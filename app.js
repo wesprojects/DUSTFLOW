@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createSim } from './sim.js';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -55,7 +57,8 @@ const U = {
   xray: { en: "See-through ducts", es: "Ductos transparentes", fr: "Gaines transparentes", sw: "Mabomba ya kuona ndani" },
   shed_walls: { en: 'Shed walls', es: 'Paredes de la caseta', fr: "Murs de l'abri", sw: 'Kuta za kibanda' },
   shed_roof: { en: 'Shed roof', es: 'Techo de la caseta', fr: "Toit de l'abri", sw: 'Paa la kibanda' },
-  shop_wall: { en: 'Shop north wall', es: 'Pared norte del taller', fr: "Mur nord de l'atelier", sw: 'Ukuta wa kaskazini' },
+  shop_wall: { en: 'Shop walls', es: 'Paredes del taller', fr: "Murs de l'atelier", sw: 'Kuta za karakana' },
+  shop_roof: { en: 'Shop roof', es: 'Techo del taller', fr: "Toit de l'atelier", sw: 'Paa la karakana' },
   labels: { en: 'Labels', es: 'Etiquetas', fr: 'Étiquettes', sw: 'Lebo' },
   sound: { en: 'Sound', es: 'Sonido', fr: 'Son', sw: 'Sauti' },
   sections: { en: "Open it up", es: "Ver por dentro", fr: "Voir l'intérieur", sw: "Ona ndani" },
@@ -237,25 +240,38 @@ window.addEventListener('error', e => { console.error('app error', e.message); }
 // ---------------------------------------------------------------- load
 async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }
 const loader = new GLTFLoader();
-const prog = { machines: 0, shop_interior: 0, collector: 0 };
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392 };
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins'];
+const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 60e6, shop_skins: 25e6 }; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
 }
-function loadGLB(k) {
-  return new Promise((res, rej) => loader.load(k + '.glb', g => { prog[k] = SIZES[k]; updLoad(); res(g); }, e => { if (e.loaded) { prog[k] = e.loaded; updLoad(); } }, rej));
+const GLB_EXT = '.glb';
+function loadGLB(k, optional = false) {
+  return new Promise((res, rej) => loader.load(k + GLB_EXT, g => { prog[k] = SIZES[k]; updLoad(); res(g); },
+    e => { if (e.total) SIZES[k] = e.total; if (e.loaded) { prog[k] = e.loaded; updLoad(); } },
+    err => { if (optional) { console.warn('[dce] optional ' + k + ' not loaded', err); prog[k] = SIZES[k]; res(null); } else rej(err); }));
 }
 
-let SC, CT, PR;
-const [scj, ctj, prj, gM, gS, gC] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector')]);
+let SC, CT, PR, TOUR;
+const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
+  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true)]);
+TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
 
 // ---------------------------------------------------------------- renderer / scene
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: Q.has('shot') });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.has('shot') ? 1 : 1.75));
+// quality ladder (office PC with integrated graphics first): 3 = pixel ratio up to 1.5 + shadows, 2 = pixel ratio 1 + shadows,
+// 1 = no shadows + 60% particles, 0 = 35% particles. Steps down by itself when frames take over 20 ms (see stepQuality).
+const QUAL = { level: Q.has('q') ? clamp(+Q.get('q'), 0, 3) : 3, acc: 0, n: 0, hold: 3, slow: 0 };
+const qualPR = () => Math.min(window.devicePixelRatio || 1, Q.has('shot') ? 1 : (QUAL.level >= 3 ? 1.5 : 1));
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: Q.has('shot') || Q.has('pdb') });
+renderer.setPixelRatio(qualPR());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.localClippingEnabled = true;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false; // the shop is static: the shadow map is redrawn only when something shows or hides
 elStage.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SC.render.background || '#eff1f5');
@@ -264,15 +280,89 @@ const hemi = new THREE.HemisphereLight(0xffffff, 0xa9aeb8, 2.1);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.55);
 const ld = SC.render.light_direction || [0.45, 0.82, 0.35];
-sun.position.set(ld[0] * 50, ld[1] * 50, ld[2] * 50);
+const SITE_C = new THREE.Vector3(18, 1.5, -12); // middle of the shop + collector (glTF frame)
+sun.position.set(SITE_C.x + ld[0] * 50, SITE_C.y + ld[1] * 50, SITE_C.z + ld[2] * 50);
+sun.target.position.copy(SITE_C); scene.add(sun.target);
+sun.castShadow = QUAL.level >= 2;
+Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 5, far: 110 });
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03; sun.shadow.radius = 3;
 scene.add(sun);
 const fill = new THREE.DirectionalLight(0xffffff, 0.45);
 fill.position.set(-30, 20, -25);
 scene.add(fill);
+// soft environment light for the textured shop (the flat explainer parts stay Lambert)
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+let SHADOW_DIRTY = true;
 
 const world = new THREE.Group();
 scene.add(world);
 for (const g of [gS, gC, gM]) world.add(g.scene);
+// the whole laminate shop (shop_room.glb) and the textured machines (shop_skins.glb)
+const roomMeshes = new Set();
+const ROOMCAT = {}; // node name -> category (WallN, WallS, WallE, WallW, Roof, Overhead, Floor, Ground, Warehouse, Cranes, Cages, Machines, Skin)
+const SKIN_PRE = { CNC1: 'CNC1_', CNC2: 'CNC2_', EB1: 'EB_1_', EB2: 'EB_2_', PanelSaw: 'PanelSaw_' };
+const SKINS = {};
+const TEXCACHE = new Map(); // one GPU copy per image (the edgebander and shop-fit atlases are in both files)
+const TEXSLOTS = ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap'];
+function shareTextures(m) {
+  for (const k of TEXSLOTS) {
+    const t = m[k]; if (!t || !t.name) continue;
+    const key = t.name + '|' + t.colorSpace + '|' + t.channel;
+    if (TEXCACHE.has(key)) m[k] = TEXCACHE.get(key); else TEXCACHE.set(key, t);
+  }
+}
+async function slimTextures() { // normal and ORM maps above 1024 px go to 1024 on the GPU (half the memory on integrated graphics)
+  const jobs = [];
+  for (const t of new Set(TEXCACHE.values())) {
+    const im = t.image;
+    if (!im || !/_(N|ORM)$/.test(t.name) || (im.width || 0) <= 1024 || typeof createImageBitmap !== 'function') continue;
+    jobs.push(createImageBitmap(im, { resizeWidth: 1024, resizeHeight: Math.round(1024 * im.height / im.width), resizeQuality: 'high' })
+      .then(b => { if (im.close) im.close(); t.image = b; t.needsUpdate = true; }).catch(() => {}));
+  }
+  await Promise.all(jobs);
+}
+function prepRoomMat(m) {
+  if (m.userData.prepped) return; m.userData.prepped = true;
+  shareTextures(m);
+  if (m.transmission > 0) { m.transmission = 0; m.transparent = true; m.opacity = Math.min(m.opacity, 0.3); } // no transmission pass
+  if (m.normalMap) m.normalScale.y *= -1; // the kits' normal maps are DirectX (green down)
+  m.envMapIntensity = 0.6;
+  for (const t of [m.map, m.normalMap, m.roughnessMap, m.aoMap]) if (t) t.anisotropy = 4;
+  if (m.transparent) m.depthWrite = false;
+}
+for (const g of [gR, gK]) {
+  if (!g) continue;
+  world.add(g.scene);
+  g.scene.updateMatrixWorld(true);
+  g.scene.traverse(o => {
+    const cat = o.userData && o.userData.room_cat;
+    if (cat && o.name) ROOMCAT[o.name] = cat;
+    if (o.userData && o.userData.skin_of) SKINS[o.userData.skin_of] = o;
+  });
+  // identical parts written once (same geometry + material) -> one InstancedMesh each
+  const same = new Map();
+  g.scene.traverse(o => { if (o.isMesh) { const k = o.geometry.uuid + '|' + o.material.uuid; (same.get(k) || same.set(k, []).get(k)).push(o); } });
+  let ni = 0;
+  for (const list of same.values()) {
+    if (list.length < 2) continue;
+    const im = new THREE.InstancedMesh(list[0].geometry, list[0].material, list.length);
+    let cat = 'Machines'; for (let p = list[0]; p; p = p.parent) if (p.userData && p.userData.room_cat) { cat = p.userData.room_cat; break; }
+    list.forEach((o, i) => { im.setMatrixAt(i, o.matrixWorld); o.parent.remove(o); });
+    im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
+    im.name = 'RoomInst_' + cat + '_' + (ni++); ROOMCAT[im.name] = cat;
+    g.scene.add(im);
+  }
+  g.scene.traverse(o => {
+    if (!o.isMesh) return;
+    roomMeshes.add(o);
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) prepRoomMat(m);
+    let cat = null; for (let p = o; p; p = p.parent) if (ROOMCAT[p.name]) { cat = ROOMCAT[p.name]; break; }
+    o.castShadow = /^(Skin|Machines|Cranes|Cages)$/.test(cat || '');
+    o.receiveShadow = !/^(Overhead|Roof)$/.test(cat || '');
+  });
+}
+await slimTextures();
 world.updateMatrixWorld(true);
 
 // node map and material registry (flat Lambert colors = the video's Workbench look)
@@ -289,13 +379,28 @@ function toLambert(m) {
   lamCache.set(m, l);
   return l;
 }
+// flat machine copies that a textured skin replaces: drawn by nothing, but still there for picking, labels and outlines
+const SKINNED = new Set(Object.keys(SKINS).map(k => SKIN_PRE[k]));
+const NO_DRAW = new THREE.MeshBasicMaterial({ visible: false });
+const isSkinned = name => [...SKINNED].some(p => name.startsWith(p));
 const pickables = [];
-world.traverse(o => {
+for (const g of [gS, gC, gM]) g.scene.traverse(o => {
   if (o.isMesh) {
     o.material = Array.isArray(o.material) ? o.material.map(toLambert) : toLambert(o.material);
     pickables.push(o);
+    if (g === gC) { o.castShadow = true; o.receiveShadow = true; }
   }
 });
+for (const n of Object.keys(NODE)) if (isSkinned(n) && NODE[n].parent && !ROOMCAT[n]) NODE[n].traverse(o => { if (o.isMesh) o.userData.noDraw = true; });
+for (const o of pickables) if (o.userData.noDraw) o.material = NO_DRAW;
+for (const n of ['Ctx_Ground', 'Pad__slab']) if (NODE[n]) NODE[n].traverse(o => { if (o.isMesh) o.receiveShadow = true; });
+if (gR && NODE.Ctx_Ground) { // the explainer's ground stopped at x 30; the shop goes to 36.6 and the back lot beyond
+  const G = NODE.Ctx_Ground; G.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(G);
+  G.position.y -= 0.035; // under the shop's own back-lot ground (z 0.745), no z-fighting
+  G.scale.x = (46 - bb.min.x) / (bb.max.x - bb.min.x); G.position.x += bb.min.x * (1 - G.scale.x);
+  G.updateMatrixWorld(true);
+}
 function topNode(o) { // highest ancestor below a gltf scene root
   let p = o;
   while (p.parent && p.parent.parent && p.parent.parent !== world) p = p.parent;
@@ -315,14 +420,20 @@ const cloneMatFor = (nodeName) => { // per-node material clones (for tinting / c
 
 // ---------------------------------------------------------------- visibility layers
 const HIDE_TOUR = new Set(); // nodes the current tour stop hides
-const TOG = { xray: true, shed_walls: true, shed_roof: true, shop_wall: true, labels: true, sound: false, follow: true };
+const TOG = { xray: true, shed_walls: true, shed_roof: true, shop_wall: true, shop_roof: false, labels: true, sound: false, follow: true };
+const roomOf = (...cats) => Object.keys(ROOMCAT).filter(n => cats.includes(ROOMCAT[n]) && NODE[n]);
+const ROOM_WALLN = roomOf('WallN');
 const groupNodes = {
   shed_walls: [...SC.groups.shed_walls, ...SC.groups.shed_frame.filter(n => n !== 'Frame__top'), ...SC.groups.shed_doors],
   shed_roof: [...SC.groups.shed_roof],
-  shop_wall: [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low, ...SC.groups.wall_window_panel, 'FX_HornConduit_lo']
+  shop_wall: [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low, ...SC.groups.wall_window_panel, 'FX_HornConduit_lo', ...roomOf('WallN', 'WallS', 'WallE', 'WallW')],
+  shop_roof: roomOf('Roof')
 };
 const CUTHIDE = new Set(); // cut pieces hidden by open cross sections
 const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear']); // placeholder block replaced by the real wall controls
+// with the whole shop loaded, its own floor and north wall replace the explainer's cropped slab and plain wall pieces
+const CTX_WALL = [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low].filter(n => !/Flex|Card/.test(n));
+if (gR) for (const n of ['Ctx_ShopFloorSlab', ...CTX_WALL]) EXTRA_HIDE.add(n);
 const groupOf = {};
 for (const [g, ns] of Object.entries(groupNodes)) for (const n of ns) groupOf[n] = g;
 function applyVisibility() {
@@ -335,10 +446,15 @@ function applyVisibility() {
     if (CUTHIDE.has(name)) vis = false;
     if (EXTRA_HIDE.has(name)) vis = false;
     if (n.userData.slideHidden) vis = false;
+    if (OVERHEAD_OFF && ROOMCAT[name] === 'Overhead') vis = false;
+    if (n.visible !== vis) SHADOW_DIRTY = true;
     n.visible = vis;
   }
 }
 const tourOverride = new Set();
+// seen from above the roof line, the lights, pipes and roof steel hide so the shop floor reads clearly
+let OVERHEAD_OFF = false;
+function stepOverhead() { const off = camera.position.y > 7.2 && !TOG.shop_roof; if (off !== OVERHEAD_OFF) { OVERHEAD_OFF = off; applyVisibility(); } }
 function setXray(on) {
   TOG.xray = on;
   const names = new Set([...SC.translucent.shop_materials, ...SC.translucent.shed_materials]);
@@ -441,164 +557,12 @@ const lensPos = SC.groups.flamex_strobe_lenses.map(n => { const b = new THREE.Bo
 
 // ---------------------------------------------------------------- simulator state
 const SIM = { t: 0 };
-const S = {}; // the state the procedures read
-function freshState() {
-  const eaton = {}, starter = {};
-  for (const c of CT.controls) {
-    if (c.type === 'eaton') eaton[c.id] = { on: true, locked: false, lock: null };
-    if (c.type === 'starter') starter[c.id] = false;
-  }
-  return {
-    eaton, starter, airlockBox: !!CT.behavior.airlock_box_default_on,
-    motor: { fan: { running: false, level: 0 }, blower: { running: false, level: 0 }, airlock: { running: false, level: 0 } },
-    gates: { CNC1: false, CNC2: false, EB1: false, EB2: false, PanelSaw: false },
-    air: { on: true, locked: false, lock: null },
-    valve: { valve_A: { open: true, locked: false, lock: null }, valve_B: { open: true, locked: false, lock: null } },
-    hatch: { hatch_cnc: { open: false, cleaned: false }, hatch_window: { open: false, cleaned: false }, hatch_riser: { open: false, cleaned: false } },
-    bucket: { placed: false }, hose: { connected: true },
-    flamex: { A: fxZone(), B: fxZone() }
-  };
-}
-function fxZone() { return { key: 0, fire: false, cause: 0, buzzer: false, horns: false, extOff: false, spray: 0, sprayed: 0, lamp: 0, msgT: null, by: null }; }
+const SM = createSim(CT, SC, { say: (o, k) => say(o, k), renderAll: () => renderAll(), playClunk: () => playClunk(), playHiss: () => playHiss(),
+  buildLockVisual: id => buildLockVisual(id), sparkInZone: z => sparkInZone(z), now: () => SIM.t });
+const { S, CTL, MSG, listeners, emit, result, motorPowered, motorLocked, updateMotors, pressStarter, pressAirlockBox, setEaton, lockable,
+  isOffForLock, applyLock, removeLock, setGate, setAir, setValve, toggleHatch, shine, trip, fxButton, hatchLightOpen, freshState, fxZone,
+  LV, gateLv, systemOn, systemOff } = SM;
 Object.assign(S, freshState());
-const CTL = Object.fromEntries(CT.controls.map(c => [c.id, c]));
-const MSG = CT.messages;
-
-const listeners = [];
-function emit(ev) { for (const f of listeners) f(ev); }
-function result(ctl, act, code, value, extra = {}) {
-  const ev = { ctl, act, code, value, ok: !/^(locked_out|no_power|needs_key|reset_cause|reset_spray|eaton_locked|lock_needs_off|no_air|air_locked|hatch_closed|bypass_no_trip|nothing_to_reset|airlock_box_off|not_simulated)$/.test(code || ''), t: SIM.t, ...extra };
-  emit(ev);
-  return ev;
-}
-function motorPowered(m) {
-  const d = CT.motors[m];
-  return S.eaton[d.inside_eaton].on && S.eaton[d.outside_eaton].on;
-}
-function motorLocked(m) {
-  const d = CT.motors[m];
-  return S.eaton[d.inside_eaton].locked || S.eaton[d.outside_eaton].locked;
-}
-function updateMotors() {
-  for (const [m, d] of Object.entries(CT.motors)) {
-    const run = motorPowered(m) && S.starter[d.starter] && (!d.enable || S.airlockBox);
-    S.motor[m].running = run;
-  }
-}
-function pressStarter(id, act) {
-  const c = CTL[id], m = c.motor, d = CT.motors[m];
-  if (act === 'stop') { S.starter[id] = false; updateMotors(); say(MSG.stopped); return result(id, 'stop', 'stopped'); }
-  // locked out: nothing starts, the starter does not pull in
-  if (motorLocked(m)) { say(MSG.locked_out, 'bad'); return result(id, 'start', 'locked_out'); }
-  // start: control power comes through the inside feeder Eaton
-  if (!S.eaton[d.inside_eaton].on) { say(S.eaton[d.inside_eaton].locked ? MSG.locked_out : MSG.no_power, 'bad'); return result(id, 'start', S.eaton[d.inside_eaton].locked ? 'locked_out' : 'no_power'); }
-  S.starter[id] = true; updateMotors();
-  if (!S.eaton[d.outside_eaton].on) {
-    say(S.eaton[d.outside_eaton].locked ? MSG.locked_out : MSG.no_power, 'bad');
-    return result(id, 'start', S.eaton[d.outside_eaton].locked ? 'locked_out' : 'no_power');
-  }
-  if (d.enable && !S.airlockBox) { say(MSG.airlock_box_off, 'bad'); return result(id, 'start', 'airlock_box_off'); }
-  say(MSG.started, 'ok');
-  return result(id, 'start', 'started');
-}
-function pressAirlockBox(act) {
-  S.airlockBox = act === 'on'; updateMotors();
-  return result('airlock_box', act, act === 'on' ? 'started' : 'stopped');
-}
-function setEaton(id, on) {
-  const e = S.eaton[id], c = CTL[id];
-  if (on && e.locked) { say(MSG.eaton_locked, 'bad'); return result(id, 'on', 'eaton_locked'); }
-  if (e.on === on) return result(id, on ? 'on' : 'off', 'same');
-  e.on = on;
-  if (!on && c.where === 'inside' && CT.behavior.inside_eaton_off_drops_starter) for (const s of c.feeds) S.starter[s] = false;
-  const before = Object.fromEntries(Object.keys(CT.motors).map(m => [m, S.motor[m].running]));
-  updateMotors();
-  if (on && c.where === 'outside' && CT.behavior.outside_reclose_restarts_if_starter_latched) {
-    for (const m of c.motors) if (!before[m] && S.motor[m].running) say(MSG.restarted_warn, 'bad');
-  }
-  playClunk();
-  return result(id, on ? 'on' : 'off', on ? 'on' : 'off');
-}
-function lockable(id) { return S.eaton[id] || (id === 'air_valve' ? S.air : S.valve[id]); }
-function isOffForLock(id) { if (S.eaton[id]) return !S.eaton[id].on; if (id === 'air_valve') return !S.air.on; if (S.valve[id]) return !S.valve[id].open; return false; }
-function applyLock(id, tag) {
-  const L = lockable(id);
-  if (!isOffForLock(id)) { say(MSG.lock_needs_off, 'bad'); return result(id, 'lock', 'lock_needs_off'); }
-  L.locked = true; L.lock = tag; say(MSG.lock_on, 'ok'); buildLockVisual(id); renderAll();
-  return result(id, 'lock', 'locked');
-}
-function removeLock(id) {
-  const L = lockable(id); if (!L.locked) return result(id, 'unlock', 'same');
-  L.locked = false; L.lock = null; say(MSG.lock_off); buildLockVisual(id); renderAll();
-  return result(id, 'unlock', 'unlocked');
-}
-function setGate(g, open) {
-  if (!S.air.on) { say(MSG.no_air, 'bad'); return result('gate_panel', open ? 'open' : 'close', 'no_air', g); }
-  S.gates[g] = open; playHiss();
-  say(open ? MSG.gate_open : MSG.gate_closed, open ? 'ok' : '');
-  return result('gate_panel', open ? 'open' : 'close', open ? 'open' : 'closed', g);
-}
-function setAir(on) {
-  if (on && S.air.locked) { say(MSG.air_locked, 'bad'); return result('air_valve', 'on', 'air_locked'); }
-  S.air.on = on; say(on ? MSG.air_on : MSG.air_off);
-  return result('air_valve', on ? 'on' : 'off', on ? 'on' : 'off');
-}
-function setValve(id, open) {
-  const v = S.valve[id];
-  if (open && v.locked) { say(MSG.eaton_locked, 'bad'); return result(id, 'open', 'eaton_locked'); }
-  v.open = open; say(open ? MSG.valve_open : MSG.valve_closed_water, open ? '' : 'ok');
-  return result(id, open ? 'open' : 'close', open ? 'open' : 'closed');
-}
-function toggleHatch(id) {
-  const h = S.hatch[id];
-  if (!h.open) { h.open = true; say(MSG.hatch_open); }
-  else { h.open = false; h.cleaned = true; say(MSG.hatch_closed_ok, 'ok'); }
-  return result(id, h.open ? 'open' : 'close', h.open ? 'open' : 'closed');
-}
-function shine(zone) {
-  const c = CTL[CT.flamex.panels[zone].detector_hatch];
-  const z = S.flamex[zone];
-  if (!S.hatch[c.id].open) { say(MSG.hatch_closed, 'bad'); return result('panel_' + zone, 'light', 'hatch_closed'); }
-  say(MSG.light_on);
-  flashlightFx = { zone, t: 1.4 };
-  if (z.key === 1 && CT.flamex.key_1_bypasses_trip) { say(MSG.bypass_no_trip, 'bad'); return result('panel_' + zone, 'light', 'bypass_no_trip'); }
-  z.cause = Math.max(z.cause, 1.4);
-  trip(zone, 'light');
-  return result('panel_' + zone, 'light', 'tripped');
-}
-let flashlightFx = null;
-function trip(zone, by) {
-  const z = S.flamex[zone];
-  if (z.key === 1 && CT.flamex.key_1_bypasses_trip) return false;
-  const was = z.fire;
-  z.fire = true; z.buzzer = true; z.horns = true; z.extOff = false; z.by = by;
-  z.spray = Math.max(z.spray, CT.flamex.spray_time_s); z.sprayed = 0;
-  if (!was) { z.msgT = new Date(); z.detectT = SIM.t; say(MSG.tripped, 'bad'); }
-  result('panel_' + zone, 'trip', 'tripped', by);
-  renderAll();
-  return true;
-}
-function fxButton(zone, btn) {
-  const z = S.flamex[zone], P = 'panel_' + zone;
-  switch (btn) {
-    case 'key': z.key = z.key ? 0 : 1; renderAll(); return result(P, 'key', 'key' + z.key, z.key);
-    case 'int': z.buzzer = false; say(MSG.int_ok); renderAll(); return result(P, 'int', 'int');
-    case 'ext':
-      if (z.key !== 1) { say(MSG.needs_key, 'bad'); return result(P, 'ext', 'needs_key'); }
-      z.extOff = !z.extOff; if (z.extOff) z.horns = false; else if (z.fire) z.horns = true;
-      say(z.extOff ? MSG.ext_off : MSG.ext_on); renderAll(); return result(P, 'ext', z.extOff ? 'ext_off' : 'ext_on');
-    case 'lamp': z.lamp = CT.flamex.lamp_test_s; say(MSG.lamp_test); return result(P, 'lamp', 'lamp');
-    case 'reset':
-      if (z.key !== 1) { say(MSG.needs_key, 'bad'); return result(P, 'reset', 'needs_key'); }
-      if (!z.fire) { say(MSG.nothing_to_reset); return result(P, 'reset', 'nothing_to_reset'); }
-      if (z.cause > 0 || sparkInZone(zone) || hatchLightOpen(zone)) { say(MSG.reset_cause, 'bad'); return result(P, 'reset', 'reset_cause'); }
-      if (z.spray > 0 && z.sprayed < CT.flamex.reset_block_s) { say(MSG.reset_spray, 'bad'); return result(P, 'reset', 'reset_spray'); }
-      Object.assign(z, { fire: false, buzzer: false, horns: false, extOff: false, spray: 0, by: null });
-      say(MSG.reset_ok, 'ok'); renderAll(); return result(P, 'reset', 'reset_ok');
-    default: say(MSG.not_simulated); return result(P, btn, 'not_simulated');
-  }
-}
-function hatchLightOpen(zone) { const id = CT.flamex.panels[zone].detector_hatch; return S.hatch[id].open; }
 function sparkInZone(zone) { return DEMO && DEMO.sparks.some(s => s.zone === zone && s.alive && s.detected); }
 
 let lastSay = null;
@@ -968,7 +932,9 @@ const pMat = new THREE.ShaderMaterial({
       vec4 ct = projectionMatrix * modelViewMatrix * vec4(aTail,1.0);
       if (aCol.a <= 0.002 || ch.w <= 0.02 || ct.w <= 0.02) { gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
       vec2 sh = (ch.xy/ch.w*0.5+0.5)*uVP, st = (ct.xy/ct.w*0.5+0.5)*uVP;
-      float rpx = max(aSize.x * projectionMatrix[1][1] * uVP.y * 0.5 / ch.w, aSize.y);
+      float mn = abs(aSize.y);
+      float rpx = max(aSize.x * projectionMatrix[1][1] * uVP.y * 0.5 / ch.w, mn);
+      if (aSize.y < 0.0) rpx = min(rpx, mn * 1.1); // air streaks keep a thin line even right at the camera
       vec2 d = sh - st; float len = length(d); vec2 dir = len > 0.001 ? d/len : vec2(1.0,0.0); vec2 nr = vec2(-dir.y, dir.x);
       float along = mix(-rpx, len + rpx, position.x);
       vec2 p = st + dir*along + nr*position.y*rpx;
@@ -999,8 +965,6 @@ particles.frustumCulled = false; particles.renderOrder = 20;
 scene.add(particles);
 
 // motor levels and drive levels
-const LV = { fan: 0, blower: 0, airlock: 0 };
-const gateLv = { CNC1: 0, CNC2: 0, EB1: 0, EB2: 0, PanelSaw: 0 };
 function driveLevel(seg, s) {
   if (seg.drive === 'gate') return LV.fan * (gateLv[s.machine] ?? 0);
   return LV[seg.drive] ?? LV.fan;
@@ -1051,6 +1015,7 @@ function stepFlow(dt) {
     const col = s.color;
     for (let k = 0; k < s.count; k++) {
       const i = s.start + k, o3 = i * 3, o4 = i * 4;
+      if (PFRAC < 1 && pState[i] !== 2 && (k * 0.6180339) % 1 > PFRAC) { cl[o4 + 3] = 0; continue; } // quality step: fewer particles
       let st = pState[i];
       if (st === 1) { // dormant: wait for the source
         if (active) { pTimer[i] -= dt; if (pTimer[i] <= 0) { st = pState[i] = 0; pS[i] = 0; pIdx[i] = 0; pSeg[i] = 0; pSettle[i] = 0; } }
@@ -1122,7 +1087,7 @@ function stepFlow(dt) {
       else if (st === 0) alpha *= Math.min(clamp(sv / 0.3, 0, 1), clamp((s.L - sv) / 0.15, 0, 1)); // fade in and out, never pop
       cl[o4] = col.r; cl[o4 + 1] = col.g; cl[o4 + 2] = col.b; cl[o4 + 3] = alpha;
       const fadeSize = s.fade ? 0.4 + 0.6 * Math.sin(Math.PI * clamp(sv / s.L, 0, 1)) : 1;
-      sz[o3] = s.radius * fadeSize * pK[i]; sz[o3 + 1] = s.minPx * pK[i]; sz[o3 + 2] = s.shape;
+      sz[o3] = s.radius * fadeSize * pK[i]; sz[o3 + 1] = (s.isAir ? -1 : 1) * s.minPx * pK[i]; sz[o3 + 2] = s.shape; // air streaks: negative = capped on screen
     }
   }
 }
@@ -1228,10 +1193,10 @@ function stepFx(dt, t) {
     for (const m of FXN.panel[z]) m.emissive.setHex(Z.fire ? 0x553300 : 0x000000);
   }
   // flashlight beam
-  if (flashlightFx) {
-    const c = CTL[CT.flamex.panels[flashlightFx.zone].detector_hatch];
+  if (SM.fl) {
+    const c = CTL[CT.flamex.panels[SM.fl.zone].detector_hatch];
     const p = V3(c.pos);
-    fxPut(p, p, FXC.light, 0.9 * clamp(flashlightFx.t, 0, 1), 0.09, 8, 2);
+    fxPut(p, p, FXC.light, 0.9 * clamp(SM.fl.t, 0, 1), 0.09, 8, 2);
   }
   // unused fx slots: hide
   const cl = aCol.array;
@@ -1285,15 +1250,7 @@ function stepDemo(dt) {
     DEMO = null; setCaption(null); elFoot.style.display = 'none'; renderAll();
   }
 }
-function stepFlamex(dt) {
-  for (const z of ['A', 'B']) {
-    const Z = S.flamex[z];
-    if (Z.cause > 0) Z.cause = Math.max(0, Z.cause - dt);
-    if (Z.lamp > 0) Z.lamp = Math.max(0, Z.lamp - dt);
-    if (Z.spray > 0) { Z.spray = Math.max(0, Z.spray - dt); Z.sprayed += dt; if (Z.spray === 0) renderAll(); }
-  }
-  if (flashlightFx) { flashlightFx.t -= dt; if (flashlightFx.t <= 0) flashlightFx = null; }
-}
+function stepFlamex(dt) { SM.stepFlamex(dt); }
 
 // ---------------------------------------------------------------- camera: orbit, tour, walk
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -1308,18 +1265,32 @@ function fovFor(k) {
   return Math.min(80, 2 * Math.atan(Math.tan(h / 2) / asp) * 180 / Math.PI);
 }
 function flyTo(key, dur = 0, after = null) {
-  if (MODE === 'walk') setMode('orbit');
+  if (MODE === 'walk') return walkTo(key, dur, after); // keep the user's mode: the walker walks there instead
   const to = { p: V3(key.position), t: V3(key.target), fov: key.hfov_deg ? fovFor(key) : camera.fov };
   const dist = camera.position.distanceTo(to.p) + 0.5 * controls.target.distanceTo(to.t);
   const d = RM ? 0.001 : Math.max(dur, clamp(1.0 + dist * 0.08, 1.2, 2.8)); // longer trips take longer, always eased
   CAMANIM = { from: { p: camera.position.clone(), t: controls.target.clone(), fov: camera.fov }, to, d, t: 0, after, lift: Math.min(2.5, dist * 0.12) };
+}
+// walk mode: a tour step or the Flamex demo moves the walker to a standing spot facing the view's target
+function walkTo(key, dur = 0, after = null) {
+  const T = V3(key.target), P = V3(key.position);
+  const h = new THREE.Vector3(P.x - T.x, 0, P.z - T.z); let hd = h.length();
+  if (hd < 0.01) { h.set(0, 0, 1); hd = 1; }
+  h.multiplyScalar(1 / hd);
+  const d = clamp(hd, 2.2, 7);
+  const to = T.clone().addScaledVector(h, d);
+  to.y = groundY(to.x, to.z) + WALK.eye;
+  const dist = camera.position.distanceTo(to);
+  const dd = RM ? 0.001 : Math.max(dur, clamp(0.8 + dist * 0.12, 1.0, 3.0));
+  const look0 = new THREE.Vector3(); camera.getWorldDirection(look0);
+  CAMANIM = { walk: true, from: { p: camera.position.clone(), look: look0.add(camera.position) }, to: { p: to, look: T }, d: dd, t: 0, after };
 }
 function playKeys(keys, intro = 0) {
   // only the keys before the first hard cut (the video's cuts become one smooth flight)
   let ks = [keys[0]];
   for (let i = 1; i < keys.length; i++) { if (keys[i].t - keys[i - 1].t < 0.15) break; ks.push(keys[i]); }
   const t0 = ks[0].t; ks = ks.map(k => ({ ...k, t: k.t - t0 }));
-  flyTo(ks[0], intro, () => { if (ks.length > 1 && !RM) CAMANIM = { keys: ks, t: 0 }; });
+  flyTo(ks[0], intro, () => { if (ks.length > 1 && !RM && MODE !== 'walk') CAMANIM = { keys: ks, t: 0 }; });
 }
 function camAt(keys, t) {
   let i = 0; while (i < keys.length - 1 && keys[i + 1].t <= t) i++;
@@ -1332,6 +1303,18 @@ function stepCam(dt) {
   if (!CAMANIM) return;
   const A = CAMANIM;
   A.t += dt;
+  if (A.walk) {
+    const f = ease(clamp(A.t / A.d, 0, 1));
+    camera.position.copy(A.from.p).lerp(A.to.p, f);
+    const look = A.from.look.clone().lerp(A.to.look, f);
+    camera.lookAt(look);
+    if (f >= 1) {
+      const dir = A.to.look.clone().sub(camera.position).normalize();
+      WALK.yaw = Math.atan2(-dir.x, -dir.z); WALK.pitch = clamp(Math.asin(dir.y), -1.3, 1.3);
+      const cb = A.after; CAMANIM = null; if (cb) cb();
+    }
+    return;
+  }
   if (A.keys) {
     const end = A.keys[A.keys.length - 1].t;
     const c = camAt(A.keys, Math.min(A.t, end));
@@ -1352,7 +1335,7 @@ controls.addEventListener('start', () => { CAMANIM = null; if (ST) { ST.paused =
 
 // walk mode
 const WALK = { yaw: 0, pitch: 0, keys: {}, joy: { x: 0, y: 0 }, eye: 1.65 };
-const groundMeshes = ['Ctx_ShopFloorSlab', 'Ctx_Ground', 'Pad__slab'].map(n => NODE[n]).filter(Boolean);
+const groundMeshes = ['Ctx_ShopFloorSlab', 'Ctx_Ground', 'Pad__slab', ...roomOf('Floor', 'Ground')].map(n => NODE[n]).filter(Boolean);
 const rayDown = new THREE.Raycaster();
 function groundY(x, z) {
   rayDown.set(new THREE.Vector3(x, 30, z), new THREE.Vector3(0, -1, 0));
@@ -1365,7 +1348,7 @@ function setMode(m) {
     CAMANIM = null; controls.enabled = false;
     const d = new THREE.Vector3(); camera.getWorldDirection(d);
     let p = camera.position.clone();
-    if (p.y > 6 || p.x < -10 || p.x > 28 || p.z < -30 || p.z > 6) { p.set(7.6, 0, -14.6); d.set(0, 0, -1); }
+    if (p.y > 6 || p.x < -10 || p.x > 40 || p.z < -30 || p.z > 9) { p.set(7.6, 0, -14.6); d.set(0, 0, -1); }
     p.y = groundY(p.x, p.z) + WALK.eye;
     camera.position.copy(p);
     WALK.yaw = Math.atan2(-d.x, -d.z); WALK.pitch = 0;
@@ -1407,7 +1390,7 @@ function joyMove(e) {
   elJoy.firstChild.style.transform = `translate(${WALK.joy.x * 36}px,${WALK.joy.y * 36}px)`;
 }
 function stepWalk(dt) {
-  if (MODE !== 'walk') return;
+  if (MODE !== 'walk' || CAMANIM) return;
   const K = WALK.keys;
   let f = (K.KeyW || K.ArrowUp ? 1 : 0) - (K.KeyS || K.ArrowDown ? 1 : 0) - WALK.joy.y;
   let r = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0) + WALK.joy.x;
@@ -1429,6 +1412,8 @@ function applyScene(vpId) { // what a viewpoint hides, cuts open and makes see-t
   HIDE_TOUR.clear(); tourOverride.clear();
   if (!v) { applyVisibility(); return; }
   for (const n of v.hide) if (!/_cut$/.test(n)) HIDE_TOUR.add(n);
+  if (v.hide.some(n => CTX_WALL.includes(n))) for (const n of ROOM_WALLN) HIDE_TOUR.add(n); // the shop's own north wall hides with the explainer's
+  for (const [k, sk] of Object.entries(SKINS)) if (v.hide.some(n => n.startsWith(SKIN_PRE[k]))) HIDE_TOUR.add(sk.name);
   for (const c of Object.values(CUT)) if (c.pieces.length) setCutOpen(c.key, v.cutaway && c.hide.some(n => v.hide.includes(n)), true);
   if (v.xray_alpha !== undefined) { const xa = Array.isArray(v.xray_alpha) ? v.xray_alpha[v.xray_alpha.length - 1][1] : v.xray_alpha; setXray(xa < 0.99); }
   EXPL.target = v.explode ? 1 : 0;
@@ -1709,7 +1694,7 @@ scene.add(MEET.g); MEET.g.visible = false;
 overlayInto(MEET.g, ['Fan__scroll', 'Fan__scroll_cut', 'AL__body', 'AL__body_cut', 'BL__housing', 'BL__housing_cut'], MEET.mat);
 function stepOverlays(dt) {
   const k = RM ? 1 : Math.min(1, dt * 3);
-  const focus = ST ? STORY[ST.i].zone : null;
+  const focus = ST ? curStep().zone : null;
   for (const [id, z] of Object.entries(ZONES)) {
     const tgt = TOG.zones || focus === id ? 1 : 0;
     z.f += (tgt - z.f) * k;
@@ -1717,7 +1702,7 @@ function stepOverlays(dt) {
     z.g.visible = z.f > 0.01;
     if (z.g.visible) syncOverlay(z.g);
   }
-  MEET.f += ((TOG.zones || (ST && STORY[ST.i].meet) ? 1 : 0) - MEET.f) * k;
+  MEET.f += ((TOG.zones || (ST && curStep().meet) ? 1 : 0) - MEET.f) * k;
   MEET.mat.uniforms.uA.value = MEET.f * (RM ? 0.8 : 0.6 + 0.35 * Math.sin(SIM.t * 2.2));
   MEET.g.visible = MEET.f > 0.01;
   if (MEET.g.visible) syncOverlay(MEET.g);
@@ -2046,164 +2031,117 @@ function renderProc() {
 // ---------------------------------------------------------------- guided story: 6 steps, each a few short parts that play on their own
 // Wording checked against LAYOUT_SPEC.md (sections 2-3), MANUAL_FACTS.md (1.5, 1.6, 3.1, 3.2) and FLAMEX_FACTS.md (sections 2, 4).
 const HEX = { dust: '#f08a24', chips: '#9a6b3c', air: '#d9b100', clean: '#3b82f6', fine: '#7d8590', loop: '#12a594', fx: '#e0453a', ctl: '#2563eb' };
-const STORY = [
-  { title: L4('A machine runs, its gate opens', 'Una máquina arranca y abre su compuerta', "Une machine tourne, sa vanne s'ouvre", 'Mashine inawaka, vali yake inafunguka'),
-    map: ['machines', 'gates'],
-    phases: [
-      { vp: 'machines', view: 'gate_panel', dur: 5, rings: ['gate_panel'],
-        cap: L4("The green button on the blast gate panel opens a gate.", 'El botón verde del panel de compuertas abre una compuerta.', 'Le bouton vert du panneau des vannes ouvre une vanne.', 'Kitufe cha kijani kwenye paneli ya vali hufungua vali.'),
-        labels: [{ a: { ctl: 'gate_panel' }, accent: '#d8b51a', text: L4("Blast gate panel", 'Panel de compuertas', 'Panneau des vannes', 'Paneli ya vali') }],
-        enter: () => { if (!S.motor.fan.running) systemOn(); S.gates.CNC1 = false; renderAll(); },
-        at: [[1.8, () => setGate('CNC1', true)]] },
-      { vp: 'machines', cam: { vp: 'machines', keys: [0, 1] }, dur: 6, hl: ['Gate_CNC1', 'Gate_CNC1_Slide', 'Duct_Hose_CNC1'],
-        cap: L4('The gate opens. The hose pulls the dust.', 'La compuerta abre. La manguera jala el polvo.', "La vanne s'ouvre. Le tuyau aspire la poussière.", 'Vali inafunguka. Bomba linavuta vumbi.'),
-        labels: [{ a: 'machines.cnc1', accent: HEX.dust, text: L4('CNC 1 running', 'CNC 1 en marcha', 'CNC 1 en marche', 'CNC 1 inafanya kazi') },
-                 { a: 'machines.g1', accent: '#1f9d55', text: L4('Blast gate open', 'Compuerta abierta', 'Vanne ouverte', 'Vali iko wazi') }] }
-    ] },
-  { title: L4('Suction pulls the dust to the cyclone', 'La succión lleva el polvo al ciclón', "L'aspiration amène la poussière au cyclone", 'Kuvuta kunapeleka vumbi kwa kimbunga'),
-    zone: 'suction', map: ['gates', 'duct', 'cyclone'],
-    phases: [
-      { vp: 'machines', cam: { vp: 'machines', keys: [2, 3] }, dur: 5.5,
-        cap: L4('The main fan pulls air through every open gate.', 'El ventilador jala aire por cada compuerta abierta.', "Le ventilateur aspire l'air par chaque vanne ouverte.", 'Feni kuu huvuta hewa kupitia kila vali iliyo wazi.'),
-        labels: [{ a: 'machines.trunk', accent: HEX.dust, text: L4('Main duct', 'Ducto principal', 'Gaine principale', 'Bomba kuu') },
-                 { a: 'machines.eb1', accent: HEX.dust, text: L4('Edgebander 1', 'Canteadora 1', 'Plaqueuse de chants 1', 'Mashine ya kingo 1') }] },
-      { vp: 'wall', cam: { vp: 'wall', keys: [0, 1] }, dur: 5,
-        cap: L4('Dusty air goes through the wall to the shed.', 'El aire con polvo cruza la pared hasta la caseta.', "L'air chargé traverse le mur jusqu'à l'abri.", 'Hewa yenye vumbi inapita ukutani hadi kibandani.'),
-        labels: [{ a: 'wall.gap', accent: HEX.dust, text: L4('Through the wall', 'A través de la pared', 'À travers le mur', 'Kupitia ukuta') },
-                 { a: 'wall.boot', accent: HEX.dust, text: L4('Into the cyclone', 'Al ciclón', 'Vers le cyclone', 'Kuingia kimbunga') }] }
-    ] },
-  { title: L4('The cyclone splits chips and air', 'El ciclón separa virutas y aire', 'Le cyclone sépare copeaux et air', 'Kimbunga kinatenganisha vipande na hewa'),
-    map: ['cyclone'],
-    phases: [
-      { vp: 'cyclone', dur: 8, hl: ['Cyc__barrel_liner', 'Cyc__cone_liner'],
-        cap: L4('Heavy chips fall. Air with fine dust rises.', 'Las virutas pesadas caen. El aire con polvo fino sube.', "Les copeaux lourds tombent. L'air et la poussière fine montent.", 'Vipande vizito vinaanguka. Hewa yenye vumbi laini inapanda.'),
-        labels: [{ a: 'cyclone.inlet', accent: HEX.dust, text: L4('Dusty air spins in', 'El aire entra girando', "L'air entre en tournant", 'Hewa inaingia ikizunguka') },
-                 { a: 'cyclone.cone', accent: HEX.chips, text: L4('Chips fall down the cone', 'Las virutas bajan por el cono', 'Les copeaux descendent le cône', 'Vipande vinashuka kwenye koni') },
-                 { a: 'cyclone.core', accent: HEX.air, text: L4('Air rises to the fan', 'El aire sube al ventilador', "L'air monte au ventilateur", 'Hewa inapanda hadi feni') }] }
-    ] },
-  { title: L4('The push side cleans the air', 'El lado de empuje limpia el aire', "Le côté soufflage nettoie l'air", 'Upande wa kusukuma unasafisha hewa'),
-    zone: 'push', meet: true, map: ['fan', 'filters', 'clean', 'drum'],
-    phases: [
-      { vp: 'fan', cam: { vp: 'fan', keys: [0, 1] }, dur: 5, hl: ['Fan__scroll', 'Fan__scroll_liner'],
-        cap: L4('The fan pulls in, then pushes out.', 'El ventilador jala y luego empuja.', 'Le ventilateur aspire, puis souffle.', 'Feni inavuta, kisha inasukuma.'),
-        labels: [{ a: 'fan.fan', accent: HEX.air, text: L4('Main fan', 'Ventilador principal', 'Ventilateur principal', 'Feni kuu') },
-                 { a: 'fan.out', accent: HEX.clean, text: L4('Down to the filters', 'Baja a los filtros', 'Descend vers les filtres', 'Chini hadi vichujio') }] },
-      { vp: 'filters', cam: { vp: 'filters', keys: [0, 1] }, dur: 5.5, hl: ['FL__cart1', 'FL__cart2', 'FL__cart3', 'FL__cart0_liner'],
-        cap: L4('Air pushes out through the filters. Dust stays in.', 'El aire sale por los filtros. El polvo se queda.', "L'air sort par les filtres. La poussière reste.", 'Hewa inatoka kupitia vichujio. Vumbi linabaki.'),
-        labels: [{ a: 'filters.cart', accent: HEX.clean, text: L4('Filters under pressure', 'Filtros a presión', 'Filtres sous pression', 'Vichujio vina shinikizo') },
-                 { a: 'filters.clean', accent: HEX.clean, text: L4('Clean air out', 'Sale aire limpio', 'Air propre', 'Hewa safi inatoka') }] },
-      { vp: 'filters', cam: { vp: 'filters', keys: [2, 3] }, dur: 5, hl: ['FL__drum', 'FL__sleeve'],
-        cap: L4('Fine dust falls into the drum.', 'El polvo fino cae al tambor.', 'La poussière fine tombe dans le fût.', 'Vumbi laini linaanguka kwenye pipa.'),
-        labels: [{ a: 'filters.drum', accent: HEX.fine, text: L4('Fine dust drum', 'Tambor de polvo fino', 'Fût de poussière fine', 'Pipa la vumbi laini') }] }
-    ] },
-  { title: L4('The airlock and chip loop to the roll-off', 'Válvula rotativa y circuito al contenedor', 'Écluse et boucle vers la benne', 'Vali na mzunguko hadi kontena'),
-    zone: 'loop', meet: true, map: ['airlock', 'blower', 'rolloff'],
-    phases: [
-      { vp: 'airlock', cam: { vp: 'airlock', keys: [0, 1] }, dur: 5, hl: ['AL__body_liner', 'AL__tee'],
-        cap: L4('The airlock drops chips but keeps the air in.', 'La válvula deja caer las virutas, pero no el aire.', "L'écluse laisse tomber les copeaux, pas l'air.", 'Vali inadondosha vipande, lakini inazuia hewa.'),
-        labels: [{ a: 'airlock.al', accent: HEX.chips, text: L4('Rotary airlock', 'Válvula rotativa', 'Écluse rotative', 'Vali ya kuzunguka') },
-                 { a: 'airlock.ret', accent: HEX.loop, text: L4('Air back from the roll-off', 'Aire que vuelve del contenedor', 'Air qui revient de la benne', 'Hewa inayorudi kutoka kontena') }] },
-      { vp: 'blower', cam: { vp: 'blower', keys: [0, 1, 2] }, dur: 6, hl: ['BL__housing', 'BL__housing_liner'],
-        cap: L4('The blower blows the chips up the riser.', 'El soplador sube las virutas por el tubo.', 'La soufflante monte les copeaux dans la colonne.', 'Kipuliza kinapuliza vipande juu ya bomba.'),
-        labels: [{ a: 'blower.bl', accent: HEX.chips, text: L4('Transfer blower', 'Soplador de transferencia', 'Soufflante de transfert', 'Kipuliza cha kusafirisha') },
-                 { a: 'blower.riser', accent: HEX.chips, text: L4('Up the riser', 'Sube por el tubo', 'Monte dans la colonne', 'Juu ya bomba') }] },
-      { vp: 'back', cam: { vp: 'back', keys: [0, 1] }, dur: 6, hl: ['RO_Pile'],
-        cap: L4('Chips go to the roll-off. The air comes back.', 'Las virutas van al contenedor. El aire regresa.', "Les copeaux vont à la benne. L'air revient.", 'Vipande vinaenda kontena. Hewa inarudi.'),
-        labels: [{ a: 'back.pile', accent: HEX.chips, text: L4('Chips land here', 'Las virutas caen aquí', 'Les copeaux arrivent ici', 'Vipande vinatua hapa') },
-                 { a: 'back.line', accent: HEX.chips, text: L4('Chips out, upper hose', 'Virutas: manguera de arriba', 'Copeaux : tuyau du haut', 'Vipande: bomba la juu') },
-                 { a: 'back.ret', accent: HEX.loop, text: L4('Air back, lower hose', 'Aire: manguera de abajo', 'Air : tuyau du bas', 'Hewa: bomba la chini') }] }
-    ] },
-  { title: L4('Safeguards: sparks, shut-offs, lockout', 'Seguridad: chispas, cortes, bloqueo', 'Sécurité : étincelles, coupures, consignation', 'Usalama: cheche, kuzima, kufunga'),
-    map: [],
-    phases: [
-      { vp: 'flamex', demo: true, hl: ['Flamex_DetA_0', 'Flamex_DetA_1'],
-        labels: [{ a: 'flamex.detA', when: () => !DEMO || DEMO.sparks[1].start == null, accent: HEX.fx, text: L4('Spark detectors', 'Detectores de chispas', "Détecteurs d'étincelles", 'Vigunduzi vya cheche') },
-                 { a: 'flamex.noz', when: () => !DEMO || DEMO.sparks[1].start == null, accent: '#2a9fd6', text: L4('Water nozzle', 'Boquilla de agua', "Buse d'eau", 'Pua ya maji') },
-                 { a: 'flamex.horn', when: () => !DEMO || DEMO.sparks[1].start == null, accent: HEX.fx, text: L4('Horns and strobes', 'Sirenas y luces', 'Sirènes et flashs', 'Honi na taa') },
-                 { a: 'flamex.detB', when: () => !!DEMO && DEMO.sparks[1].start != null, accent: HEX.fx, text: L4('Spark detectors, zone B', 'Detectores, zona B', 'Détecteurs, zone B', 'Vigunduzi, eneo B') },
-                 { a: 'flamex.valve', when: () => !!DEMO && DEMO.sparks[1].start != null, accent: '#2a9fd6', text: L4('Water valve, zone B', 'Válvula de agua, zona B', "Vanne d'eau, zone B", 'Vali ya maji, eneo B') }] },
-      { vp: 'back', view: 'outside_switches', dur: 6, panel: 'outside', rings: ['eaton_out_fan', 'eaton_out_blower', 'eaton_out_airlock'],
-        cap: L4('Before any work: switch off, lock, and tag.', 'Antes de trabajar: apagar, poner candado y etiqueta.', 'Avant tout travail : couper, cadenasser, étiqueter.', 'Kabla ya kazi: zima, funga kufuli, weka lebo.'),
-        action: { text: U.practice_loto, fn: () => startProc('loto_fan_airlock') },
-        labels: [{ a: { ctl: 'eaton_out_fan' }, accent: HEX.ctl, text: L4('Shut-off: main fan', 'Corte: ventilador', 'Coupure : ventilateur', 'Kizima: feni kuu') },
-                 { a: { ctl: 'eaton_out_blower' }, accent: HEX.ctl, text: L4('Shut-off: blower', 'Corte: soplador', 'Coupure : soufflante', 'Kizima: kipuliza') },
-                 { a: { ctl: 'eaton_out_airlock' }, accent: HEX.ctl, text: L4('Shut-off: airlock', 'Corte: válvula rotativa', 'Coupure : écluse', 'Kizima: vali') }] }
-    ] }
-];
-let ST = null; // { i, k, t, paused, fired }
+const STORY = TOUR.steps; // tour.json: the guided tour, edited as data
+const SHUT = TOUR.shutdown;
+const TU = TOUR.ui;
+let ST = null; // { i, k, t, paused, fired, endT }  i === STORY.length = the shut-down sequence
+const curStep = () => (!ST ? null : ST.i >= STORY.length ? SHUT : STORY[ST.i]);
+let ST_ZONES0 = false;
 let CAPO = null, STCAP = null; // free caption (viewpoints, demo) and the story part's caption
 function endDemo() {
   if (!DEMO) return;
   for (const z of ['A', 'B']) Object.assign(S.flamex[z], { fire: false, buzzer: false, horns: false, extOff: false, spray: 0, cause: 0, by: null });
   DEMO = null; CAPO = null; elFoot.style.display = 'none';
 }
+function tourState(name, soft) { // set the simulator to one of tour.json's states (instantly: motors at speed, gates placed)
+  const st = TOUR.states[name]; if (!st) return;
+  if (soft && SM.hasState(st)) return;
+  if (DEMO) endDemo();
+  SM.applyState(st);
+  if (st.instant !== false) { initFlow(true); for (const g of Object.keys(gateLv)) if (GATES[g]) { GATES[g].f = gateLv[g]; placeGate(GATES[g]); } }
+  for (const id of Object.keys(CTL3)) buildLockVisual(id);
+}
+function tourAct(a) { SM.act(a, TOUR.states); renderAll(); }
 function storyStart(i, k = 0) {
   if (PROC) { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); }
+  if (!ST) ST_ZONES0 = !!TOG.zones;
   STOP = -1; LSRC.view = []; CAPO = null;
-  ST = { i: clamp(i, 0, STORY.length - 1), k: -1, t: 0, paused: false, fired: new Set() };
+  ST = { i: clamp(i, 0, STORY.length), k: -1, t: 0, paused: false, fired: new Set(), endT: null };
   storyPhase(k);
 }
 function storyPhase(k) {
-  const step = STORY[ST.i], ph = step.phases[clamp(k, 0, step.phases.length - 1)];
-  ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set();
+  const step = curStep(), ph = step.phases[clamp(k, 0, step.phases.length - 1)];
+  ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set(); ST.endT = null;
   if (DEMO && !ph.demo) endDemo();
+  if (ph.state) tourState(ph.state, ph.state_soft);
   TOG.shed_walls = TOG.shed_roof = TOG.shop_wall = true;
+  TOG.zones = ph.zones ? true : ST_ZONES0;
   applyScene(ph.vp);
   const vw = ph.view ? CT.views[ph.view] : null;
   if (vw) applyViewVis(vw);
-  if (ph.demo) { TOG.follow = true; startDemo(); }
+  if (ph.demo === 'start') { TOG.follow = true; startDemo(); }
+  else if (ph.cam === 'none' || ph.demo) { /* the demo flies the camera */ }
   else if (vw) flyTo({ position: vw.position, target: vw.target });
-  else { const v = VPS.find(x => x.id === (ph.cam ? ph.cam.vp : ph.vp)); playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); }
-  LSRC.story = (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: l.accent, when: l.when }));
-  LSRC.max = 3; refreshLabels();
+  else if (ph.cam && ph.cam.position) flyTo(ph.cam);
+  else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); }
+  LSRC.story = (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: HEX[l.accent] || l.accent }));
+  LSRC.max = 3; refreshLabels(); zoneLabels();
   highlightStory(ph.hl || []);
   highlightControls([]); // the labels point at the controls; no rings over them
   if (ph.panel) openPanel(ph.panel); else if (PANEL && !PROC) closePanel();
   STCAP = ph.cap || null;
-  if (ph.enter) ph.enter();
   renderCaption(); renderSide(); updateFlow();
 }
+function untilOk(u) { if (!u) return true; const v = getPath(u.path); return 'eq' in u ? v === u.eq : !!v; }
 function stepStory(dt) {
   if (!ST) return;
-  const step = STORY[ST.i], ph = step.phases[ST.k];
+  const step = curStep(), ph = step.phases[ST.k];
   ST.t += dt;
-  for (const [t, f] of (ph.at || [])) if (ST.t >= t && !ST.fired.has(t)) { ST.fired.add(t); f(); }
-  if (ST.paused || ST.k >= step.phases.length - 1) return;
-  if (ph.demo ? (!DEMO && ST.t > 1) : ST.t >= ph.dur) storyPhase(ST.k + 1);
+  (ph.at || []).forEach(([t, a], j) => { if (ST.t >= t && !ST.fired.has(j)) { ST.fired.add(j); tourAct(a); } });
+  if (ST.paused) return;
+  const done = ST.t >= (ph.dur || 5) && (untilOk(ph.until) || ST.t > 60);
+  if (!done) return;
+  if (ST.k < step.phases.length - 1) { storyPhase(ST.k + 1); return; }
+  if (ph.end) return; // end card: Replay / Shut down
+  if (ST.endT == null) ST.endT = ST.t;
+  if (ST.t - ST.endT > 1.2) storyStart(ST.i + 1); // played straight through: on to the next step
 }
+function storyNext() { if (!ST) { storyStart(0); return; } storyStart(ST.i >= STORY.length ? 0 : ST.i + 1); }
+function storyPrev() { if (!ST) return; if (ST.k > 0) storyPhase(ST.k - 1); else storyStart(ST.i >= STORY.length ? STORY.length - 1 : Math.max(0, ST.i - 1)); }
 function storyStop() {
   if (!ST) return;
-  ST = null; STCAP = null; LSRC.story = []; refreshLabels(); highlightStory([]); hlGroup.clear();
+  ST = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
   if (DEMO) endDemo();
   renderCaption(); renderSide(); updateFlow();
 }
+window.addEventListener('keydown', e => { // keyboard: right arrow / Space next, left arrow back, Esc exit (the arrows walk in walk mode)
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.ctrlKey || e.altKey || e.metaKey) return;
+  const walk = MODE === 'walk';
+  if (e.code === 'Space' || e.code === 'PageDown' || (!walk && e.code === 'ArrowRight')) { e.preventDefault(); if (e.shiftKey && e.code === 'Space') storyPrev(); else storyNext(); }
+  else if (e.code === 'PageUp' || (!walk && e.code === 'ArrowLeft')) { if (ST) { e.preventDefault(); storyPrev(); } }
+  else if (e.code === 'Escape' && ST) storyStop();
+});
 function setCaption(o) { CAPO = o; renderCaption(); }
 function renderCaption() {
   const L1 = LANG === 'all' ? 'en' : LANG;
   let html;
   if (ST) {
-    const step = STORY[ST.i], ph = step.phases[ST.k];
-    const cap = (DEMO && CAPO) || STCAP;
+    const step = curStep(), ph = step.phases[ST.k];
+    const cap = STCAP || (DEMO && CAPO);
+    const caps = !cap ? '' : (Array.isArray(cap) ? cap : [cap]).map(c => `<div class="sb-cap">${t4(c)}</div>`).join('');
+    const n = ST.i >= STORY.length ? '' : `<span class="sb-n">${ST.i + 1} / ${STORY.length}</span>`;
+    const atEnd = ph.end && ST.k === step.phases.length - 1;
     html = `<div class="sb-top"><button class="sb-nav" data-sb="prev" aria-label="${esc(tx(U.back, L1))}">‹</button>
-      <div class="sb-title"><span class="sb-n">${ST.i + 1} / ${STORY.length}</span><span>${b4(step.title)}</span></div>
+      <div class="sb-title">${n}<span>${b4(step.title)}</span></div>
       <button class="sb-nav" data-sb="next" aria-label="${esc(tx(U.next, L1))}">›</button><button class="sb-x" data-sb="x" aria-label="${esc(tx(U.exit, L1))}">×</button></div>
-      ${cap ? `<div class="sb-cap">${t4(cap)}</div>` : ''}
+      ${caps}
       <div class="sb-dots">${step.phases.length > 1 ? step.phases.map((p, j) => `<button class="${j === ST.k ? 'on' : j < ST.k ? 'done' : ''}" data-sbp="${j}" aria-label="${j + 1}"></button>`).join('') : ''}
-        ${ST.paused || ST.k === step.phases.length - 1 ? `<button class="sb-re" data-sb="re">↻ ${esc(tx(U.replay, L1))}</button>` : ''}
-        ${ph.action ? `<button class="b sb-act" data-sb="act">${b4(ph.action.text)}</button>` : ''}</div>`;
+        ${ST.paused && !atEnd ? `<button class="sb-re" data-sb="re">↻ ${esc(tx(TU.replay, L1))}</button>` : ''}</div>
+      ${atEnd ? `<div class="sb-end"><button class="b sb-big" data-sb="replay">↻ ${b4(TU.replay)}</button>${ST.i < STORY.length ? `<button class="b sb-big sb-act" data-sb="shut">■ ${b4(TU.shutdown)}</button>` : ''}</div>` : ''}
+      <div class="sb-keys">${esc(tx(TU.keys, L1))}</div>`;
     elCap.className = 'story';
   } else if (CAPO) { html = t4(CAPO); elCap.className = ''; }
   else { html = `<button class="sb-start" data-sb="start">▶ ${b4(U.tour)} <span class="sb-n">${STORY.length}</span></button>`; elCap.className = 'idle'; }
   if (elCap._h === html) return;
-  elCap._h = html; elCap.innerHTML = html; elCap.style.display = MODE === 'walk' ? 'none' : 'block'; fitRight();
+  elCap._h = html; elCap.innerHTML = html; elCap.style.display = MODE === 'walk' && !ST ? 'none' : 'block'; fitRight();
   elCap.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
     const a = b.dataset.sb;
-    if (a === 'start') storyStart(0);
+    if (a === 'start' || a === 'replay') storyStart(0);
     else if (a === 'x') storyStop();
-    else if (a === 'next') storyStart(ST.i >= STORY.length - 1 ? 0 : ST.i + 1);
-    else if (a === 'prev') storyStart(ST.i <= 0 ? STORY.length - 1 : ST.i - 1);
-    else if (a === 're') storyStart(ST.i);
-    else if (a === 'act') { const f = STORY[ST.i].phases[ST.k].action.fn; storyStop(); f(); }
+    else if (a === 'next') storyNext();
+    else if (a === 'prev') storyPrev();
+    else if (a === 're') storyPhase(ST.k);
+    else if (a === 'shut') storyStart(STORY.length);
   });
   elCap.querySelectorAll('[data-sbp]').forEach(b => b.onclick = () => storyPhase(+b.dataset.sbp));
 }
@@ -2276,7 +2214,7 @@ function zoneLabels() { // with the zones on, the 3D view names them (same color
 function updateFlow() { // live state: arrows move only while their system runs; the story step's boxes glow
   const svg = $('#fmSvg'); if (!svg) return;
   const runS = LV.fan > 0.3 && anyGate(), runL = LV.blower > 0.3;
-  const hot = ST ? STORY[ST.i].map : [], fz = ST ? STORY[ST.i].zone : null;
+  const hot = ST ? (curStep().map || []) : [], fz = ST ? curStep().zone : null;
   const sig = [runS, runL, hot.join(), fz, TOG.zones].join('|');
   if (sig === FLOWSIG) return; FLOWSIG = sig;
   svg.classList.toggle('run-s', runS); svg.classList.toggle('run-l', runL);
@@ -2323,7 +2261,7 @@ function renderSide() {
       <div class="switch"><button class="b ${MODE === 'orbit' ? 'on' : ''}" data-mode="orbit">${b4(U.orbit)}</button><button class="b ${MODE === 'walk' ? 'on' : ''}" data-mode="walk">${b4(U.walk)}</button></div>
       <div class="note">${t4(U.drag_hint)}</div></div>
     <div class="sec"><div class="hd">${b4(U.show)}</div>
-      ${['xray', 'shed_walls', 'shed_roof', 'shop_wall', 'labels', 'sound'].map(k => `<label class="tog"><input type="checkbox" data-tog="${k}" ${TOG[k] ? 'checked' : ''}><span>${b4(U[k])}</span></label>`).join('')}</div>
+      ${['xray', 'shed_walls', 'shed_roof', 'shop_wall', 'shop_roof', 'labels', 'sound'].map(k => `<label class="tog"><input type="checkbox" data-tog="${k}" ${TOG[k] ? 'checked' : ''}><span>${b4(U[k])}</span></label>`).join('')}</div>
     <div class="sec"><div class="hd">${b4(U.sections)}</div><div class="row">${cutBtns}<button class="b ${EXPL.target ? 'on' : ''}" id="expl">${b4(U.exploded)}</button><button class="b" id="cutAll">${b4(U.close_all)}</button></div></div>
     <div class="sec"><div class="hd">${b4(U.flamex)}</div><button class="b wide ${DEMO ? 'on' : ''}" id="demo">${b4(U.flamex_run)}</button>
       <label class="tog"><input type="checkbox" data-tog="follow" ${TOG.follow ? 'checked' : ''}><span>${b4(U.follow)}</span></label>
@@ -2366,24 +2304,6 @@ function renderSide() {
 function renderAll() { renderSide(); renderInfo(); renderPanel(); renderProc(); renderHud(); }
 
 // ---------------------------------------------------------------- system on/off and reset
-function systemOn() {
-  let blocked = false;
-  for (const [m, d] of Object.entries(CT.motors)) {
-    if (motorLocked(m) || !motorPowered(m)) { blocked = true; continue; }
-    S.starter[d.starter] = true;
-  }
-  S.airlockBox = true;
-  if (S.air.on) for (const g of SC.presets.system_on_like_video.gates_open) S.gates[g] = true;
-  updateMotors();
-  if (blocked) say(MSG.locked_out, 'bad');
-  result('system', 'on', 'started');
-  renderAll();
-}
-function systemOff() {
-  for (const d of Object.values(CT.motors)) S.starter[d.starter] = false;
-  for (const g of Object.keys(S.gates)) S.gates[g] = false;
-  updateMotors(); result('system', 'off', 'stopped'); renderAll();
-}
 function resetScene(quiet = false) {
   DEMO = null; setCaption(null); elFoot.style.display = 'none';
   Object.assign(S, freshState());
@@ -2413,15 +2333,8 @@ function resize() {
 window.addEventListener('resize', resize);
 function tick(dt) {
   SIM.t += dt;
-  updateMotors();
-  for (const [m, d] of Object.entries(CT.motors)) {
-    const tgt = S.motor[m].running ? 1 : 0;
-    if (LV[m] < tgt) LV[m] = Math.min(1, LV[m] + dt / d.spin_up_s);
-    else if (LV[m] > tgt) LV[m] = Math.max(0, LV[m] - dt / d.coast_down_s);
-  }
+  SM.stepLevels(dt);
   for (const g of Object.keys(gateLv)) {
-    const tgt = S.gates[g] ? 1 : 0, sp = dt / (CT.gate_panel.move_s || 0.6);
-    if (gateLv[g] !== tgt) gateLv[g] = gateLv[g] < tgt ? Math.min(1, gateLv[g] + sp) : Math.max(0, gateLv[g] - sp);
     if (GATES[g] && Math.abs(GATES[g].f - gateLv[g]) > 1e-4) { GATES[g].f = gateLv[g]; placeGate(GATES[g]); }
   }
   for (const R of ROT) {
@@ -2450,18 +2363,39 @@ function tick(dt) {
   if (PROC) checkStep();
   soundTick(dt);
 }
+// automatic quality steps: average frame time over 2 s above 20 ms -> one step down (pixel ratio, then shadows, then particles)
+let PFRAC = 1; // share of flow particles drawn
+function applyQuality() {
+  renderer.setPixelRatio(qualPR()); resize();
+  const sh = QUAL.level >= 2;
+  if (sun.castShadow !== sh) { sun.castShadow = sh; SHADOW_DIRTY = true; }
+  PFRAC = QUAL.level >= 2 ? 1 : QUAL.level === 1 ? 0.6 : 0.35;
+}
+function stepQuality(dt) {
+  if (Q.has('shot') || Q.has('q') || document.hidden || dt > 0.25) return; // ignore tab switches and load hitches
+  QUAL.acc += dt; QUAL.n++;
+  if (QUAL.acc < 2) return;
+  const ms = 1000 * QUAL.acc / QUAL.n; QUAL.acc = 0; QUAL.n = 0;
+  if (QUAL.hold > 0) { QUAL.hold--; return; } // let the scene settle after load or a step
+  if (ms > 20 && QUAL.level > 0) { QUAL.level--; QUAL.hold = 1; applyQuality(); console.log('[dce] quality ' + QUAL.level + ' (frame ' + ms.toFixed(1) + ' ms)'); }
+}
 let FRAMEERR = 0;
 function frame() { try { frameInner(); } catch (e) { if (FRAMEERR++ < 3) console.error('[dce] frame error ' + (e && e.stack || e)); requestAnimationFrame(frame); } }
 let FRAMES = 0;
 function frameInner() {
   FRAMES++;
-  const dt = Math.min(0.05, clock.getDelta());
+  if (Q.has('dbg') && FRAMES % 20 === 1) console.log('[dce] frame ' + FRAMES + ' t ' + performance.now().toFixed(0) + ' cap ' + elCap.style.display + ' load ' + $('#loading').style.display);
+  const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
   stepCam(dt);
   if (MODE === 'orbit' && !CAMANIM) controls.update();
   stepWalk(dt);
   tick(dt);
   aHead.needsUpdate = aTail.needsUpdate = aCol.needsUpdate = aSize.needsUpdate = true;
+  stepOverhead();
+  if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
+  if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
   renderer.render(scene, camera);
+  stepQuality(rawDt);
   placeLabels(dt);
   uiAcc += dt;
   if (uiAcc > 0.25) {
@@ -2564,7 +2498,7 @@ if (Q.get('trip')) trip(Q.get('trip'), 'light');
   if (Q.has('cam')) { const c = Q.get('cam').split(',').map(Number); camera.position.set(c[0], c[1], c[2]); controls.target.set(c[3], c[4], c[5]); CAMANIM = null; }
   if (warm) { CAMANIM = null; controls.update(); }
 }
-if (Q.has('story')) { storyStart(+Q.get('story') - 1, +(Q.get('phase') || 1) - 1); if (Q.has('zones')) TOG.zones = Q.get('zones') === '1'; }
+if (Q.has('story')) { storyStart(+Q.get('story') - 1, +(Q.get('phase') || 1) - 1); if (Q.has('zones')) TOG.zones = Q.get('zones') === '1'; if (Q.has('pause')) ST.paused = true; }
 if (Q.has('zones') && !Q.has('story')) TOG.zones = Q.get('zones') === '1';
 FLOWSIG = ''; updateFlow(); zoneLabels();
 if (Q.has('sel')) { const b = FMB.find(x => x.id === Q.get('sel')); if (b) goFlow(b.id); }
@@ -2575,7 +2509,7 @@ if (Q.has('sel')) { const b = FMB.find(x => x.id === Q.get('sel')); if (b) goFlo
 if (Q.get('selftest')) selfTest();
 renderAll();
 renderCaption();
-if (Q.has('shot') || Q.has('story') || Q.has('sel')) setTimeout(() => console.log('[dce] labels ' + JSON.stringify(LREP) + ' fps ' + (window.__fps || 0).toFixed(1) + ' stage ' + elStage.clientWidth + 'x' + elStage.clientHeight + ' canvas ' + renderer.domElement.width + 'x' + renderer.domElement.height + ' cam ' + camera.position.toArray().map(v => v.toFixed(2)) + ' frames ' + FRAMES), +(Q.get('rep') || 6000));
+if (Q.has('shot') || Q.has('story') || Q.has('sel')) setTimeout(() => console.log('[dce] labels ' + JSON.stringify(LREP) + ' fps ' + (window.__fps || 0).toFixed(1) + ' stage ' + elStage.clientWidth + 'x' + elStage.clientHeight + ' canvas ' + renderer.domElement.width + 'x' + renderer.domElement.height + ' cam ' + camera.position.toArray().map(v => v.toFixed(2)) + ' frames ' + FRAMES + ' motors ' + Object.keys(S.motor).filter(m => S.motor[m].running).join('+') + ' box ' + S.airlockBox + ' panel ' + PANEL + ' quality ' + QUAL.level + ' tour ' + (ST ? ST.i + 1 + '.' + (ST.k + 1) : '-')), +(Q.get('rep') || 6000));
 $('#loading').style.display = 'none';
 window.__ready = true;
 window.__dce = { S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
