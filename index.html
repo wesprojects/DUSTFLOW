@@ -214,6 +214,9 @@ details.more summary:before{content:"B8  "} details.more[open] summary:before{c
 #loading .bar div{height:100%;width:0;background:#2563eb}
 #joy{position:absolute;left:18px;bottom:18px;width:120px;height:120px;border-radius:50%;background:rgba(30,40,60,.18);border:2px solid rgba(30,40,60,.35);z-index:6;display:none;touch-action:none}
 #joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(37,99,235,.75)}
+#navhint{position:absolute;left:50%;top:52px;transform:translateX(-50%);background:rgba(20,24,30,.82);color:#fff;font-size:14px;padding:8px 14px;border-radius:10px;z-index:6;pointer-events:none;max-width:min(820px,calc(100% - 420px));transition:opacity .8s}
+#navhint.off{opacity:0}
+#navhint .t4 .es{color:#f5a524} #navhint .t4 .fr{color:#78aaff} #navhint .t4 .sw{color:#b48edc}
 #walkhelp{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(20,24,30,.75);color:#fff;font-size:12px;padding:5px 10px;border-radius:8px;z-index:3;display:none}
 #modal{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:10;display:none;align-items:center;justify-content:center}
 #modal .card{width:min(360px,calc(100% - 24px))}
@@ -276,7 +279,7 @@ body{font-size:15px}
     <svg width="107" height="9" viewBox="0 0 107 9" style="display:block;margin-top:1px"><text x="0" y="8" textLength="107" lengthAdjust="spacingAndGlyphs" font-family="'DM Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace" font-size="7.5" font-weight="700" fill="#f5a524">RESEARCH AND DEVELOPMENT</text></svg>
   </div>
 </header>
-<script>const BUILD = "2026-11-13.1"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
+<script>const BUILD = "2026-11-13.2"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
 <div id="app">
   <aside id="side" aria-label="Controls"></aside>
   <main id="stage">

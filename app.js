@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createSim } from './sim.js';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -122,6 +123,8 @@ const U = {
   hatch: { en: 'Detector hatch', es: 'Escotilla del detector', fr: 'Trappe du détecteur', sw: 'Kifuniko cha kigunduzi' },
   real_speed: { en: 'Real speed', es: 'Velocidad real', fr: 'Vitesse réelle', sw: 'Kasi halisi' },
   shown_at: { en: 'drawn at', es: 'dibujado a', fr: 'dessiné à', sw: 'imechorwa kwa' },
+  home: { en: 'Home', es: 'Inicio', fr: 'Accueil', sw: 'Mwanzo' },
+  nav_hint: { en: 'Drag: look · Right-drag: move · Wheel: zoom to cursor · Double-click: go there · H: home', es: 'Arrastrar: mirar · Clic derecho y arrastrar: mover · Rueda: acercar al cursor · Doble clic: ir ahí · H: inicio', fr: 'Glisser : regarder · Clic droit et glisser : déplacer · Molette : zoom vers le curseur · Double-clic : y aller · H : accueil', sw: 'Buruta: tazama · Buruta kwa kitufe cha kulia: sogeza · Gurudumu: karibia kielekezi · Bofya mara mbili: nenda hapo · H: mwanzo' },
   walk_help: { en: "Drag to look. WASD or arrows to walk.", es: "Arrastre para mirar. WASD o flechas para caminar.", fr: "Glissez pour regarder. WASD ou flèches pour marcher.", sw: "Buruta kuangalia. WASD au mishale kutembea." },
   walk_help_touch: { en: "Drag to look. Joystick to walk.", es: "Arrastre para mirar. Joystick para caminar.", fr: "Glissez pour regarder. Joystick pour marcher.", sw: "Buruta kuangalia. Kijiti kutembea." },
   loading: { en: 'Loading the shop', es: 'Cargando el taller', fr: "Chargement de l'atelier", sw: 'Inapakia karakana' },
@@ -240,9 +243,9 @@ window.addEventListener('error', e => { console.error('app error', e.message); }
 // ---------------------------------------------------------------- load
 async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }
 const loader = new GLTFLoader();
-const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins'];
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins', 'collector_skins'];
 const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 60e6, shop_skins: 25e6 }; // updated by the real sizes as they arrive
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6, shop_skins: 14e6, collector_skins: 8e6 }; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
@@ -255,8 +258,8 @@ function loadGLB(k, optional = false) {
 }
 
 let SC, CT, PR, TOUR;
-const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
-  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true)]);
+const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
+  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true), loadGLB('collector_skins', true)]);
 TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
 
@@ -275,7 +278,7 @@ renderer.shadowMap.autoUpdate = false; // the shop is static: the shadow map is 
 elStage.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SC.render.background || '#eff1f5');
-const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 500);
+const camera = new THREE.PerspectiveCamera(46, 1, 0.03, 600);
 const hemi = new THREE.HemisphereLight(0xffffff, 0xa9aeb8, 2.1);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.55);
@@ -322,8 +325,33 @@ async function slimTextures() { // normal and ORM maps above 1024 px go to 1024 
   }
   await Promise.all(jobs);
 }
+// shop floor: plain, even gray sealed concrete with saw-cut control joints (owner, 2026-11-13). Joint grid from the column
+// grid: columns 7.315 m (24 ft) apart on the line y 9.125; joints on the column lines and at half bays (12 ft) east-west,
+// on the column line and halfway to each wall (about 15 ft) north-south. Photos 05 and 13 show no clear joints, so
+// this is the column grid divided evenly, not a measured layout.
+const FLOOR_JOINTS = { x0: 7.525, dx: 3.6576, y0: 9.125, dy: 4.5625, room: [0.152, 36.49, 0.152, 18.898] };
+function makeConcrete(m) {
+  m.map = null; m.normalMap = null; m.roughnessMap = null; m.metalnessMap = null; m.aoMap = null;
+  m.color.set(0x8f9396); m.roughness = 0.82; m.metalness = 0; m.envMapIntensity = 0.45;
+  const J = FLOOR_JOINTS;
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vJW;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvJW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vJW;
+float jline(float v, float off, float per) { float d = abs(fract((v - off) / per + 0.5) - 0.5) * per; float w = fwidth(v); return 1.0 - smoothstep(0.005, 0.005 + 1.5 * w, d); }`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+{ float sy = -vJW.z;
+  float inside = step(${J.room[0].toFixed(3)}, vJW.x) * step(vJW.x, ${J.room[1].toFixed(3)}) * step(${J.room[2].toFixed(3)}, sy) * step(sy, ${J.room[3].toFixed(3)});
+  float j = max(jline(vJW.x, ${J.x0.toFixed(4)}, ${J.dx.toFixed(4)}), jline(sy, ${J.y0.toFixed(4)}, ${J.dy.toFixed(4)})) * inside;
+  diffuseColor.rgb *= (0.975 + 0.025 * sin(vJW.x * 0.31 + 1.3) * sin(vJW.z * 0.23)) * (1.0 - 0.5 * j); }`);
+  };
+  m.customProgramCacheKey = () => 'dce_concrete';
+  m.needsUpdate = true;
+}
 function prepRoomMat(m) {
   if (m.userData.prepped) return; m.userData.prepped = true;
+  if (m.map && /T_Shell_Floor_BC/.test(m.map.name || '')) { makeConcrete(m); return; }
   shareTextures(m);
   if (m.transmission > 0) { m.transmission = 0; m.transparent = true; m.opacity = Math.min(m.opacity, 0.3); } // no transmission pass
   if (m.normalMap) m.normalScale.y *= -1; // the kits' normal maps are DirectX (green down)
@@ -331,7 +359,7 @@ function prepRoomMat(m) {
   for (const t of [m.map, m.normalMap, m.roughnessMap, m.aoMap]) if (t) t.anisotropy = 4;
   if (m.transparent) m.depthWrite = false;
 }
-for (const g of [gR, gK]) {
+for (const g of [gR, gK, gD]) {
   if (!g) continue;
   world.add(g.scene);
   g.scene.updateMatrixWorld(true);
@@ -358,7 +386,7 @@ for (const g of [gR, gK]) {
     roomMeshes.add(o);
     for (const m of (Array.isArray(o.material) ? o.material : [o.material])) prepRoomMat(m);
     let cat = null; for (let p = o; p; p = p.parent) if (ROOMCAT[p.name]) { cat = ROOMCAT[p.name]; break; }
-    o.castShadow = /^(Skin|Machines|Cranes|Cages)$/.test(cat || '');
+    o.castShadow = /^(Skin|CSkin|Machines|Cranes|Cages)$/.test(cat || '');
     o.receiveShadow = !/^(Overhead|Roof)$/.test(cat || '');
   });
 }
@@ -368,6 +396,19 @@ world.updateMatrixWorld(true);
 // node map and material registry (flat Lambert colors = the video's Workbench look)
 const NODE = {};
 world.traverse(o => { if (o.name && !NODE[o.name]) NODE[o.name] = o; });
+{ // controls.json wall_layout: the interactive Flamex panels and strobes stand where the assembled shop has them;
+  // the flat edgebanders and panel saw (click targets, outlines) sit on the textured machines
+  const WL = CT.wall_layout || {};
+  world.updateMatrixWorld(true);
+  for (const [n, m] of Object.entries(WL.moves || {})) {
+    const nd = NODE[n]; if (!nd) continue;
+    const b = new THREE.Box3().setFromObject(nd), c = b.getCenter(new THREE.Vector3());
+    const d = new THREE.Vector3(m.center[0] - c.x, m.center[1] - c.y, m.front_z - b.max.z);
+    for (const k of [n, ...(m.with || [])]) if (NODE[k]) NODE[k].position.add(d);
+  }
+  for (const [pre, d] of Object.entries(WL.machine_offsets || {})) if (Array.isArray(d)) for (const o of gM.scene.children) if (o.name.startsWith(pre)) o.position.add(V3(d));
+  world.updateMatrixWorld(true);
+}
 const MATS = {}; // name -> [materials]
 const lamCache = new Map();
 function toLambert(m) {
@@ -401,6 +442,41 @@ if (gR && NODE.Ctx_Ground) { // the explainer's ground stopped at x 30; the shop
   G.scale.x = (46 - bb.min.x) / (bb.max.x - bb.min.x); G.position.x += bb.min.x * (1 - G.scale.x);
   G.updateMatrixWorld(true);
 }
+// textured collector, ducts and shed (collector_skins.glb): shown instead of the explainer's flat parts, except while a
+// cutaway, the exploded view or a viewpoint needs the explainer's split pieces; x-ray makes them see-through
+const CSKIN_RE = { DC_Cyclone: /^Cyc__/, DC_Fan: /^Fan__/, DC_Airlock: /^AL__/, DC_ConveyBlower: /^BL__/, DC_FilterUnit: /^FL__/,
+  DC_Enclosure: /^Enc__/, DC_EnclosureFrame: /^Frame__/, DC_CompactorPad: /^Pad__slab$/ };
+const CSKINS = [];
+const XRAY_NAMES = new Set([...SC.translucent.shop_materials, ...SC.translucent.shed_materials]);
+const EXPL_NODES = new Set(Object.values(SC.explode.groups).flatMap(g => g.nodes));
+if (gD) gD.scene.traverse(o => {
+  const id = o.userData && o.userData.cskin; if (!id) return;
+  const re = CSKIN_RE[id] || new RegExp('^' + id + '$');
+  const nodes = Object.keys(NODE).filter(n => re.test(n) && NODE[n].parent && !ROOMCAT[n] && !/^CSkin_/.test(n));
+  const meshes = []; for (const n of nodes) NODE[n].traverse(m => { if (m.isMesh && pickables.includes(m)) meshes.push(m); });
+  const mats = [];
+  o.traverse(m => { if (m.isMesh) { m.material = m.material.clone(); m.material.userData.b = { t: m.material.transparent, o: m.material.opacity, dw: m.material.depthWrite }; mats.push(m.material); } });
+  const xray = meshes.some(m => [].concat(m.material).some(mm => XRAY_NAMES.has(mm.name)));
+  CSKINS.push({ id, node: o, nodes, meshes, mats, xray, expl: nodes.some(n => EXPL_NODES.has(n)), duct: nodes.some(n => SC.translucent.duct_nodes.includes(n)), on: null, xa: null });
+});
+function applySkins() {
+  if (!CSKINS.length) return;
+  const expl = EXPL.target > 0 || EXPL.e > 0.001;
+  const openCut = new Set(); let ductCut = false;
+  for (const [k, c] of Object.entries(CUT)) if (c.open || c.t > 0.001) { for (const n of (c.hide || [])) openCut.add(n); if (k === 'ducts') ductCut = true; }
+  for (const K of CSKINS) {
+    const on = (K.nodes.length === 0 || K.nodes.every(n => visibleDeep(NODE[n]))) && !K.nodes.some(n => openCut.has(n)) && !(expl && K.expl) && !(ductCut && K.duct);
+    if (on !== K.on) {
+      K.on = on; K.node.visible = on; SHADOW_DIRTY = true;
+      for (const m of K.meshes) { if (m.userData.mat0 === undefined) m.userData.mat0 = m.material; m.material = on ? NO_DRAW : m.userData.mat0; }
+    }
+    const xa = on && TOG.xray && K.xray;
+    if (xa !== K.xa) {
+      K.xa = xa;
+      for (const m of K.mats) { m.transparent = xa || m.userData.b.t; m.opacity = xa ? SC.translucent.alpha : m.userData.b.o; m.depthWrite = !xa && m.userData.b.dw; m.needsUpdate = true; }
+    }
+  }
+}
 function topNode(o) { // highest ancestor below a gltf scene root
   let p = o;
   while (p.parent && p.parent.parent && p.parent.parent !== world) p = p.parent;
@@ -413,7 +489,9 @@ const cloneMatFor = (nodeName) => { // per-node material clones (for tinting / c
   n.traverse(o => {
     if (!o.isMesh) return;
     const cl = (m) => { const c = m.clone(); c.userData.base = { ...m.userData.base }; (MATS[c.name] = MATS[c.name] || []).push(c); out.push(c); return c; };
-    o.material = Array.isArray(o.material) ? o.material.map(cl) : cl(o.material);
+    const cur = o.userData.mat0 !== undefined ? o.userData.mat0 : o.material;
+    const nm = Array.isArray(cur) ? cur.map(cl) : cl(cur);
+    if (o.userData.mat0 !== undefined) o.userData.mat0 = nm; else o.material = nm;
   });
   return out;
 };
@@ -430,7 +508,7 @@ const groupNodes = {
   shop_roof: roomOf('Roof')
 };
 const CUTHIDE = new Set(); // cut pieces hidden by open cross sections
-const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear']); // placeholder block replaced by the real wall controls
+const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear', ...((CT.wall_layout || {}).hide || [])]); // placeholder block and the old wall dressing
 // with the whole shop loaded, its own floor and north wall replace the explainer's cropped slab and plain wall pieces
 const CTX_WALL = [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low].filter(n => !/Flex|Card/.test(n));
 if (gR) for (const n of ['Ctx_ShopFloorSlab', ...CTX_WALL]) EXTRA_HIDE.add(n);
@@ -1255,7 +1333,50 @@ function stepFlamex(dt) { SM.stepFlamex(dt); }
 // ---------------------------------------------------------------- camera: orbit, tour, walk
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.09; controls.screenSpacePanning = true;
-controls.maxDistance = 120; controls.minDistance = 0.3;
+controls.maxDistance = 160; controls.minDistance = 0.05; // no hard limits that trap the view, only a sensible range
+controls.zoomToCursor = true; controls.zoomSpeed = 1.2; controls.panSpeed = 1.0; controls.rotateSpeed = 0.9;
+// ---- fluid navigation: zoom to the cursor, double-click to glide there, WASD/QE to move, H for home
+const navRay = new THREE.Raycaster();
+let navT = 0;
+function navMeshes() { const out = []; for (const o of pickables) if (visibleDeep(o)) out.push(o); for (const o of roomMeshes) if (visibleDeep(o)) out.push(o); return out; }
+function hitUnder(clientX, clientY) {
+  const r = renderer.domElement.getBoundingClientRect();
+  navRay.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), camera);
+  const h = navRay.intersectObjects(navMeshes(), false).find(x => !x.object.material || x.object.material.visible !== false || x.object.material === NO_DRAW);
+  return h || null;
+}
+renderer.domElement.addEventListener('wheel', e => { // runs before OrbitControls' own wheel handler
+  if (MODE !== 'orbit') return;
+  CAMANIM = null;
+  const now = performance.now(); if (now - navT < 120) return; navT = now;
+  const h = hitUnder(e.clientX, e.clientY);
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const dT = camera.position.distanceTo(controls.target);
+  const nd = wheelTargetDist(dT, h ? h.distance : null, e.deltaY < 0);
+  if (Math.abs(nd - dT) > 1e-3) controls.target.copy(camera.position).addScaledVector(dir, nd);
+}, { capture: true, passive: true });
+renderer.domElement.addEventListener('dblclick', e => {
+  const h = hitUnder(e.clientX, e.clientY); if (!h) return;
+  const g = glideGoal(camera.position.toArray(), h.point.toArray(), camera.position.distanceTo(h.point));
+  if (ST) { ST.paused = true; renderCaption(); }
+  flyTo(g, 0.9);
+});
+function stepFly(dt) {
+  if (MODE !== 'orbit') return;
+  const d = new THREE.Vector3(); camera.getWorldDirection(d);
+  const mv = flyStep(WALK.keys, Math.atan2(-d.x, -d.z), dt); if (!mv) return;
+  if (CAMANIM) { CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } }
+  const v = V3(mv); camera.position.add(v); controls.target.add(v);
+}
+function goHome() {
+  if (MODE === 'walk') setMode('orbit');
+  if (ST) storyStop();
+  STOP = 0; applyScene('overview');
+  const k = VPS[0].camera[VPS[0].camera.length - 1];
+  flyTo(k, 1.4); showLabels(VPS[0].labels, 3); renderSide();
+}
+window.addEventListener('keydown', e => { if (e.code === 'KeyH' && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !e.ctrlKey && !e.metaKey) goHome(); });
+
 let MODE = 'orbit';
 let CAMANIM = null; // {from:{p,t,fov}, keys:[...], t}
 function fovFor(k) {
@@ -1348,7 +1469,11 @@ function setMode(m) {
     CAMANIM = null; controls.enabled = false;
     const d = new THREE.Vector3(); camera.getWorldDirection(d);
     let p = camera.position.clone();
-    if (p.y > 6 || p.x < -10 || p.x > 40 || p.z < -30 || p.z > 9) { p.set(7.6, 0, -14.6); d.set(0, 0, -1); }
+    if (p.y > 6) { // from a high orbit view: stand on the floor in front of what you were looking at, facing the same way
+      const t = controls.target.clone(), h = new THREE.Vector3(d.x, 0, d.z); if (h.lengthSq() < 1e-6) h.set(0, 0, -1); h.normalize();
+      p.copy(t).addScaledVector(h, -3); d.copy(h);
+    }
+    if (p.x < -10 || p.x > 40 || p.z < -30 || p.z > 9) { p.set(7.6, 0, -14.6); d.set(0, 0, -1); }
     p.y = groundY(p.x, p.z) + WALK.eye;
     camera.position.copy(p);
     WALK.yaw = Math.atan2(-d.x, -d.z); WALK.pitch = 0;
@@ -1395,6 +1520,7 @@ function stepWalk(dt) {
   let f = (K.KeyW || K.ArrowUp ? 1 : 0) - (K.KeyS || K.ArrowDown ? 1 : 0) - WALK.joy.y;
   let r = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0) + WALK.joy.x;
   if (K.KeyQ) WALK.yaw += dt * 1.6; if (K.KeyE) WALK.yaw -= dt * 1.6;
+  if (f || r) { if (ST && !ST.paused) { ST.paused = true; renderCaption(); } }
   const sp = (K.ShiftLeft || K.ShiftRight ? 3.4 : 1.5);
   const fw = new THREE.Vector3(-Math.sin(WALK.yaw), 0, -Math.cos(WALK.yaw)), rt = new THREE.Vector3(-fw.z, 0, fw.x);
   camera.position.addScaledVector(fw, f * sp * dt).addScaledVector(rt, r * sp * dt);
@@ -1522,7 +1648,7 @@ function placeLabels(dt) {
   for (const it of items) {
     _pp.copy(it.p).project(camera);
     it.ax = (_pp.x * 0.5 + 0.5) * W; it.ay = (-_pp.y * 0.5 + 0.5) * H;
-    it.ok = TOG.labels && MODE !== 'walk' && _pp.z < 1 && _pp.z > -1 && it.ax > 10 && it.ax < W - 10 && it.ay > 10 && it.ay < H - 10 && (!it.when || it.when());
+    it.ok = TOG.labels && (MODE !== 'walk' || !!ST) && _pp.z < 1 && _pp.z > -1 && it.ax > 10 && it.ax < W - 10 && it.ay > 10 && it.ay < H - 10 && (!it.when || it.when());
     if (it.ok && obs.some(o => it.ax > o.x0 && it.ax < o.x1 && it.ay > o.y0 && it.ay < o.y1)) it.ok = false; // anchor hidden under a card
     if (it.ok && ++nOk > LSRC.max) it.ok = false; // at most a few at once
   }
@@ -2061,9 +2187,10 @@ function storyStart(i, k = 0) {
 }
 function storyPhase(k) {
   const step = curStep(), ph = step.phases[clamp(k, 0, step.phases.length - 1)];
+  const seq = ST.k === step.phases.indexOf(ph) - 1; // reached by playing on (a jump sets the exact state instead)
   ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set(); ST.endT = null;
   if (DEMO && !ph.demo) endDemo();
-  if (ph.state) tourState(ph.state, ph.state_soft);
+  if (ph.state) tourState(ph.state, ph.state_soft && seq);
   TOG.shed_walls = TOG.shed_roof = TOG.shop_wall = true;
   TOG.zones = ph.zones ? true : ST_ZONES0;
   applyScene(ph.vp);
@@ -2258,7 +2385,7 @@ function renderSide() {
       <div class="switch"><button class="b big ${sysOn ? 'go' : ''}" id="sysOn">${b4(U.on)}</button><button class="b big ${!sysOn ? 'stop' : ''}" id="sysOff">${b4(U.off)}</button></div>
       <div class="row" style="margin-top:6px"><button class="b wide" id="rst">${b4(U.reset_scene)}</button></div></div>
     <div class="sec"><div class="hd">${b4(U.view)}</div>
-      <div class="switch"><button class="b ${MODE === 'orbit' ? 'on' : ''}" data-mode="orbit">${b4(U.orbit)}</button><button class="b ${MODE === 'walk' ? 'on' : ''}" data-mode="walk">${b4(U.walk)}</button></div>
+      <div class="switch"><button class="b ${MODE === 'orbit' ? 'on' : ''}" data-mode="orbit">${b4(U.orbit)}</button><button class="b ${MODE === 'walk' ? 'on' : ''}" data-mode="walk">${b4(U.walk)}</button><button class="b" id="home" title="H">⌂ ${b4(U.home)}</button></div>
       <div class="note">${t4(U.drag_hint)}</div></div>
     <div class="sec"><div class="hd">${b4(U.show)}</div>
       ${['xray', 'shed_walls', 'shed_roof', 'shop_wall', 'shop_roof', 'labels', 'sound'].map(k => `<label class="tog"><input type="checkbox" data-tog="${k}" ${TOG[k] ? 'checked' : ''}><span>${b4(U[k])}</span></label>`).join('')}</div>
@@ -2286,6 +2413,7 @@ function renderSide() {
   on('#sysOff', () => systemOff());
   on('#rst', () => resetScene());
   on('[data-mode]', b => setMode(b.dataset.mode));
+  on('#home', () => goHome());
   on('[data-stop]', b => applyStop(+b.dataset.stop));
   const det = elSide.querySelector('details.more'); if (det) det.ontoggle = () => { MOREOPEN = det.open; };
   elSide.querySelectorAll('[data-tog]').forEach(i => i.onchange = () => {
@@ -2389,9 +2517,11 @@ function frameInner() {
   stepCam(dt);
   if (MODE === 'orbit' && !CAMANIM) controls.update();
   stepWalk(dt);
+  stepFly(dt);
   tick(dt);
   aHead.needsUpdate = aTail.needsUpdate = aCol.needsUpdate = aSize.needsUpdate = true;
   stepOverhead();
+  applySkins();
   if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
   if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
   renderer.render(scene, camera);
@@ -2511,6 +2641,10 @@ renderAll();
 renderCaption();
 if (Q.has('shot') || Q.has('story') || Q.has('sel')) setTimeout(() => console.log('[dce] labels ' + JSON.stringify(LREP) + ' fps ' + (window.__fps || 0).toFixed(1) + ' stage ' + elStage.clientWidth + 'x' + elStage.clientHeight + ' canvas ' + renderer.domElement.width + 'x' + renderer.domElement.height + ' cam ' + camera.position.toArray().map(v => v.toFixed(2)) + ' frames ' + FRAMES + ' motors ' + Object.keys(S.motor).filter(m => S.motor[m].running).join('+') + ' box ' + S.airlockBox + ' panel ' + PANEL + ' quality ' + QUAL.level + ' tour ' + (ST ? ST.i + 1 + '.' + (ST.k + 1) : '-')), +(Q.get('rep') || 6000));
 $('#loading').style.display = 'none';
+{ // first visit: a short navigation hint
+  let seen = false; try { seen = localStorage.getItem('dce_nav_hint') === '1'; localStorage.setItem('dce_nav_hint', '1'); } catch (e) { /* storage blocked */ }
+  if (!seen || Q.has('hint')) { const el = document.createElement('div'); el.id = 'navhint'; el.innerHTML = t4(U.nav_hint); elStage.appendChild(el); setTimeout(() => el.classList.add('off'), 9000); setTimeout(() => el.remove(), 10000); }
+}
 window.__ready = true;
 window.__dce = { S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
 console.log('[dce] ready ' + JSON.stringify({ particles: NTOT, flowParticles: NP, nodes: Object.keys(NODE).length }));
