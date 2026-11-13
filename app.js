@@ -1541,7 +1541,7 @@ function stepCam(dt) {
   camera.lookAt(controls.target); // face the moving target the whole way
   if (f >= 1) { const cb = A.after; CAMANIM = null; if (cb) cb(); }
 }
-controls.addEventListener('start', () => { if (HERO) { HERO = false; renderCaption(); } CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } });
+controls.addEventListener('start', () => { if (HERO) { setTimeout(() => { if (HERO && !ST) { HERO = false; renderCaption(); } }, 300); } CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } });
 
 // walk mode
 const WALK = { yaw: 0, pitch: 0, keys: {}, joy: { x: 0, y: 0 }, eye: 1.65 };
