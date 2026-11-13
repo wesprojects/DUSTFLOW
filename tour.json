@@ -1,184 +1,1250 @@
 {
-  "meta": {
-    "title": "Guided tour: from a closed shop to the whole system running",
-    "made": "2026-11-13",
-    "edit_rule": "Edit the words, times and actions here; app.js plays them. Each step has phases that play on their own. A phase can set a 'state' (from 'states'), run timed actions 'at' [[seconds, action]], wait 'until' a simulator value, fly the camera ('view' = a controls.json view, 'cam' = {vp, keys} from a scene.json viewpoint, or {position, target}, or 'none' = leave the camera), show 'labels', ring 'rings' controls and open a 'panel'. 'vp' picks what a scene.json viewpoint hides and cuts open.",
-    "start_order": "Owner, 2026-11-13: the inside starters are turned on right to left: starter 1 (rotary airlock, with the airlock box), starter 2 (transfer blower), starter 3 (dust collector main fan). Shut down is the reverse.",
-    "actions": "{do:'starter', id, act:'start'|'stop'} {do:'airlock_box', act:'on'|'off'} {do:'gate', id ('*' = every open gate), open} {do:'fx', zone:'A'|'B', btn:'key'|'int'|'ext'|'reset'} {do:'state', state} {do:'eaton', id, on}"
+ "meta": {
+  "title": "Guided tour: from a closed shop to the whole system running",
+  "made": "2026-11-13",
+  "edit_rule": "Edit the words, times and actions here; app.js plays them. Each step has phases that play on their own. A phase can set a 'state' (from 'states'), run timed actions 'at' [[seconds, action]], wait 'until' a simulator value, fly the camera ('view' = a controls.json view, 'cam' = {vp, keys} from a scene.json viewpoint, or {position, target}, or 'none' = leave the camera), show 'labels', ring 'rings' controls and open a 'panel'. 'vp' picks what a scene.json viewpoint hides and cuts open.",
+  "start_order": "Owner, 2026-11-13: the inside starters are turned on right to left: starter 1 (rotary airlock, with the airlock box), starter 2 (transfer blower), starter 3 (dust collector main fan). Shut down is the reverse.",
+  "actions": "{do:'starter', id, act:'start'|'stop'} {do:'airlock_box', act:'on'|'off'} {do:'gate', id ('*' = every open gate), open} {do:'fx', zone:'A'|'B', btn:'key'|'int'|'ext'|'reset'} {do:'state', state} {do:'eaton', id, on}",
+  "xray_rule": "'xray': true = this phase looks inside the ducts, so x-ray switches on for it (it is off by default)."
+ },
+ "ui": {
+  "replay": {
+   "en": "Replay",
+   "es": "Repetir",
+   "fr": "Revoir",
+   "sw": "Rudia"
   },
-  "ui": {
-    "replay": { "en": "Replay", "es": "Repetir", "fr": "Revoir", "sw": "Rudia" },
-    "shutdown": { "en": "Shut down", "es": "Apagar", "fr": "Arrêter", "sw": "Zima" },
-    "keys": { "en": "Keys: → or Space next, ← back, Esc exit", "es": "Teclas: → o Espacio sigue, ← atrás, Esc salir", "fr": "Touches : → ou Espace suite, ← retour, Échap quitter", "sw": "Vitufe: → au Space mbele, ← nyuma, Esc toka" }
-  },
-  "states": {
-    "closed": { "fresh": true, "starters": [], "airlock_box": false, "gates": [], "instant": true },
-    "airlock": { "fresh": true, "starters": ["starter1"], "airlock_box": true, "gates": [], "instant": true },
-    "airlock_blower": { "fresh": true, "starters": ["starter1", "starter2"], "airlock_box": true, "gates": [], "instant": true },
-    "running": { "fresh": true, "starters": ["starter1", "starter2", "starter3"], "airlock_box": true, "gates": [], "instant": true },
-    "cnc1": { "fresh": true, "starters": ["starter1", "starter2", "starter3"], "airlock_box": true, "gates": ["CNC1"], "instant": true }
-  },
-  "steps": [
-    {
-      "id": "closed",
-      "title": { "en": "The shop is closed", "es": "El taller está cerrado", "fr": "L'atelier est fermé", "sw": "Karakana imefungwa" },
-      "map": [],
-      "phases": [
-        { "state": "closed", "vp": "overview", "dur": 6,
-          "cap": { "en": "Everything is off. The Eatons are on, but every starter is off.", "es": "Todo está apagado. Los Eaton están encendidos, pero los arrancadores están apagados.", "fr": "Tout est arrêté. Les Eaton sont en marche, mais les démarreurs sont arrêtés.", "sw": "Kila kitu kimezimwa. Eaton ziko wazi, lakini vianzishi vyote vimezimwa." },
-          "labels": [
-            { "a": "overview.shop", "accent": "#5d6570", "text": { "en": "Laminate shop", "es": "Taller de laminado", "fr": "Atelier de stratifié", "sw": "Karakana ya laminati" } },
-            { "a": "overview.shed", "accent": "#5d6570", "text": { "en": "Dust collector", "es": "Colector de polvo", "fr": "Dépoussiéreur", "sw": "Kikusanya vumbi" } } ] },
-        { "vp": "overview", "cam": { "position": [11.2, 6.8, -28.6], "target": [4.4, 2.8, -21.0], "hfov_deg": 61.9 }, "dur": 6,
-          "cap": { "en": "Nothing spins and no air moves. All gates are closed. Flamex is on watch.", "es": "Nada gira y el aire no se mueve. Todas las compuertas están cerradas. Flamex está vigilando.", "fr": "Rien ne tourne, l'air ne bouge pas. Toutes les vannes sont fermées. Flamex surveille.", "sw": "Hakuna kinachozunguka, hewa haisogei. Vali zote zimefungwa. Flamex inalinda." } }
-      ]
-    },
-    {
-      "id": "start",
-      "title": { "en": "Start the dust collector, one system at a time", "es": "Arranque el colector, un sistema a la vez", "fr": "Démarrez le dépoussiéreur, un système à la fois", "sw": "Washa kikusanya vumbi, mfumo mmoja baada ya mwingine" },
-      "map": ["airlock", "blower", "fan"],
-      "phases": [
-        { "state": "closed", "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["airlock_box", "starter1"], "dur": 5,
-          "at": [[1.2, { "do": "airlock_box", "act": "on" }], [2.2, { "do": "starter", "id": "starter1", "act": "start" }]],
-          "cap": { "en": "1. Starter 1 (right) and the airlock box: the rotary airlock.", "es": "1. Arrancador 1 (derecha) y la caja de la válvula: la válvula rotativa.", "fr": "1. Démarreur 1 (à droite) et le boîtier de l'écluse : l'écluse rotative.", "sw": "1. Kianzishi 1 (kulia) na kisanduku cha vali: vali ya kuzunguka." },
-          "labels": [{ "a": { "ctl": "starter1" }, "accent": "#2563eb", "text": { "en": "Starter 1", "es": "Arrancador 1", "fr": "Démarreur 1", "sw": "Kianzishi 1" } }] },
-        { "state": "airlock", "state_soft": true, "vp": "airlock", "cam": { "vp": "airlock", "keys": [0, 1] }, "dur": 5, "hl": ["AL__body_liner", "Rig_AirlockRotor"],
-          "cap": { "en": "The airlock turns. No chips yet.", "es": "La válvula gira. Todavía no hay virutas.", "fr": "L'écluse tourne. Pas encore de copeaux.", "sw": "Vali inazunguka. Bado hakuna vipande." },
-          "labels": [{ "a": "airlock.al", "accent": "#9a6b3c", "text": { "en": "Rotary airlock", "es": "Válvula rotativa", "fr": "Écluse rotative", "sw": "Vali ya kuzunguka" } }] },
-        { "state": "airlock", "state_soft": true, "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["starter2"], "dur": 4.5,
-          "at": [[1.5, { "do": "starter", "id": "starter2", "act": "start" }]],
-          "cap": { "en": "2. Starter 2: the transfer blower.", "es": "2. Arrancador 2: el soplador de transferencia.", "fr": "2. Démarreur 2 : la soufflante de transfert.", "sw": "2. Kianzishi 2: kipuliza cha kusafirisha." },
-          "labels": [{ "a": { "ctl": "starter2" }, "accent": "#2563eb", "text": { "en": "Starter 2", "es": "Arrancador 2", "fr": "Démarreur 2", "sw": "Kianzishi 2" } }] },
-        { "state": "airlock_blower", "state_soft": true, "vp": "back", "cam": { "vp": "back", "keys": [0, 1] }, "dur": 6,
-          "cap": { "en": "The chip loop air starts: out to the roll-off and back.", "es": "Arranca el aire del circuito: va al contenedor y regresa.", "fr": "L'air de la boucle démarre : vers la benne et retour.", "sw": "Hewa ya mzunguko inaanza: inaenda kwenye kontena na kurudi." },
-          "labels": [
-            { "a": "back.line", "accent": "#12a594", "text": { "en": "Out, upper hose", "es": "Sale por la manguera de arriba", "fr": "Aller : tuyau du haut", "sw": "Kwenda: bomba la juu" } },
-            { "a": "back.ret", "accent": "#12a594", "text": { "en": "Back, lower hose", "es": "Regresa por la manguera de abajo", "fr": "Retour : tuyau du bas", "sw": "Kurudi: bomba la chini" } } ] },
-        { "state": "airlock_blower", "state_soft": true, "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["starter3"], "dur": 4.5,
-          "at": [[1.5, { "do": "starter", "id": "starter3", "act": "start" }]],
-          "cap": { "en": "3. Starter 3 (left): the dust collector main fan.", "es": "3. Arrancador 3 (izquierda): el ventilador principal del colector.", "fr": "3. Démarreur 3 (à gauche) : le ventilateur principal du dépoussiéreur.", "sw": "3. Kianzishi 3 (kushoto): feni kuu ya kikusanya vumbi." },
-          "labels": [{ "a": { "ctl": "starter3" }, "accent": "#2563eb", "text": { "en": "Starter 3", "es": "Arrancador 3", "fr": "Démarreur 3", "sw": "Kianzishi 3" } }] },
-        { "state": "running", "state_soft": true, "vp": "fan", "cam": { "vp": "fan", "keys": [0, 1] }, "dur": 6, "hl": ["Fan__scroll", "Fan__scroll_liner"],
-          "cap": { "en": "Suction and push start. No dust yet: every gate is closed.", "es": "Arrancan la succión y el empuje. Aún no hay polvo: las compuertas están cerradas.", "fr": "L'aspiration et le soufflage démarrent. Pas encore de poussière : les vannes sont fermées.", "sw": "Kuvuta na kusukuma kunaanza. Bado hakuna vumbi: vali zote zimefungwa." },
-          "labels": [{ "a": "fan.fan", "accent": "#d9b100", "text": { "en": "Main fan", "es": "Ventilador principal", "fr": "Ventilateur principal", "sw": "Feni kuu" } }] }
-      ]
-    },
-    {
-      "id": "gate",
-      "title": { "en": "Open the machine's gate", "es": "Abra la compuerta de la máquina", "fr": "Ouvrez la vanne de la machine", "sw": "Fungua vali ya mashine" },
-      "map": ["gates"],
-      "phases": [
-        { "state": "running", "vp": "machines", "view": "gate_panel", "panel": "gate_panel", "rings": ["gate_panel"], "dur": 5,
-          "at": [[1.8, { "do": "gate", "id": "CNC1", "open": true }]],
-          "cap": { "en": "At the blast gate panel, press green for CNC 1.", "es": "En el panel de compuertas, pulse el verde de CNC 1.", "fr": "Au panneau des vannes, appuyez sur le vert de CNC 1.", "sw": "Kwenye paneli ya vali, bonyeza kijani cha CNC 1." },
-          "labels": [{ "a": { "ctl": "gate_panel" }, "accent": "#d8b51a", "text": { "en": "Blast gate panel", "es": "Panel de compuertas", "fr": "Panneau des vannes", "sw": "Paneli ya vali" } }] },
-        { "state": "cnc1", "state_soft": true, "vp": "machines", "cam": { "vp": "machines", "keys": [0, 1] }, "dur": 5, "hl": ["Gate_CNC1", "Gate_CNC1_Slide"],
-          "cap": { "en": "Its gate slides open. Now the hose pulls.", "es": "Su compuerta se abre. Ahora la manguera jala.", "fr": "Sa vanne s'ouvre. Le tuyau aspire.", "sw": "Vali yake inafunguka. Sasa bomba linavuta." },
-          "labels": [{ "a": "machines.g1", "accent": "#1f9d55", "text": { "en": "Blast gate open", "es": "Compuerta abierta", "fr": "Vanne ouverte", "sw": "Vali iko wazi" } }] }
-      ]
-    },
-    {
-      "id": "dust",
-      "title": { "en": "Follow the dust", "es": "Siga el polvo", "fr": "Suivez la poussière", "sw": "Fuata vumbi" },
-      "zone": "suction", "map": ["machines", "duct", "cyclone", "airlock", "blower", "rolloff", "fan", "filters", "clean", "drum"],
-      "phases": [
-        { "state": "cnc1", "vp": "machines", "cam": { "vp": "machines", "keys": [0, 1] }, "dur": 5, "hl": ["Duct_Hose_CNC1"],
-          "cap": { "en": "CNC 1 runs. The hose pulls up the sawdust.", "es": "CNC 1 funciona. La manguera sube el aserrín.", "fr": "La CNC 1 tourne. Le tuyau aspire la sciure.", "sw": "CNC 1 inafanya kazi. Bomba linavuta vumbi la mbao juu." },
-          "labels": [{ "a": "machines.cnc1", "accent": "#f08a24", "text": { "en": "CNC 1 running", "es": "CNC 1 en marcha", "fr": "CNC 1 en marche", "sw": "CNC 1 inafanya kazi" } }] },
-        { "vp": "machines", "cam": { "vp": "machines", "keys": [2, 3] }, "dur": 5,
-          "cap": { "en": "Along the main duct to the north wall.", "es": "Por el ducto principal hasta la pared norte.", "fr": "Le long de la gaine principale jusqu'au mur nord.", "sw": "Kupitia bomba kuu hadi ukuta wa kaskazini." },
-          "labels": [{ "a": "machines.trunk", "accent": "#f08a24", "text": { "en": "Main duct", "es": "Ducto principal", "fr": "Gaine principale", "sw": "Bomba kuu" } }] },
-        { "vp": "wall", "cam": { "vp": "wall", "keys": [0, 1] }, "dur": 5,
-          "cap": { "en": "Through the wall into the cyclone.", "es": "Cruza la pared y entra al ciclón.", "fr": "À travers le mur, dans le cyclone.", "sw": "Kupitia ukuta hadi kimbunga." },
-          "labels": [{ "a": "wall.gap", "accent": "#f08a24", "text": { "en": "Through the wall", "es": "A través de la pared", "fr": "À travers le mur", "sw": "Kupitia ukuta" } }] },
-        { "vp": "cyclone", "dur": 7, "hl": ["Cyc__barrel_liner", "Cyc__cone_liner"],
-          "cap": { "en": "The cyclone splits it. Chips fall, air rises.", "es": "El ciclón lo separa. Las virutas caen, el aire sube.", "fr": "Le cyclone sépare. Les copeaux tombent, l'air monte.", "sw": "Kimbunga kinatenganisha. Vipande vinaanguka, hewa inapanda." },
-          "labels": [
-            { "a": "cyclone.cone", "accent": "#9a6b3c", "text": { "en": "Chips fall", "es": "Las virutas caen", "fr": "Les copeaux tombent", "sw": "Vipande vinaanguka" } },
-            { "a": "cyclone.core", "accent": "#d9b100", "text": { "en": "Air rises", "es": "El aire sube", "fr": "L'air monte", "sw": "Hewa inapanda" } } ] },
-        { "vp": "airlock", "cam": { "vp": "airlock", "keys": [0, 1] }, "dur": 5,
-          "cap": { "en": "The airlock drops the chips into the chip loop.", "es": "La válvula deja caer las virutas al circuito.", "fr": "L'écluse fait tomber les copeaux dans la boucle.", "sw": "Vali inadondosha vipande kwenye mzunguko." },
-          "labels": [{ "a": "airlock.al", "accent": "#9a6b3c", "text": { "en": "Rotary airlock", "es": "Válvula rotativa", "fr": "Écluse rotative", "sw": "Vali ya kuzunguka" } }] },
-        { "vp": "back", "cam": { "vp": "back", "keys": [0, 1] }, "dur": 5,
-          "cap": { "en": "The blower sends them out to the roll-off.", "es": "El soplador las manda al contenedor.", "fr": "La soufflante les envoie à la benne.", "sw": "Kipuliza kinavipeleka kwenye kontena." },
-          "labels": [{ "a": "back.pile", "accent": "#9a6b3c", "text": { "en": "Chips land here", "es": "Las virutas caen aquí", "fr": "Les copeaux arrivent ici", "sw": "Vipande vinatua hapa" } }] },
-        { "vp": "fan", "cam": { "vp": "fan", "keys": [0, 1] }, "dur": 4.5,
-          "cap": { "en": "The air goes up through the main fan.", "es": "El aire sube por el ventilador principal.", "fr": "L'air monte par le ventilateur principal.", "sw": "Hewa inapanda kupitia feni kuu." },
-          "labels": [{ "a": "fan.fan", "accent": "#d9b100", "text": { "en": "Main fan", "es": "Ventilador principal", "fr": "Ventilateur principal", "sw": "Feni kuu" } }] },
-        { "vp": "filters", "cam": { "vp": "filters", "keys": [0, 1] }, "dur": 5.5,
-          "cap": { "en": "The filters catch the fine dust. Clean air leaves.", "es": "Los filtros atrapan el polvo fino. Sale aire limpio.", "fr": "Les filtres retiennent la poussière fine. L'air propre sort.", "sw": "Vichujio vinanasa vumbi laini. Hewa safi inatoka." },
-          "labels": [{ "a": "filters.clean", "accent": "#3b82f6", "text": { "en": "Clean air out", "es": "Sale aire limpio", "fr": "Air propre", "sw": "Hewa safi inatoka" } }] },
-        { "vp": "filters", "cam": { "vp": "filters", "keys": [2, 3] }, "dur": 4.5,
-          "cap": { "en": "Fine dust falls into the drum.", "es": "El polvo fino cae al tambor.", "fr": "La poussière fine tombe dans le fût.", "sw": "Vumbi laini linaanguka kwenye pipa." },
-          "labels": [{ "a": "filters.drum", "accent": "#7d8590", "text": { "en": "Fine dust drum", "es": "Tambor de polvo fino", "fr": "Fût de poussière fine", "sw": "Pipa la vumbi laini" } }] }
-      ]
-    },
-    {
-      "id": "spark",
-      "title": { "en": "Spark detection", "es": "Detección de chispas", "fr": "Détection d'étincelles", "sw": "Kugundua cheche" },
-      "map": [],
-      "phases": [
-        { "state": "cnc1", "vp": "flamex", "demo": "start", "cam": "none", "until": { "path": "flamex.A.fire", "eq": true }, "dur": 1.5,
-          "cap": { "en": "A spark comes down the duct. The detectors see it.", "es": "Una chispa baja por el ducto. Los detectores la ven.", "fr": "Une étincelle descend la gaine. Les détecteurs la voient.", "sw": "Cheche inashuka kwenye bomba. Vigunduzi vinaiona." },
-          "labels": [{ "a": "flamex.detA", "accent": "#e0453a", "text": { "en": "Spark detectors", "es": "Detectores de chispas", "fr": "Détecteurs d'étincelles", "sw": "Vigunduzi vya cheche" } }] },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "dur": 2.5,
-          "cap": { "en": "Water sprays across the duct. Horns, strobes and the panel go on.", "es": "El agua rocía el ducto. Se encienden sirenas, luces y el panel.", "fr": "L'eau arrose la gaine. Sirènes, flashs et panneau s'allument.", "sw": "Maji yananyunyizwa ndani ya bomba. Honi, taa na paneli zinawaka." },
-          "labels": [
-            { "a": "flamex.noz", "accent": "#2a9fd6", "text": { "en": "Water spray", "es": "Rocío de agua", "fr": "Jet d'eau", "sw": "Kinyunyizio cha maji" } },
-            { "a": "flamex.horn", "accent": "#e0453a", "text": { "en": "Horns and strobes", "es": "Sirenas y luces", "fr": "Sirènes et flashs", "sw": "Honi na taa" } } ] },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_A", "rings": ["panel_A"], "dur": 3,
-          "at": [[0.8, { "do": "fx", "zone": "A", "btn": "key" }], [1.8, { "do": "fx", "zone": "A", "btn": "ext" }]],
-          "cap": { "en": "Silence: key to 1, then ext. The horns stop. The water does not.", "es": "Silenciar: llave en 1, luego ext. Las sirenas paran. El agua no.", "fr": "Silence : clé sur 1, puis ext. Les sirènes s'arrêtent. L'eau continue.", "sw": "Nyamazisha: ufunguo kwenye 1, kisha ext. Honi zinanyamaza. Maji yanaendelea." } },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_A", "until": { "path": "flamex.A.spray", "eq": 0 }, "dur": 1,
-          "cap": { "en": "The water stops after its set time.", "es": "El agua para después de su tiempo.", "fr": "L'eau s'arrête après son temps réglé.", "sw": "Maji yanaacha baada ya muda wake." } },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_A", "rings": ["panel_A"], "dur": 3.5,
-          "at": [[0.8, { "do": "fx", "zone": "A", "btn": "reset" }], [2.0, { "do": "fx", "zone": "A", "btn": "key" }]],
-          "cap": { "en": "Reset with the key at 1, then turn the key back to 0.", "es": "Reinicie con la llave en 1 y regrese la llave a 0.", "fr": "Réarmez avec la clé sur 1, puis remettez la clé sur 0.", "sw": "Rudisha ufunguo ukiwa kwenye 1, kisha urudishe ufunguo kwenye 0." } },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_B", "until": { "path": "flamex.B.fire", "eq": true }, "dur": 2,
-          "cap": { "en": "Zone 2 (B), on the conveyor riser, works the same way.", "es": "La zona 2 (B), en el tubo de transporte, funciona igual.", "fr": "La zone 2 (B), sur la colonne de transport, fonctionne pareil.", "sw": "Eneo la 2 (B), kwenye bomba la wima, linafanya kazi vivyo hivyo." },
-          "labels": [
-            { "a": "flamex.detB", "accent": "#e0453a", "text": { "en": "Spark detectors, zone 2", "es": "Detectores, zona 2", "fr": "Détecteurs, zone 2", "sw": "Vigunduzi, eneo la 2" } },
-            { "a": "flamex.valve", "accent": "#2a9fd6", "text": { "en": "Water valve, zone 2", "es": "Válvula de agua, zona 2", "fr": "Vanne d'eau, zone 2", "sw": "Vali ya maji, eneo la 2" } } ] },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_B", "rings": ["panel_B"], "until": { "path": "flamex.B.spray", "eq": 0 }, "dur": 3,
-          "at": [[1.0, { "do": "fx", "zone": "B", "btn": "key" }], [2.0, { "do": "fx", "zone": "B", "btn": "ext" }]],
-          "cap": { "en": "Silence it the same way. The water stops on its own.", "es": "Silencie igual. El agua para sola.", "fr": "Même silence. L'eau s'arrête toute seule.", "sw": "Nyamazisha vivyo hivyo. Maji yanaacha yenyewe." } },
-        { "vp": "flamex", "demo": "keep", "cam": "none", "panel": "flamex_B", "rings": ["panel_B"], "dur": 3.5,
-          "at": [[0.8, { "do": "fx", "zone": "B", "btn": "reset" }], [2.0, { "do": "fx", "zone": "B", "btn": "key" }]],
-          "cap": { "en": "Reset, key back to 0. Flamex is on watch again.", "es": "Reinicie y regrese la llave a 0. Flamex vigila otra vez.", "fr": "Réarmez, clé sur 0. Flamex surveille de nouveau.", "sw": "Rudisha, ufunguo kwenye 0. Flamex inalinda tena." } }
-      ]
-    },
-    {
-      "id": "together",
-      "title": { "en": "How it all works together", "es": "Cómo funciona todo junto", "fr": "Comment tout fonctionne ensemble", "sw": "Jinsi yote yanavyofanya kazi pamoja" },
-      "map": [],
-      "phases": [
-        { "state": "cnc1", "vp": "overview", "zones": true, "dur": 12, "end": true,
-          "cap": [
-            { "en": "Suction brings the dust in.", "es": "La succión trae el polvo.", "fr": "L'aspiration amène la poussière.", "sw": "Kuvuta kunaleta vumbi." },
-            { "en": "The cyclone splits it: chips go out, the air is cleaned.", "es": "El ciclón lo separa: las virutas salen, el aire se limpia.", "fr": "Le cyclone sépare : les copeaux sortent, l'air est nettoyé.", "sw": "Kimbunga kinatenganisha: vipande vinatoka, hewa inasafishwa." },
-            { "en": "Flamex watches for sparks the whole time.", "es": "Flamex vigila las chispas todo el tiempo.", "fr": "Flamex surveille les étincelles en permanence.", "sw": "Flamex inaangalia cheche muda wote." } ] }
-      ]
-    }
-  ],
   "shutdown": {
-    "id": "shutdown",
-    "title": { "en": "Shut down", "es": "Apagar", "fr": "Arrêter", "sw": "Kuzima" },
-    "map": [],
-    "phases": [
-      { "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["starter3"], "dur": 4,
-        "at": [[1.2, { "do": "starter", "id": "starter3", "act": "stop" }]],
-        "cap": { "en": "1. Starter 3: stop the main fan.", "es": "1. Arrancador 3: pare el ventilador principal.", "fr": "1. Démarreur 3 : arrêtez le ventilateur principal.", "sw": "1. Kianzishi 3: zima feni kuu." } },
-      { "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["starter2"], "dur": 4,
-        "at": [[1.2, { "do": "starter", "id": "starter2", "act": "stop" }]],
-        "cap": { "en": "2. Starter 2: stop the transfer blower.", "es": "2. Arrancador 2: pare el soplador de transferencia.", "fr": "2. Démarreur 2 : arrêtez la soufflante de transfert.", "sw": "2. Kianzishi 2: zima kipuliza cha kusafirisha." } },
-      { "vp": "machines", "view": "collector_wall", "panel": "collector", "rings": ["starter1", "airlock_box"], "dur": 4,
-        "at": [[1.0, { "do": "starter", "id": "starter1", "act": "stop" }], [2.0, { "do": "airlock_box", "act": "off" }]],
-        "cap": { "en": "3. Starter 1 and the airlock box: stop the airlock.", "es": "3. Arrancador 1 y la caja: pare la válvula rotativa.", "fr": "3. Démarreur 1 et le boîtier : arrêtez l'écluse rotative.", "sw": "3. Kianzishi 1 na kisanduku: zima vali ya kuzunguka." } },
-      { "vp": "machines", "view": "gate_panel", "panel": "gate_panel", "rings": ["gate_panel"], "dur": 4,
-        "at": [[1.2, { "do": "gate", "id": "*", "open": false }]],
-        "cap": { "en": "Close the open gates.", "es": "Cierre las compuertas abiertas.", "fr": "Fermez les vannes ouvertes.", "sw": "Funga vali zilizo wazi." } },
-      { "vp": "overview", "dur": 6, "end": true,
-        "cap": { "en": "The shop is closed again. The fan coasts to a stop.", "es": "El taller está cerrado otra vez. El ventilador se detiene solo.", "fr": "L'atelier est de nouveau fermé. Le ventilateur ralentit jusqu'à l'arrêt.", "sw": "Karakana imefungwa tena. Feni inapungua mpaka inasimama." } }
-    ]
+   "en": "Shut down",
+   "es": "Apagar",
+   "fr": "Arrêter",
+   "sw": "Zima"
+  },
+  "keys": {
+   "en": "Keys: → or Space next, ← back, Esc exit",
+   "es": "Teclas: → o Espacio sigue, ← atrás, Esc salir",
+   "fr": "Touches : → ou Espace suite, ← retour, Échap quitter",
+   "sw": "Vitufe: → au Space mbele, ← nyuma, Esc toka"
   }
+ },
+ "states": {
+  "closed": {
+   "fresh": true,
+   "starters": [],
+   "airlock_box": false,
+   "gates": [],
+   "instant": true
+  },
+  "airlock": {
+   "fresh": true,
+   "starters": [
+    "starter1"
+   ],
+   "airlock_box": true,
+   "gates": [],
+   "instant": true
+  },
+  "airlock_blower": {
+   "fresh": true,
+   "starters": [
+    "starter1",
+    "starter2"
+   ],
+   "airlock_box": true,
+   "gates": [],
+   "instant": true
+  },
+  "running": {
+   "fresh": true,
+   "starters": [
+    "starter1",
+    "starter2",
+    "starter3"
+   ],
+   "airlock_box": true,
+   "gates": [],
+   "instant": true
+  },
+  "cnc1": {
+   "fresh": true,
+   "starters": [
+    "starter1",
+    "starter2",
+    "starter3"
+   ],
+   "airlock_box": true,
+   "gates": [
+    "CNC1"
+   ],
+   "instant": true
+  }
+ },
+ "steps": [
+  {
+   "id": "closed",
+   "title": {
+    "en": "The shop is closed",
+    "es": "El taller está cerrado",
+    "fr": "L'atelier est fermé",
+    "sw": "Karakana imefungwa"
+   },
+   "map": [],
+   "phases": [
+    {
+     "state": "closed",
+     "vp": "overview",
+     "dur": 6,
+     "cap": {
+      "en": "Everything is off. The Eatons are on, but every starter is off.",
+      "es": "Todo está apagado. Los Eaton están encendidos, pero los arrancadores están apagados.",
+      "fr": "Tout est arrêté. Les Eaton sont en marche, mais les démarreurs sont arrêtés.",
+      "sw": "Kila kitu kimezimwa. Eaton ziko wazi, lakini vianzishi vyote vimezimwa."
+     },
+     "labels": [
+      {
+       "a": "overview.shop",
+       "accent": "#5d6570",
+       "text": {
+        "en": "Laminate shop",
+        "es": "Taller de laminado",
+        "fr": "Atelier de stratifié",
+        "sw": "Karakana ya laminati"
+       }
+      },
+      {
+       "a": "overview.shed",
+       "accent": "#5d6570",
+       "text": {
+        "en": "Dust collector",
+        "es": "Colector de polvo",
+        "fr": "Dépoussiéreur",
+        "sw": "Kikusanya vumbi"
+       }
+      }
+     ]
+    },
+    {
+     "vp": "overview",
+     "cam": {
+      "position": [
+       11.2,
+       6.8,
+       -28.6
+      ],
+      "target": [
+       4.4,
+       2.8,
+       -21.0
+      ],
+      "hfov_deg": 61.9
+     },
+     "dur": 6,
+     "cap": {
+      "en": "Nothing spins and no air moves. All gates are closed. Flamex is on watch.",
+      "es": "Nada gira y el aire no se mueve. Todas las compuertas están cerradas. Flamex está vigilando.",
+      "fr": "Rien ne tourne, l'air ne bouge pas. Toutes les vannes sont fermées. Flamex surveille.",
+      "sw": "Hakuna kinachozunguka, hewa haisogei. Vali zote zimefungwa. Flamex inalinda."
+     }
+    }
+   ]
+  },
+  {
+   "id": "start",
+   "title": {
+    "en": "Start the dust collector, one system at a time",
+    "es": "Arranque el colector, un sistema a la vez",
+    "fr": "Démarrez le dépoussiéreur, un système à la fois",
+    "sw": "Washa kikusanya vumbi, mfumo mmoja baada ya mwingine"
+   },
+   "map": [
+    "airlock",
+    "blower",
+    "fan"
+   ],
+   "phases": [
+    {
+     "state": "closed",
+     "vp": "machines",
+     "view": "collector_wall",
+     "panel": "collector",
+     "rings": [
+      "airlock_box",
+      "starter1"
+     ],
+     "dur": 5,
+     "at": [
+      [
+       1.2,
+       {
+        "do": "airlock_box",
+        "act": "on"
+       }
+      ],
+      [
+       2.2,
+       {
+        "do": "starter",
+        "id": "starter1",
+        "act": "start"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "1. Starter 1 (right) and the airlock box: the rotary airlock.",
+      "es": "1. Arrancador 1 (derecha) y la caja de la válvula: la válvula rotativa.",
+      "fr": "1. Démarreur 1 (à droite) et le boîtier de l'écluse : l'écluse rotative.",
+      "sw": "1. Kianzishi 1 (kulia) na kisanduku cha vali: vali ya kuzunguka."
+     },
+     "labels": [
+      {
+       "a": {
+        "ctl": "starter1"
+       },
+       "accent": "#2563eb",
+       "text": {
+        "en": "Starter 1",
+        "es": "Arrancador 1",
+        "fr": "Démarreur 1",
+        "sw": "Kianzishi 1"
+       }
+      }
+     ]
+    },
+    {
+     "state": "airlock",
+     "state_soft": true,
+     "vp": "airlock",
+     "cam": {
+      "vp": "airlock",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "hl": [
+      "AL__body_liner",
+      "Rig_AirlockRotor"
+     ],
+     "cap": {
+      "en": "The airlock turns. No chips yet.",
+      "es": "La válvula gira. Todavía no hay virutas.",
+      "fr": "L'écluse tourne. Pas encore de copeaux.",
+      "sw": "Vali inazunguka. Bado hakuna vipande."
+     },
+     "labels": [
+      {
+       "a": "airlock.al",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Rotary airlock",
+        "es": "Válvula rotativa",
+        "fr": "Écluse rotative",
+        "sw": "Vali ya kuzunguka"
+       }
+      }
+     ]
+    },
+    {
+     "state": "airlock",
+     "state_soft": true,
+     "vp": "machines",
+     "view": "collector_wall",
+     "panel": "collector",
+     "rings": [
+      "starter2"
+     ],
+     "dur": 4.5,
+     "at": [
+      [
+       1.5,
+       {
+        "do": "starter",
+        "id": "starter2",
+        "act": "start"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "2. Starter 2: the transfer blower.",
+      "es": "2. Arrancador 2: el soplador de transferencia.",
+      "fr": "2. Démarreur 2 : la soufflante de transfert.",
+      "sw": "2. Kianzishi 2: kipuliza cha kusafirisha."
+     },
+     "labels": [
+      {
+       "a": {
+        "ctl": "starter2"
+       },
+       "accent": "#2563eb",
+       "text": {
+        "en": "Starter 2",
+        "es": "Arrancador 2",
+        "fr": "Démarreur 2",
+        "sw": "Kianzishi 2"
+       }
+      }
+     ]
+    },
+    {
+     "state": "airlock_blower",
+     "state_soft": true,
+     "vp": "back",
+     "cam": {
+      "vp": "back",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 6,
+     "cap": {
+      "en": "The chip loop air starts: out to the roll-off and back.",
+      "es": "Arranca el aire del circuito: va al contenedor y regresa.",
+      "fr": "L'air de la boucle démarre : vers la benne et retour.",
+      "sw": "Hewa ya mzunguko inaanza: inaenda kwenye kontena na kurudi."
+     },
+     "labels": [
+      {
+       "a": "back.line",
+       "accent": "#12a594",
+       "text": {
+        "en": "Out, upper hose",
+        "es": "Sale por la manguera de arriba",
+        "fr": "Aller : tuyau du haut",
+        "sw": "Kwenda: bomba la juu"
+       }
+      },
+      {
+       "a": "back.ret",
+       "accent": "#12a594",
+       "text": {
+        "en": "Back, lower hose",
+        "es": "Regresa por la manguera de abajo",
+        "fr": "Retour : tuyau du bas",
+        "sw": "Kurudi: bomba la chini"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "state": "airlock_blower",
+     "state_soft": true,
+     "vp": "machines",
+     "view": "collector_wall",
+     "panel": "collector",
+     "rings": [
+      "starter3"
+     ],
+     "dur": 4.5,
+     "at": [
+      [
+       1.5,
+       {
+        "do": "starter",
+        "id": "starter3",
+        "act": "start"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "3. Starter 3 (left): the dust collector main fan.",
+      "es": "3. Arrancador 3 (izquierda): el ventilador principal del colector.",
+      "fr": "3. Démarreur 3 (à gauche) : le ventilateur principal du dépoussiéreur.",
+      "sw": "3. Kianzishi 3 (kushoto): feni kuu ya kikusanya vumbi."
+     },
+     "labels": [
+      {
+       "a": {
+        "ctl": "starter3"
+       },
+       "accent": "#2563eb",
+       "text": {
+        "en": "Starter 3",
+        "es": "Arrancador 3",
+        "fr": "Démarreur 3",
+        "sw": "Kianzishi 3"
+       }
+      }
+     ]
+    },
+    {
+     "state": "running",
+     "state_soft": true,
+     "vp": "fan",
+     "cam": {
+      "vp": "fan",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 6,
+     "hl": [
+      "Fan__scroll",
+      "Fan__scroll_liner"
+     ],
+     "cap": {
+      "en": "Suction and push start. No dust yet: every gate is closed.",
+      "es": "Arrancan la succión y el empuje. Aún no hay polvo: las compuertas están cerradas.",
+      "fr": "L'aspiration et le soufflage démarrent. Pas encore de poussière : les vannes sont fermées.",
+      "sw": "Kuvuta na kusukuma kunaanza. Bado hakuna vumbi: vali zote zimefungwa."
+     },
+     "labels": [
+      {
+       "a": "fan.fan",
+       "accent": "#d9b100",
+       "text": {
+        "en": "Main fan",
+        "es": "Ventilador principal",
+        "fr": "Ventilateur principal",
+        "sw": "Feni kuu"
+       }
+      }
+     ],
+     "xray": true
+    }
+   ]
+  },
+  {
+   "id": "gate",
+   "title": {
+    "en": "Open the machine's gate",
+    "es": "Abra la compuerta de la máquina",
+    "fr": "Ouvrez la vanne de la machine",
+    "sw": "Fungua vali ya mashine"
+   },
+   "map": [
+    "gates"
+   ],
+   "phases": [
+    {
+     "state": "running",
+     "vp": "machines",
+     "view": "gate_panel",
+     "panel": "gate_panel",
+     "rings": [
+      "gate_panel"
+     ],
+     "dur": 5,
+     "at": [
+      [
+       1.8,
+       {
+        "do": "gate",
+        "id": "CNC1",
+        "open": true
+       }
+      ]
+     ],
+     "cap": {
+      "en": "At the blast gate panel, press green for CNC 1.",
+      "es": "En el panel de compuertas, pulse el verde de CNC 1.",
+      "fr": "Au panneau des vannes, appuyez sur le vert de CNC 1.",
+      "sw": "Kwenye paneli ya vali, bonyeza kijani cha CNC 1."
+     },
+     "labels": [
+      {
+       "a": {
+        "ctl": "gate_panel"
+       },
+       "accent": "#d8b51a",
+       "text": {
+        "en": "Blast gate panel",
+        "es": "Panel de compuertas",
+        "fr": "Panneau des vannes",
+        "sw": "Paneli ya vali"
+       }
+      }
+     ]
+    },
+    {
+     "state": "cnc1",
+     "state_soft": true,
+     "vp": "machines",
+     "cam": {
+      "vp": "machines",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "hl": [
+      "Gate_CNC1",
+      "Gate_CNC1_Slide"
+     ],
+     "cap": {
+      "en": "Its gate slides open. Now the hose pulls.",
+      "es": "Su compuerta se abre. Ahora la manguera jala.",
+      "fr": "Sa vanne s'ouvre. Le tuyau aspire.",
+      "sw": "Vali yake inafunguka. Sasa bomba linavuta."
+     },
+     "labels": [
+      {
+       "a": "machines.g1",
+       "accent": "#1f9d55",
+       "text": {
+        "en": "Blast gate open",
+        "es": "Compuerta abierta",
+        "fr": "Vanne ouverte",
+        "sw": "Vali iko wazi"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dust",
+   "title": {
+    "en": "Follow the dust",
+    "es": "Siga el polvo",
+    "fr": "Suivez la poussière",
+    "sw": "Fuata vumbi"
+   },
+   "zone": "suction",
+   "map": [
+    "machines",
+    "duct",
+    "cyclone",
+    "airlock",
+    "blower",
+    "rolloff",
+    "fan",
+    "filters",
+    "clean",
+    "drum"
+   ],
+   "phases": [
+    {
+     "state": "cnc1",
+     "vp": "machines",
+     "cam": {
+      "vp": "machines",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "hl": [
+      "Duct_Hose_CNC1"
+     ],
+     "cap": {
+      "en": "CNC 1 runs. The hose pulls up the sawdust.",
+      "es": "CNC 1 funciona. La manguera sube el aserrín.",
+      "fr": "La CNC 1 tourne. Le tuyau aspire la sciure.",
+      "sw": "CNC 1 inafanya kazi. Bomba linavuta vumbi la mbao juu."
+     },
+     "labels": [
+      {
+       "a": "machines.cnc1",
+       "accent": "#f08a24",
+       "text": {
+        "en": "CNC 1 running",
+        "es": "CNC 1 en marcha",
+        "fr": "CNC 1 en marche",
+        "sw": "CNC 1 inafanya kazi"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "machines",
+     "cam": {
+      "vp": "machines",
+      "keys": [
+       2,
+       3
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "Along the main duct to the north wall.",
+      "es": "Por el ducto principal hasta la pared norte.",
+      "fr": "Le long de la gaine principale jusqu'au mur nord.",
+      "sw": "Kupitia bomba kuu hadi ukuta wa kaskazini."
+     },
+     "labels": [
+      {
+       "a": "machines.trunk",
+       "accent": "#f08a24",
+       "text": {
+        "en": "Main duct",
+        "es": "Ducto principal",
+        "fr": "Gaine principale",
+        "sw": "Bomba kuu"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "wall",
+     "cam": {
+      "vp": "wall",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "Through the wall into the cyclone.",
+      "es": "Cruza la pared y entra al ciclón.",
+      "fr": "À travers le mur, dans le cyclone.",
+      "sw": "Kupitia ukuta hadi kimbunga."
+     },
+     "labels": [
+      {
+       "a": "wall.gap",
+       "accent": "#f08a24",
+       "text": {
+        "en": "Through the wall",
+        "es": "A través de la pared",
+        "fr": "À travers le mur",
+        "sw": "Kupitia ukuta"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "cyclone",
+     "dur": 7,
+     "hl": [
+      "Cyc__barrel_liner",
+      "Cyc__cone_liner"
+     ],
+     "cap": {
+      "en": "The cyclone splits it. Chips fall, air rises.",
+      "es": "El ciclón lo separa. Las virutas caen, el aire sube.",
+      "fr": "Le cyclone sépare. Les copeaux tombent, l'air monte.",
+      "sw": "Kimbunga kinatenganisha. Vipande vinaanguka, hewa inapanda."
+     },
+     "labels": [
+      {
+       "a": "cyclone.cone",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Chips fall",
+        "es": "Las virutas caen",
+        "fr": "Les copeaux tombent",
+        "sw": "Vipande vinaanguka"
+       }
+      },
+      {
+       "a": "cyclone.core",
+       "accent": "#d9b100",
+       "text": {
+        "en": "Air rises",
+        "es": "El aire sube",
+        "fr": "L'air monte",
+        "sw": "Hewa inapanda"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "airlock",
+     "cam": {
+      "vp": "airlock",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "The airlock drops the chips into the chip loop.",
+      "es": "La válvula deja caer las virutas al circuito.",
+      "fr": "L'écluse fait tomber les copeaux dans la boucle.",
+      "sw": "Vali inadondosha vipande kwenye mzunguko."
+     },
+     "labels": [
+      {
+       "a": "airlock.al",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Rotary airlock",
+        "es": "Válvula rotativa",
+        "fr": "Écluse rotative",
+        "sw": "Vali ya kuzunguka"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "back",
+     "cam": {
+      "vp": "back",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "The blower sends them out to the roll-off.",
+      "es": "El soplador las manda al contenedor.",
+      "fr": "La soufflante les envoie à la benne.",
+      "sw": "Kipuliza kinavipeleka kwenye kontena."
+     },
+     "labels": [
+      {
+       "a": "back.pile",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Chips land here",
+        "es": "Las virutas caen aquí",
+        "fr": "Les copeaux arrivent ici",
+        "sw": "Vipande vinatua hapa"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "fan",
+     "cam": {
+      "vp": "fan",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 4.5,
+     "cap": {
+      "en": "The air goes up through the main fan.",
+      "es": "El aire sube por el ventilador principal.",
+      "fr": "L'air monte par le ventilateur principal.",
+      "sw": "Hewa inapanda kupitia feni kuu."
+     },
+     "labels": [
+      {
+       "a": "fan.fan",
+       "accent": "#d9b100",
+       "text": {
+        "en": "Main fan",
+        "es": "Ventilador principal",
+        "fr": "Ventilateur principal",
+        "sw": "Feni kuu"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "filters",
+     "cam": {
+      "vp": "filters",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5.5,
+     "cap": {
+      "en": "The filters catch the fine dust. Clean air leaves.",
+      "es": "Los filtros atrapan el polvo fino. Sale aire limpio.",
+      "fr": "Les filtres retiennent la poussière fine. L'air propre sort.",
+      "sw": "Vichujio vinanasa vumbi laini. Hewa safi inatoka."
+     },
+     "labels": [
+      {
+       "a": "filters.clean",
+       "accent": "#3b82f6",
+       "text": {
+        "en": "Clean air out",
+        "es": "Sale aire limpio",
+        "fr": "Air propre",
+        "sw": "Hewa safi inatoka"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "filters",
+     "cam": {
+      "vp": "filters",
+      "keys": [
+       2,
+       3
+      ]
+     },
+     "dur": 4.5,
+     "cap": {
+      "en": "Fine dust falls into the drum.",
+      "es": "El polvo fino cae al tambor.",
+      "fr": "La poussière fine tombe dans le fût.",
+      "sw": "Vumbi laini linaanguka kwenye pipa."
+     },
+     "labels": [
+      {
+       "a": "filters.drum",
+       "accent": "#7d8590",
+       "text": {
+        "en": "Fine dust drum",
+        "es": "Tambor de polvo fino",
+        "fr": "Fût de poussière fine",
+        "sw": "Pipa la vumbi laini"
+       }
+      }
+     ],
+     "xray": true
+    }
+   ]
+  },
+  {
+   "id": "spark",
+   "title": {
+    "en": "Spark detection",
+    "es": "Detección de chispas",
+    "fr": "Détection d'étincelles",
+    "sw": "Kugundua cheche"
+   },
+   "map": [],
+   "phases": [
+    {
+     "state": "cnc1",
+     "vp": "flamex",
+     "demo": "start",
+     "cam": "none",
+     "until": {
+      "path": "flamex.A.fire",
+      "eq": true
+     },
+     "dur": 1.5,
+     "cap": {
+      "en": "A spark comes down the duct. The detectors see it.",
+      "es": "Una chispa baja por el ducto. Los detectores la ven.",
+      "fr": "Une étincelle descend la gaine. Les détecteurs la voient.",
+      "sw": "Cheche inashuka kwenye bomba. Vigunduzi vinaiona."
+     },
+     "labels": [
+      {
+       "a": "flamex.detA",
+       "accent": "#e0453a",
+       "text": {
+        "en": "Spark detectors",
+        "es": "Detectores de chispas",
+        "fr": "Détecteurs d'étincelles",
+        "sw": "Vigunduzi vya cheche"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "dur": 2.5,
+     "cap": {
+      "en": "Water sprays across the duct. Horns, strobes and the panel go on.",
+      "es": "El agua rocía el ducto. Se encienden sirenas, luces y el panel.",
+      "fr": "L'eau arrose la gaine. Sirènes, flashs et panneau s'allument.",
+      "sw": "Maji yananyunyizwa ndani ya bomba. Honi, taa na paneli zinawaka."
+     },
+     "labels": [
+      {
+       "a": "flamex.noz",
+       "accent": "#2a9fd6",
+       "text": {
+        "en": "Water spray",
+        "es": "Rocío de agua",
+        "fr": "Jet d'eau",
+        "sw": "Kinyunyizio cha maji"
+       }
+      },
+      {
+       "a": "flamex.horn",
+       "accent": "#e0453a",
+       "text": {
+        "en": "Horns and strobes",
+        "es": "Sirenas y luces",
+        "fr": "Sirènes et flashs",
+        "sw": "Honi na taa"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_A",
+     "rings": [
+      "panel_A"
+     ],
+     "dur": 3,
+     "at": [
+      [
+       0.8,
+       {
+        "do": "fx",
+        "zone": "A",
+        "btn": "key"
+       }
+      ],
+      [
+       1.8,
+       {
+        "do": "fx",
+        "zone": "A",
+        "btn": "ext"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "Silence: key to 1, then ext. The horns stop. The water does not.",
+      "es": "Silenciar: llave en 1, luego ext. Las sirenas paran. El agua no.",
+      "fr": "Silence : clé sur 1, puis ext. Les sirènes s'arrêtent. L'eau continue.",
+      "sw": "Nyamazisha: ufunguo kwenye 1, kisha ext. Honi zinanyamaza. Maji yanaendelea."
+     }
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_A",
+     "until": {
+      "path": "flamex.A.spray",
+      "eq": 0
+     },
+     "dur": 1,
+     "cap": {
+      "en": "The water stops after its set time.",
+      "es": "El agua para después de su tiempo.",
+      "fr": "L'eau s'arrête après son temps réglé.",
+      "sw": "Maji yanaacha baada ya muda wake."
+     }
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_A",
+     "rings": [
+      "panel_A"
+     ],
+     "dur": 3.5,
+     "at": [
+      [
+       0.8,
+       {
+        "do": "fx",
+        "zone": "A",
+        "btn": "reset"
+       }
+      ],
+      [
+       2.0,
+       {
+        "do": "fx",
+        "zone": "A",
+        "btn": "key"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "Reset with the key at 1, then turn the key back to 0.",
+      "es": "Reinicie con la llave en 1 y regrese la llave a 0.",
+      "fr": "Réarmez avec la clé sur 1, puis remettez la clé sur 0.",
+      "sw": "Rudisha ufunguo ukiwa kwenye 1, kisha urudishe ufunguo kwenye 0."
+     }
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_B",
+     "until": {
+      "path": "flamex.B.fire",
+      "eq": true
+     },
+     "dur": 2,
+     "cap": {
+      "en": "Zone 2 (B), on the conveyor riser, works the same way.",
+      "es": "La zona 2 (B), en el tubo de transporte, funciona igual.",
+      "fr": "La zone 2 (B), sur la colonne de transport, fonctionne pareil.",
+      "sw": "Eneo la 2 (B), kwenye bomba la wima, linafanya kazi vivyo hivyo."
+     },
+     "labels": [
+      {
+       "a": "flamex.detB",
+       "accent": "#e0453a",
+       "text": {
+        "en": "Spark detectors, zone 2",
+        "es": "Detectores, zona 2",
+        "fr": "Détecteurs, zone 2",
+        "sw": "Vigunduzi, eneo la 2"
+       }
+      },
+      {
+       "a": "flamex.valve",
+       "accent": "#2a9fd6",
+       "text": {
+        "en": "Water valve, zone 2",
+        "es": "Válvula de agua, zona 2",
+        "fr": "Vanne d'eau, zone 2",
+        "sw": "Vali ya maji, eneo la 2"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_B",
+     "rings": [
+      "panel_B"
+     ],
+     "until": {
+      "path": "flamex.B.spray",
+      "eq": 0
+     },
+     "dur": 3,
+     "at": [
+      [
+       1.0,
+       {
+        "do": "fx",
+        "zone": "B",
+        "btn": "key"
+       }
+      ],
+      [
+       2.0,
+       {
+        "do": "fx",
+        "zone": "B",
+        "btn": "ext"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "Silence it the same way. The water stops on its own.",
+      "es": "Silencie igual. El agua para sola.",
+      "fr": "Même silence. L'eau s'arrête toute seule.",
+      "sw": "Nyamazisha vivyo hivyo. Maji yanaacha yenyewe."
+     }
+    },
+    {
+     "vp": "flamex",
+     "demo": "keep",
+     "cam": "none",
+     "panel": "flamex_B",
+     "rings": [
+      "panel_B"
+     ],
+     "dur": 3.5,
+     "at": [
+      [
+       0.8,
+       {
+        "do": "fx",
+        "zone": "B",
+        "btn": "reset"
+       }
+      ],
+      [
+       2.0,
+       {
+        "do": "fx",
+        "zone": "B",
+        "btn": "key"
+       }
+      ]
+     ],
+     "cap": {
+      "en": "Reset, key back to 0. Flamex is on watch again.",
+      "es": "Reinicie y regrese la llave a 0. Flamex vigila otra vez.",
+      "fr": "Réarmez, clé sur 0. Flamex surveille de nouveau.",
+      "sw": "Rudisha, ufunguo kwenye 0. Flamex inalinda tena."
+     }
+    }
+   ]
+  },
+  {
+   "id": "together",
+   "title": {
+    "en": "How it all works together",
+    "es": "Cómo funciona todo junto",
+    "fr": "Comment tout fonctionne ensemble",
+    "sw": "Jinsi yote yanavyofanya kazi pamoja"
+   },
+   "map": [],
+   "phases": [
+    {
+     "state": "cnc1",
+     "vp": "overview",
+     "zones": true,
+     "dur": 12,
+     "end": true,
+     "cap": [
+      {
+       "en": "Suction brings the dust in.",
+       "es": "La succión trae el polvo.",
+       "fr": "L'aspiration amène la poussière.",
+       "sw": "Kuvuta kunaleta vumbi."
+      },
+      {
+       "en": "The cyclone splits it: chips go out, the air is cleaned.",
+       "es": "El ciclón lo separa: las virutas salen, el aire se limpia.",
+       "fr": "Le cyclone sépare : les copeaux sortent, l'air est nettoyé.",
+       "sw": "Kimbunga kinatenganisha: vipande vinatoka, hewa inasafishwa."
+      },
+      {
+       "en": "Flamex watches for sparks the whole time.",
+       "es": "Flamex vigila las chispas todo el tiempo.",
+       "fr": "Flamex surveille les étincelles en permanence.",
+       "sw": "Flamex inaangalia cheche muda wote."
+      }
+     ],
+     "xray": true
+    }
+   ]
+  }
+ ],
+ "shutdown": {
+  "id": "shutdown",
+  "title": {
+   "en": "Shut down",
+   "es": "Apagar",
+   "fr": "Arrêter",
+   "sw": "Kuzima"
+  },
+  "map": [],
+  "phases": [
+   {
+    "vp": "machines",
+    "view": "collector_wall",
+    "panel": "collector",
+    "rings": [
+     "starter3"
+    ],
+    "dur": 4,
+    "at": [
+     [
+      1.2,
+      {
+       "do": "starter",
+       "id": "starter3",
+       "act": "stop"
+      }
+     ]
+    ],
+    "cap": {
+     "en": "1. Starter 3: stop the main fan.",
+     "es": "1. Arrancador 3: pare el ventilador principal.",
+     "fr": "1. Démarreur 3 : arrêtez le ventilateur principal.",
+     "sw": "1. Kianzishi 3: zima feni kuu."
+    }
+   },
+   {
+    "vp": "machines",
+    "view": "collector_wall",
+    "panel": "collector",
+    "rings": [
+     "starter2"
+    ],
+    "dur": 4,
+    "at": [
+     [
+      1.2,
+      {
+       "do": "starter",
+       "id": "starter2",
+       "act": "stop"
+      }
+     ]
+    ],
+    "cap": {
+     "en": "2. Starter 2: stop the transfer blower.",
+     "es": "2. Arrancador 2: pare el soplador de transferencia.",
+     "fr": "2. Démarreur 2 : arrêtez la soufflante de transfert.",
+     "sw": "2. Kianzishi 2: zima kipuliza cha kusafirisha."
+    }
+   },
+   {
+    "vp": "machines",
+    "view": "collector_wall",
+    "panel": "collector",
+    "rings": [
+     "starter1",
+     "airlock_box"
+    ],
+    "dur": 4,
+    "at": [
+     [
+      1.0,
+      {
+       "do": "starter",
+       "id": "starter1",
+       "act": "stop"
+      }
+     ],
+     [
+      2.0,
+      {
+       "do": "airlock_box",
+       "act": "off"
+      }
+     ]
+    ],
+    "cap": {
+     "en": "3. Starter 1 and the airlock box: stop the airlock.",
+     "es": "3. Arrancador 1 y la caja: pare la válvula rotativa.",
+     "fr": "3. Démarreur 1 et le boîtier : arrêtez l'écluse rotative.",
+     "sw": "3. Kianzishi 1 na kisanduku: zima vali ya kuzunguka."
+    }
+   },
+   {
+    "vp": "machines",
+    "view": "gate_panel",
+    "panel": "gate_panel",
+    "rings": [
+     "gate_panel"
+    ],
+    "dur": 4,
+    "at": [
+     [
+      1.2,
+      {
+       "do": "gate",
+       "id": "*",
+       "open": false
+      }
+     ]
+    ],
+    "cap": {
+     "en": "Close the open gates.",
+     "es": "Cierre las compuertas abiertas.",
+     "fr": "Fermez les vannes ouvertes.",
+     "sw": "Funga vali zilizo wazi."
+    }
+   },
+   {
+    "vp": "overview",
+    "dur": 6,
+    "end": true,
+    "cap": {
+     "en": "The shop is closed again. The fan coasts to a stop.",
+     "es": "El taller está cerrado otra vez. El ventilador se detiene solo.",
+     "fr": "L'atelier est de nouveau fermé. Le ventilateur ralentit jusqu'à l'arrêt.",
+     "sw": "Karakana imefungwa tena. Feni inapungua mpaka inasimama."
+    }
+   }
+  ]
+ }
 }

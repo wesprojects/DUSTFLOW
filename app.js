@@ -59,6 +59,9 @@ const U = {
   shed_walls: { en: 'Shed walls', es: 'Paredes de la caseta', fr: "Murs de l'abri", sw: 'Kuta za kibanda' },
   shed_roof: { en: 'Shed roof', es: 'Techo de la caseta', fr: "Toit de l'abri", sw: 'Paa la kibanda' },
   shop_wall: { en: 'Shop walls', es: 'Paredes del taller', fr: "Murs de l'atelier", sw: 'Kuta za karakana' },
+  ceiling: { en: 'Show ceiling', es: 'Mostrar el techo interior', fr: 'Afficher le plafond', sw: 'Onyesha dari' },
+  zones: { en: 'Show air zones', es: 'Mostrar zonas de aire', fr: "Montrer les zones d'air", sw: 'Onyesha maeneo ya hewa' },
+  start_training: { en: 'Start training', es: 'Iniciar la formación', fr: 'Commencer la formation', sw: 'Anza mafunzo' },
   shop_roof: { en: 'Shop roof', es: 'Techo del taller', fr: "Toit de l'atelier", sw: 'Paa la karakana' },
   labels: { en: 'Labels', es: 'Etiquetas', fr: 'Étiquettes', sw: 'Lebo' },
   sound: { en: 'Sound', es: 'Sonido', fr: 'Son', sw: 'Sauti' },
@@ -432,7 +435,8 @@ for (const g of [gS, gC, gM]) g.scene.traverse(o => {
     if (g === gC) { o.castShadow = true; o.receiveShadow = true; }
   }
 });
-for (const n of Object.keys(NODE)) if (isSkinned(n) && NODE[n].parent && !ROOMCAT[n]) NODE[n].traverse(o => { if (o.isMesh) o.userData.noDraw = true; });
+const KEEP_FLAT = /^CNC[12]_Spoilboard/; // the assembled CNC kits have no spoilboard: without it the open bed showed the plumbing under it
+for (const n of Object.keys(NODE)) if (isSkinned(n) && !KEEP_FLAT.test(n) && NODE[n].parent && !ROOMCAT[n]) NODE[n].traverse(o => { if (o.isMesh && !KEEP_FLAT.test(o.name)) o.userData.noDraw = true; });
 for (const o of pickables) if (o.userData.noDraw) o.material = NO_DRAW;
 for (const n of ['Ctx_Ground', 'Pad__slab']) if (NODE[n]) NODE[n].traverse(o => { if (o.isMesh) o.receiveShadow = true; });
 if (gR && NODE.Ctx_Ground) { // the explainer's ground stopped at x 30; the shop goes to 36.6 and the back lot beyond
@@ -455,10 +459,95 @@ if (gD) gD.scene.traverse(o => {
   const nodes = Object.keys(NODE).filter(n => re.test(n) && NODE[n].parent && !ROOMCAT[n] && !/^CSkin_/.test(n));
   const meshes = []; for (const n of nodes) NODE[n].traverse(m => { if (m.isMesh && pickables.includes(m)) meshes.push(m); });
   const mats = [];
-  o.traverse(m => { if (m.isMesh) { m.material = m.material.clone(); m.material.userData.b = { t: m.material.transparent, o: m.material.opacity, dw: m.material.depthWrite }; mats.push(m.material); } });
-  const xray = meshes.some(m => [].concat(m.material).some(mm => XRAY_NAMES.has(mm.name)));
+  o.traverse(m => { if (m.isMesh) {
+    m.material = m.material.clone();
+    if (!/Decal/i.test(m.material.name)) m.material.side = THREE.DoubleSide; // no vanishing single-sided faces
+    m.material.userData.b = { t: m.material.transparent, o: m.material.opacity, dw: m.material.depthWrite }; mats.push(m.material);
+  } });
+  // only the ducts go see-through with x-ray; the shed, the collector and the roll-off always stay solid
+  const xray = SC.translucent.duct_nodes.some(n => nodes.includes(n)) && !/^DC_(Compactor|CompactorPad|Enclosure|EnclosureFrame|Enclosure_Door)/.test(id);
   CSKINS.push({ id, node: o, nodes, meshes, mats, xray, expl: nodes.some(n => EXPL_NODES.has(n)), duct: nodes.some(n => SC.translucent.duct_nodes.includes(n)), on: null, xa: null });
 });
+// the roll-off: a plain, solid, dark-brown 20 yd enclosed container (owner photos 80-82), built here until Wes's measurements
+// arrive: about 22 ft x 8 ft x 5.5 ft on two rails, vertical side ribs, the hook (A-frame) end to the west, the rear door
+// toward the shed with the two hose inlets where the gold hoses end, one flat "USA" decal on the lot-facing side.
+// both roll-off hose inlets at the same height: 1.80 m above the pad (owner, 2026-11-13; they are never offset). Each gold
+// hose's last 0.9 m is eased to meet its inlet; the rest of the hose keeps its shape.
+const INLET_Y = 0.90 + 1.80;
+function reEndHose(root) {
+  if (!root) return [];
+  root.updateMatrixWorld(true);
+  const v = new THREE.Vector3(), all = [];
+  root.traverse(o => { if (!o.isMesh) return; const pa = o.geometry.attributes.position; for (let i = 0; i < pa.count; i++) all.push(v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld).clone()); });
+  if (!all.length) return [];
+  const minX = Math.min(...all.map(p => p.x));
+  const end = all.filter(p => p.x < minX + 0.06 && p.y > 1.2 && p.y < 3.3).sort((p, q) => p.z - q.z);
+  if (end.length < 4) return [];
+  let gi = 0, gmax = 0; for (let i = 1; i < end.length; i++) { const d = end[i].z - end[i - 1].z; if (d > gmax) { gmax = d; gi = i; } }
+  const groups = gmax > 0.15 ? [end.slice(0, gi), end.slice(gi)] : [end];
+  const ends = groups.map(gp => gp.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / gp.length));
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const pa = o.geometry.attributes.position, inv = o.matrixWorld.clone().invert();
+    for (let i = 0; i < pa.count; i++) {
+      v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld);
+      let best = null, bd = 1e9; for (const e of ends) { const d = v.distanceTo(e); if (d < bd) { bd = d; best = e; } }
+      if (!best || bd > 0.9) continue;
+      const w = 1 - smooth(clamp(bd / 0.9, 0, 1));
+      v.y += (INLET_Y - best.y) * w;
+      v.applyMatrix4(inv); pa.setXYZ(i, v.x, v.y, v.z);
+    }
+    pa.needsUpdate = true; o.geometry.computeBoundingSphere(); o.geometry.computeBoundingBox();
+  });
+  return ends.map(e => new THREE.Vector3(e.x, INLET_Y, e.z));
+}
+const HOSE_ENDS = (() => { let skin = null; for (const K of CSKINS) if (K.id === 'DC_ConveyHoses') skin = K.node; const a = reEndHose(skin); const b = reEndHose(NODE.DC_ConveyHoses); return a.length === 2 ? a : b; })();
+const ROLLOFF = (() => {
+  const g = new THREE.Group(); g.name = 'RollOff_Simple';
+  const brown = new THREE.MeshStandardMaterial({ color: 0x3b2a1f, roughness: 0.72, metalness: 0.25 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x241913, roughness: 0.8, metalness: 0.3 });
+  const galv = new THREE.MeshStandardMaterial({ color: 0xa9adb0, roughness: 0.45, metalness: 0.7 });
+  const E = 1.79, L = 4.94, W = 2.55, YC = 21.15, Z0 = 0.905, RAIL = 0.15, H = 1.945; // shop frame: east end x, length, width, center y, pad top
+  const X0 = E - L, ZB = Z0 + RAIL, ZT = ZB + H;
+  const box = (x0, x1, y0, y1, z0, z1, m) => { // shop-frame box -> glTF
+    const o = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0), m);
+    o.position.set((x0 + x1) / 2, (z0 + z1) / 2, -(y0 + y1) / 2); o.castShadow = o.receiveShadow = true; g.add(o); return o;
+  };
+  box(X0, E, YC - W / 2, YC + W / 2, ZB, ZT, brown); // the body, flat closed top
+  for (const sy of [-1, 1]) box(X0 + 0.2, E - 0.1, YC + sy * 0.95 - 0.09, YC + sy * 0.95 + 0.09, Z0, ZB, dark); // rails
+  box(X0 - 0.03, E + 0.03, YC - W / 2 - 0.05, YC + W / 2 + 0.05, ZT - 0.1, ZT, dark); // top rim
+  for (let x = X0 + 0.45; x < E - 0.3; x += 0.62) for (const sy of [-1, 1]) { // vertical side ribs
+    const y = YC + sy * (W / 2 + 0.03); box(x - 0.04, x + 0.04, y - 0.03, y + 0.03, ZB, ZT - 0.1, dark);
+  }
+  // hook end (west): A-frame with the hook bar on top
+  const a1 = box(X0 - 0.35, X0 - 0.23, YC - 0.5, YC - 0.38, Z0, ZT + 0.25, dark); a1.rotation.x = -0.32;
+  const a2 = box(X0 - 0.35, X0 - 0.23, YC + 0.38, YC + 0.5, Z0, ZT + 0.25, dark); a2.rotation.x = 0.32;
+  box(X0 - 0.36, X0 - 0.22, YC - 0.12, YC + 0.12, ZT + 0.05, ZT + 0.3, dark);
+  box(X0 - 0.25, X0, YC - 0.35, YC + 0.35, ZB, ZB + 0.25, dark);
+  // rear door (east, toward the shed): proud panel, hinges on the north edge, a locking bar
+  box(E, E + 0.04, YC - W / 2 + 0.06, YC + W / 2 - 0.06, ZB + 0.05, ZT - 0.12, brown);
+  for (const z of [ZB + 0.3, ZT - 0.45]) box(E, E + 0.08, YC + W / 2 - 0.12, YC + W / 2 - 0.02, z, z + 0.16, dark);
+  box(E + 0.04, E + 0.09, YC - 0.75, YC - 0.69, ZB + 0.1, ZT - 0.2, galv);
+  // the two hose inlets, both 1.80 m above the pad, across the door where the gold hoses end
+  const ends = HOSE_ENDS.length === 2 ? HOSE_ENDS : [new THREE.Vector3(E, INLET_Y, -(YC - 0.45)), new THREE.Vector3(E, INLET_Y, -(YC + 0.15))];
+  for (const p of ends) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.14, 28), galv); c.rotation.z = Math.PI / 2;
+    c.position.set(E + 0.07, INLET_Y, clamp(p.z, -(YC + W / 2 - 0.25), -(YC - W / 2 + 0.25))); c.castShadow = true; g.add(c);
+  }
+  // one flat USA decal on the lot-facing (north) side
+  const tex = canvasTex(512, 256, (c, w, h) => {
+    c.clearRect(0, 0, w, h); c.font = 'bold 170px Arial Black, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.lineWidth = 10; c.strokeStyle = '#ffffff'; c.strokeText('USA', w / 2, h / 2 + 8);
+    const gr = c.createLinearGradient(0, 40, 0, h - 40); gr.addColorStop(0, '#c8202a'); gr.addColorStop(0.5, '#c8202a'); gr.addColorStop(0.5, '#1f3f8f'); gr.addColorStop(1, '#1f3f8f');
+    c.fillStyle = gr; c.fillText('USA', w / 2, h / 2 + 8);
+  });
+  const dec = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6, depthWrite: false }));
+  dec.position.set(E - 1.6, ZB + H * 0.55, -(YC + W / 2 + 0.065)); dec.rotation.y = Math.PI; g.add(dec);
+  world.add(g);
+  return g;
+})();
+if (NODE.DC_Compactor) NODE.DC_Compactor.traverse(o => { if (o.isMesh) { o.material = NO_DRAW; o.userData.mat0 = NO_DRAW; } });
+{ const i = CSKINS.findIndex(K => K.id === 'DC_Compactor'); if (i >= 0) { CSKINS[i].node.visible = false; CSKINS[i].node.parent.remove(CSKINS[i].node); CSKINS.splice(i, 1); } }
 function applySkins() {
   if (!CSKINS.length) return;
   const expl = EXPL.target > 0 || EXPL.e > 0.001;
@@ -498,7 +587,7 @@ const cloneMatFor = (nodeName) => { // per-node material clones (for tinting / c
 
 // ---------------------------------------------------------------- visibility layers
 const HIDE_TOUR = new Set(); // nodes the current tour stop hides
-const TOG = { xray: true, shed_walls: true, shed_roof: true, shop_wall: true, shop_roof: false, labels: true, sound: false, follow: true };
+const TOG = { xray: false, shed_walls: true, shed_roof: true, shop_wall: true, shop_roof: false, ceiling: false, labels: true, sound: false, follow: true };
 const roomOf = (...cats) => Object.keys(ROOMCAT).filter(n => cats.includes(ROOMCAT[n]) && NODE[n]);
 const ROOM_WALLN = roomOf('WallN');
 const groupNodes = {
@@ -532,7 +621,7 @@ function applyVisibility() {
 const tourOverride = new Set();
 // seen from above the roof line, the lights, pipes and roof steel hide so the shop floor reads clearly
 let OVERHEAD_OFF = false;
-function stepOverhead() { const off = camera.position.y > 7.2 && !TOG.shop_roof; if (off !== OVERHEAD_OFF) { OVERHEAD_OFF = off; applyVisibility(); } }
+function stepOverhead() { const off = !TOG.ceiling || (camera.position.y > 7.2 && !TOG.shop_roof); if (off !== OVERHEAD_OFF) { OVERHEAD_OFF = off; applyVisibility(); } }
 function setXray(on) {
   TOG.xray = on;
   const names = new Set([...SC.translucent.shop_materials, ...SC.translucent.shed_materials]);
@@ -1452,7 +1541,7 @@ function stepCam(dt) {
   camera.lookAt(controls.target); // face the moving target the whole way
   if (f >= 1) { const cb = A.after; CAMANIM = null; if (cb) cb(); }
 }
-controls.addEventListener('start', () => { CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } });
+controls.addEventListener('start', () => { if (HERO) { HERO = false; renderCaption(); } CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } });
 
 // walk mode
 const WALK = { yaw: 0, pitch: 0, keys: {}, joy: { x: 0, y: 0 }, eye: 1.65 };
@@ -1541,7 +1630,6 @@ function applyScene(vpId) { // what a viewpoint hides, cuts open and makes see-t
   if (v.hide.some(n => CTX_WALL.includes(n))) for (const n of ROOM_WALLN) HIDE_TOUR.add(n); // the shop's own north wall hides with the explainer's
   for (const [k, sk] of Object.entries(SKINS)) if (v.hide.some(n => n.startsWith(SKIN_PRE[k]))) HIDE_TOUR.add(sk.name);
   for (const c of Object.values(CUT)) if (c.pieces.length) setCutOpen(c.key, v.cutaway && c.hide.some(n => v.hide.includes(n)), true);
-  if (v.xray_alpha !== undefined) { const xa = Array.isArray(v.xray_alpha) ? v.xray_alpha[v.xray_alpha.length - 1][1] : v.xray_alpha; setXray(xa < 0.99); }
   EXPL.target = v.explode ? 1 : 0;
   applyVisibility();
 }
@@ -2163,6 +2251,7 @@ const TU = TOUR.ui;
 let ST = null; // { i, k, t, paused, fired, endT }  i === STORY.length = the shut-down sequence
 const curStep = () => (!ST ? null : ST.i >= STORY.length ? SHUT : STORY[ST.i]);
 let ST_ZONES0 = false;
+let HERO = !Q.has('story') && !Q.has('shot'); // first load: the training button sits front and center
 let CAPO = null, STCAP = null; // free caption (viewpoints, demo) and the story part's caption
 function endDemo() {
   if (!DEMO) return;
@@ -2181,6 +2270,7 @@ function tourAct(a) { SM.act(a, TOUR.states); renderAll(); }
 function storyStart(i, k = 0) {
   if (PROC) { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); }
   if (!ST) ST_ZONES0 = !!TOG.zones;
+  HERO = false; RAIL = null;
   STOP = -1; LSRC.view = []; CAPO = null;
   ST = { i: clamp(i, 0, STORY.length), k: -1, t: 0, paused: false, fired: new Set(), endT: null };
   storyPhase(k);
@@ -2190,10 +2280,13 @@ function storyPhase(k) {
   const seq = ST.k === step.phases.indexOf(ph) - 1; // reached by playing on (a jump sets the exact state instead)
   ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set(); ST.endT = null;
   if (DEMO && !ph.demo) endDemo();
-  if (ph.state) tourState(ph.state, ph.state_soft && seq);
+  let stName = ph.state, soft = ph.state_soft && seq;
+  if (!stName && !seq) { for (let j = ST.k; j >= 0; j--) if (step.phases[j].state) { stName = step.phases[j].state; break; } soft = false; } // a jump: that phase's state
+  if (stName) tourState(stName, soft);
   TOG.shed_walls = TOG.shed_roof = TOG.shop_wall = true;
   TOG.zones = ph.zones ? true : ST_ZONES0;
   applyScene(ph.vp);
+  setXray(!!ph.xray || USER_XRAY); // x-ray only where the step looks inside a duct
   const vw = ph.view ? CT.views[ph.view] : null;
   if (vw) applyViewVis(vw);
   if (ph.demo === 'start') { TOG.follow = true; startDemo(); }
@@ -2227,7 +2320,7 @@ function storyNext() { if (!ST) { storyStart(0); return; } storyStart(ST.i >= ST
 function storyPrev() { if (!ST) return; if (ST.k > 0) storyPhase(ST.k - 1); else storyStart(ST.i >= STORY.length ? STORY.length - 1 : Math.max(0, ST.i - 1)); }
 function storyStop() {
   if (!ST) return;
-  ST = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
+  ST = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; setXray(USER_XRAY); refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
   if (DEMO) endDemo();
   renderCaption(); renderSide(); updateFlow();
 }
@@ -2258,7 +2351,7 @@ function renderCaption() {
       <div class="sb-keys">${esc(tx(TU.keys, L1))}</div>`;
     elCap.className = 'story';
   } else if (CAPO) { html = t4(CAPO); elCap.className = ''; }
-  else { html = `<button class="sb-start" data-sb="start">▶ ${b4(U.tour)} <span class="sb-n">${STORY.length}</span></button>`; elCap.className = 'idle'; }
+  else { html = `<button class="sb-start" data-sb="start">▶ ${b4(HERO ? U.start_training : U.tour)} <span class="sb-n">${STORY.length}</span></button>`; elCap.className = HERO ? 'idle hero' : 'idle'; }
   if (elCap._h === html) return;
   elCap._h = html; elCap.innerHTML = html; elCap.style.display = MODE === 'walk' && !ST ? 'none' : 'block'; fitRight();
   elCap.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
@@ -2370,40 +2463,56 @@ function goFlow(id) { // tap a box: fly there, open it up, and show its card
   renderSide(); updateFlow();
 }
 
-// ---------- side panel
+// ---------- left rail + one drawer (Training, Explore, Controls, Air flow map, Settings); closed by default
 let MOREOPEN = false;
-function renderSide() {
-  if (!elSide._init) { elSide.innerHTML = '<div id="sideTop"></div><div id="flowCard" class="fm-card"></div><div id="sideMain"></div>'; elSide._init = true; renderFlow(); }
-  const cutBtns = ['cyclone', 'fan', 'airlock', 'transfer_blower', 'filter_cartridge', 'drum', 'ducts'].map(k => `<button class="b ${CUT[k].open ? 'on' : ''}" data-cut="${k}">${b4(k === 'ducts' ? U.ducts : CUT[k].text)}</button>`).join('');
-  const sysOn = S.motor.fan.running || S.motor.blower.running || S.motor.airlock.running;
-  $('#sideTop').innerHTML = `<h1>Dust Collection Explorer</h1><div class="sub">${t4(U.sub)}</div>
-    <div class="langs">${['all', ...LANGS].map(l => `<button data-lang="${l}" class="${LANG === l ? 'on' : ''}">${l === 'all' ? esc(U.all.en) : l.toUpperCase()}</button>`).join('')}</div>`;
-  $('#sideMain').innerHTML = `
-    <div class="sec"><div class="hd">${b4(U.tour)}</div>
-      <div class="tour">${STORY.map((st, i) => `<button class="b ${ST && ST.i === i ? 'on' : ''}" data-story="${i}"><span class="n">${i + 1}</span><span>${b4(st.title)}</span></button>`).join('')}</div></div>
-    <div class="sec"><div class="hd">${b4(U.system)}</div>
-      <div class="switch"><button class="b big ${sysOn ? 'go' : ''}" id="sysOn">${b4(U.on)}</button><button class="b big ${!sysOn ? 'stop' : ''}" id="sysOff">${b4(U.off)}</button></div>
-      <div class="row" style="margin-top:6px"><button class="b wide" id="rst">${b4(U.reset_scene)}</button></div></div>
-    <div class="sec"><div class="hd">${b4(U.view)}</div>
-      <div class="switch"><button class="b ${MODE === 'orbit' ? 'on' : ''}" data-mode="orbit">${b4(U.orbit)}</button><button class="b ${MODE === 'walk' ? 'on' : ''}" data-mode="walk">${b4(U.walk)}</button><button class="b" id="home" title="H">⌂ ${b4(U.home)}</button></div>
-      <div class="note">${t4(U.drag_hint)}</div></div>
-    <div class="sec"><div class="hd">${b4(U.show)}</div>
-      ${['xray', 'shed_walls', 'shed_roof', 'shop_wall', 'shop_roof', 'labels', 'sound'].map(k => `<label class="tog"><input type="checkbox" data-tog="${k}" ${TOG[k] ? 'checked' : ''}><span>${b4(U[k])}</span></label>`).join('')}</div>
-    <div class="sec"><div class="hd">${b4(U.sections)}</div><div class="row">${cutBtns}<button class="b ${EXPL.target ? 'on' : ''}" id="expl">${b4(U.exploded)}</button><button class="b" id="cutAll">${b4(U.close_all)}</button></div></div>
-    <div class="sec"><div class="hd">${b4(U.flamex)}</div><button class="b wide ${DEMO ? 'on' : ''}" id="demo">${b4(U.flamex_run)}</button>
-      <label class="tog"><input type="checkbox" data-tog="follow" ${TOG.follow ? 'checked' : ''}><span>${b4(U.follow)}</span></label>
-      <div class="note">${t4(CT.flamex.spray_note)}</div></div>
-    <div class="sec"><div class="hd">${b4(U.training)}</div><div class="tour">
+let RAIL = null;
+let USER_XRAY = false; // the Settings choice; tour steps that look inside a duct switch x-ray on for that step only
+const RAILS = [
+  { id: 'training', icon: '▶', t: L4('Training', 'Formación', 'Formation', 'Mafunzo') },
+  { id: 'explore', icon: '◎', t: L4('Explore', 'Explorar', 'Explorer', 'Gundua') },
+  { id: 'controls', icon: '⏻', t: L4('Controls', 'Controles', 'Commandes', 'Vidhibiti') },
+  { id: 'flow', icon: '⇄', t: L4('Air flow map', 'Mapa del aire', "Carte de l'air", 'Ramani ya hewa') },
+  { id: 'settings', icon: '⚙', t: L4('Settings', 'Ajustes', 'Réglages', 'Mipangilio') }
+];
+function drawerHTML(id) {
+  const sec = (hd, body) => `<div class="sec"><div class="hd">${b4(hd)}</div>${body}</div>`;
+  if (id === 'training') return `<div class="dt">${b4(RAILS[0].t)}</div>
+    ${sec(U.tour, `<div class="tour">${STORY.map((st, i) => `<button class="b ${ST && ST.i === i ? 'on' : ''}" data-story="${i}"><span class="n">${i + 1}</span><span>${b4(st.title)}</span></button>`).join('')}</div>`)}
+    ${sec(U.procedures, `<div class="tour">${PR.procedures.map(p => `<button class="b ${PROC && PROC.id === p.id ? 'on' : ''}" data-proc="${p.id}">${b4(p.title)}</button>`).join('')}</div>`)}
+    ${sec(U.flamex, `<button class="b wide ${DEMO ? 'on' : ''}" id="demo">${b4(U.flamex_run)}</button>
+      <label class="tog"><input type="checkbox" data-tog="follow" ${TOG.follow ? 'checked' : ''}><span>${b4(U.follow)}</span></label><div class="note">${t4(CT.flamex.spray_note)}</div>`)}`;
+  if (id === 'explore') {
+    const sysOn = S.motor.fan.running || S.motor.blower.running || S.motor.airlock.running;
+    const cutBtns = ['cyclone', 'fan', 'airlock', 'transfer_blower', 'filter_cartridge', 'drum', 'ducts'].map(k => `<button class="b ${CUT[k].open ? 'on' : ''}" data-cut="${k}">${b4(k === 'ducts' ? U.ducts : CUT[k].text)}</button>`).join('');
+    return `<div class="dt">${b4(RAILS[1].t)}</div>
+      ${sec(U.view, `<div class="switch"><button class="b ${MODE === 'orbit' ? 'on' : ''}" data-mode="orbit">${b4(U.orbit)}</button><button class="b ${MODE === 'walk' ? 'on' : ''}" data-mode="walk">${b4(U.walk)}</button><button class="b" id="home" title="H">⌂ ${b4(U.home)}</button></div><div class="note">${t4(U.nav_hint)}</div>`)}
+      ${sec(U.system, `<div class="switch"><button class="b big ${sysOn ? 'go' : ''}" id="sysOn">${b4(U.on)}</button><button class="b big ${!sysOn ? 'stop' : ''}" id="sysOff">${b4(U.off)}</button></div>
+        <div class="row" style="margin-top:6px"><button class="b wide" id="rst">${b4(U.reset_scene)}</button></div>`)}
+      ${sec(U.sections, `<div class="row">${cutBtns}<button class="b ${EXPL.target ? 'on' : ''}" id="expl">${b4(U.exploded)}</button><button class="b" id="cutAll">${b4(U.close_all)}</button></div>`)}
+      ${sec(U.more_views, `<div class="tour">${VPS.map((v, i) => `<button class="b ${i === STOP ? 'on' : ''}" data-stop="${i}"><span class="n">${v.index}</span><span>${b4(v.title)}</span></button>`).join('')}</div>`)}`;
+  }
+  if (id === 'controls') return `<div class="dt">${b4(RAILS[2].t)}</div>${sec(U.training, `<div class="tour">
       <button class="b" data-panel="collector" data-view="collector_wall">${b4(U.p_collector)}</button>
       <button class="b" data-panel="outside" data-view="outside_switches">${b4(U.p_outside)}</button>
       <button class="b" data-panel="gate_panel" data-view="gate_panel">${b4(U.p_gates)}</button>
       <button class="b" data-panel="flamex_A" data-view="flamex_panels">${b4(U.p_fxA)}</button>
-      <button class="b" data-panel="flamex_B" data-view="flamex_panels">${b4(U.p_fxB)}</button></div></div>
-    <div class="sec"><div class="hd">${b4(U.procedures)}</div><div class="tour">
-      ${PR.procedures.map(p => `<button class="b ${PROC && PROC.id === p.id ? 'on' : ''}" data-proc="${p.id}">${b4(p.title)}</button>`).join('')}</div></div>
-    <details class="sec more" ${MOREOPEN ? 'open' : ''}><summary class="hd">${b4(U.more_views)}</summary>
-      <div class="tour">${VPS.map((v, i) => `<button class="b ${i === STOP ? 'on' : ''}" data-stop="${i}"><span class="n">${v.index}</span><span>${b4(v.title)}</span></button>`).join('')}</div></details>`;
+      <button class="b" data-panel="flamex_B" data-view="flamex_panels">${b4(U.p_fxB)}</button></div>`)}`;
+  if (id === 'settings') return `<div class="dt">${b4(RAILS[4].t)}</div>
+    ${sec(L4('Language', 'Idioma', 'Langue', 'Lugha'), `<div class="langs">${['all', ...LANGS].map(l => `<button data-lang="${l}" class="${LANG === l ? 'on' : ''}">${l === 'all' ? esc(U.all.en) : l.toUpperCase()}</button>`).join('')}</div>`)}
+    ${sec(U.show, ['xray', 'shop_wall', 'ceiling', 'shop_roof', 'shed_walls', 'shed_roof', 'zones', 'labels', 'sound'].map(k => `<label class="tog"><input type="checkbox" data-tog="${k}" ${TOG[k] ? 'checked' : ''}><span>${b4(U[k])}</span></label>`).join(''))}`;
+  if (id === 'flow') return `<div class="dt">${b4(RAILS[3].t)}</div>`;
+  return '';
+}
+function renderSide() {
+  if (!elSide._init) { elSide.innerHTML = '<nav id="rail"></nav><div id="drawer"><button class="dx" id="dclose" aria-label="close">×</button><div id="drawerIn"></div><div id="flowCard" class="fm-card"></div></div>'; elSide._init = true; renderFlow(); }
+  const L1 = LANG === 'all' ? 'en' : LANG;
+  $('#rail').innerHTML = RAILS.map(r => `<button class="rl ${RAIL === r.id ? 'on' : ''}" data-rail="${r.id}"><i>${r.icon}</i><span>${esc(tx(r.t, L1))}</span></button>`).join('');
+  $('#drawer').style.display = RAIL ? 'block' : 'none';
+  $('#flowCard').style.display = RAIL === 'flow' ? 'block' : 'none';
+  $('#drawerIn').innerHTML = RAIL ? drawerHTML(RAIL) : '';
   const on = (sel, f) => elSide.querySelectorAll(sel).forEach(b => b.onclick = (e) => f(b, e));
+  on('[data-rail]', b => { RAIL = RAIL === b.dataset.rail ? null : b.dataset.rail; HERO = false; renderSide(); renderCaption(); });
+  on('#dclose', () => { RAIL = null; renderSide(); });
   on('[data-lang]', b => {
     LANG = b.dataset.lang; try { localStorage.setItem('dce_lang', LANG); } catch (e) { /* ignore */ }
     hudKey = ''; elCap._h = ''; renderAll(); renderFlow(); refreshLabels(); renderCaption();
@@ -2415,10 +2524,11 @@ function renderSide() {
   on('[data-mode]', b => setMode(b.dataset.mode));
   on('#home', () => goHome());
   on('[data-stop]', b => applyStop(+b.dataset.stop));
-  const det = elSide.querySelector('details.more'); if (det) det.ontoggle = () => { MOREOPEN = det.open; };
   elSide.querySelectorAll('[data-tog]').forEach(i => i.onchange = () => {
     const k = i.dataset.tog; TOG[k] = i.checked;
-    if (k === 'xray') setXray(i.checked);
+    if (k === 'xray') { USER_XRAY = i.checked; setXray(i.checked); }
+    if (k === 'zones') { zoneLabels(); updateFlow(); }
+    if (k === 'ceiling') { OVERHEAD_OFF = null; stepOverhead(); }
     if (groupNodes[k]) { tourOverride.add(k); applyVisibility(); }
     if (k === 'sound' && i.checked) ac();
   });
@@ -2602,11 +2712,12 @@ async function selfTest() {
 }
 
 // ---------------------------------------------------------------- start
-setXray(true);
+setXray(false);
 resetScene(true);
 applyVisibility();
 resize();
 applyStop(0, false);
+if (HERO) { LSRC.view = []; refreshLabels(); } // first load: no labels, just the Start training button
 // scripted states for tests: ?shot=<viewpoint>&system=on|off&xray=1&cut=cyclone&panel=collector&proc=...&flamex=demo&ft=4&warm=3&walk=1
 if (Q.get('system') === 'off') { systemOff(); for (const m of Object.keys(LV)) LV[m] = 0; for (const g of Object.keys(gateLv)) gateLv[g] = 0; initFlow(false); }
 if (Q.has('gates')) { for (const g of Object.keys(S.gates)) S.gates[g] = false; for (const g of Q.get('gates').split(',')) if (g in S.gates) { S.gates[g] = true; gateLv[g] = 1; } initFlow(true); }
