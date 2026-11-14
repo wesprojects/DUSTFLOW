@@ -380,7 +380,7 @@ for (const g of [gR, gK, gD]) {
     if (o.userData && o.userData.skin_of) SKINS[o.userData.skin_of] = o;
   });
   if (g === gR && !USE_SKINS) { // the shop model's own machines (assembled_v2) stay out: the video's machines are shown
-    const drop = []; g.scene.traverse(o => { if (o.userData && o.userData.room_cat === 'Machines') drop.push(o); });
+    const drop = []; g.scene.traverse(o => { if (o.userData && (o.userData.room_cat === 'Machines' || (gW && o.userData.room_cat === 'Cranes'))) drop.push(o); });
     for (const o of drop) { if (o.parent) o.parent.remove(o); delete ROOMCAT[o.name]; }
   }
   // identical parts written once (same geometry + material) -> one InstancedMesh each
@@ -616,7 +616,7 @@ const groupNodes = {
   shop_roof: roomOf('Roof')
 };
 const CUTHIDE = new Set(); // cut pieces hidden by open cross sections
-const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear', 'DC_GapConduits', ...((CT.wall_layout || {}).hide || [])]); // placeholder block and the old wall dressing
+const EXTRA_HIDE = new Set([...(gW && PWJ ? Object.keys(NODE).filter(n => /^(FX_Panel_|FX_Horn|Ctx_WallLo_(Flex|Card))/.test(n)) : []), 'Ctx_WallLo_Switchgear', 'DC_GapConduits', ...((CT.wall_layout || {}).hide || [])]); // placeholder block and the old wall dressing
 // with the whole shop loaded, its own floor and north wall replace the explainer's cropped slab and plain wall pieces
 const CTX_WALL = [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low].filter(n => !/Flex|Card/.test(n));
 if (gR) for (const n of ['Ctx_ShopFloorSlab', ...CTX_WALL]) EXTRA_HIDE.add(n);
@@ -741,6 +741,10 @@ const FXN = {
   panel: { A: cloneMatFor('FX_Panel_A'), B: cloneMatFor('FX_Panel_B') }
 };
 const lensPos = SC.groups.flamex_strobe_lenses.map(n => { const b = new THREE.Box3().setFromObject(NODE[n]); return b.getCenter(new THREE.Vector3()); });
+if (gW && PWJ) { // Paper City's horns: their lenses flash
+  gW.scene.traverse(o => { if (o.isMesh && /EL_Plastic_Clear/.test(o.material.name)) { o.material = o.material.clone(); FXN.lens.push(o.material); } });
+  if ((PWJ.removed.horn_lens || []).length) { lensPos.length = 0; for (const r of PWJ.removed.horn_lens) lensPos.push(V3(r.center)); }
+}
 
 // ---------------------------------------------------------------- simulator state
 const SIM = { t: 0 };
@@ -984,36 +988,106 @@ buildOutsideDressing();
 buildOutsideJBox();
 useRealWall();
 // Flamex panels in the model: overlay a live face (LEDs) and make them clickable
+// The real panel faces, laid out from the owner's photos: A = Interior FLE 5000 (photo 60), B = Exterior Minimax FMZ 5000 (photo 61).
+// u, v = 0..1 across the faceplate (FLE) or the grey inset (Minimax). Returns the button spots.
+function fxState(z, blink) {
+  const Z = S.flamex[z], lamp = Z.lamp > 0, water = Z.spray > 0 && S.valve[CT.flamex.panels[z].valve].open;
+  return { fire: (Z.fire && blink) || lamp, fireOn: Z.fire || lamp, lamp, key: Z.key, water: water || lamp, horns: Z.horns || lamp, extOff: (Z.extOff && Z.fire) || lamp, Z };
+}
+function drawPanelFace(z, g, W, H, st) {
+  const X = u => u * W, Y = v => v * H, f = Math.max(7, W / 46);
+  const led = (u, v, on, col) => { g.fillStyle = on ? col : '#3b3f44'; g.beginPath(); g.arc(X(u), Y(v), Math.max(2.5, W / 140), 0, 7); g.fill(); };
+  const label = (u, v, w, h, lines, opts = {}) => {
+    g.fillStyle = '#f4f4f2'; g.fillRect(X(u), Y(v - h / 2), X(w), Y(h));
+    if (!lines) return; g.fillStyle = opts.col || '#151515'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const L = Array.isArray(lines) ? lines : [lines], fs = opts.fs || f * (L.length > 1 ? 0.62 : 0.8);
+    g.font = `${opts.bold === false ? '' : 'bold '}${fs}px Arial`;
+    L.forEach((t, i) => g.fillText(t, X(u + w / 2), Y(v) + (i - (L.length - 1) / 2) * fs * 1.05));
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  };
+  const btn = (u, v, w, h, red, glyph) => { g.fillStyle = red ? '#d33a2c' : '#c9cdd1'; g.strokeStyle = '#555'; g.lineWidth = 1;
+    const r = Math.min(X(w), Y(h)) * 0.35; g.beginPath(); g.roundRect(X(u - w / 2), Y(v - h / 2), X(w), Y(h), r); g.fill(); g.stroke();
+    if (glyph) { g.fillStyle = red ? '#fff' : '#222'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `bold ${f * 0.62}px Arial`; g.fillText(glyph, X(u), Y(v)); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
+    return { x: u - w / 2, y: v - h / 2, w, h };
+  };
+  const hot = [];
+  if (z === 'A') { // FLE 5000: grey faceplate
+    g.fillStyle = '#8e959d'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#7d848c'; g.fillRect(0, Y(0.31), W, Math.max(1, H / 300));
+    [['Fire', st.fire, '#ff2a2a'], ['Fault', st.lamp, '#ffc21f'], [['Supervisory', 'Access on'], st.key === 1 || st.lamp, '#ffc21f']].forEach(([t, on, c], i) => { led(0.04, 0.09 + i * 0.075, on, c); label(0.07, 0.09 + i * 0.075, 0.17, 0.055, t); });
+    label(0.36, 0.105, 0.29, 0.1, ['FLAMEX INC.', '4365 Federal Drive · Greensboro, NC'], { col: '#1d3d8f' }); label(0.36, 0.235, 0.29, 0.06, 'FLE 5000', { fs: f * 1.1 });
+    [['Operation', true, '#3dff6a'], ['System fault', st.lamp, '#ffc21f'], [['Mains Fault', 'Battery Fault'], st.lamp, '#ffc21f']].forEach(([t, on, c], i) => { led(0.68, 0.09 + i * 0.075, on, c); label(0.71, 0.09 + i * 0.075, 0.22, 0.055, t); });
+    const leftRows = [[['Primary Zone', 'Spark Detector', 'Off / fault'], st.fireOn, '#ff2a2a', 1], [['Secondary Zone', 'Spark Detector', 'Off / fault'], st.lamp, '#ffc21f', 1], [['Monitoring', 'Spark Detector', 'Off / fault'], st.lamp, '#ffc21f', 1], null,
+      [['Ext. Reset Circuit', 'Off / fault'], st.lamp, '#ffc21f', 1], [['Monitoring Primary', 'Extinguishing Zone'], st.lamp, '#ffc21f', 1], [['Monitoring', 'Booster Pump'], st.lamp, '#ffc21f', 1],
+      [['Ground', 'Fault'], st.lamp, '#ffc21f'], [['Primary Zone', 'Fault Water'], st.lamp, '#ffc21f'], [['Primary Zone', 'Leakage'], st.lamp, '#ffc21f']];
+    leftRows.forEach((r, i) => { if (!r) return; const v = 0.385 + i * 0.065; led(0.04, v, r[1], r[2]); label(0.07, v, 0.17, 0.052, r[0]); if (r[3]) btn(0.29, v, 0.05, 0.035); });
+    const rightRows = [[['Primary Zone Spark', 'Counter'], st.fireOn, '#ff2a2a'], [['Secondary Zone Spark', 'Counter'], st.lamp, '#ffc21f'], ['Test State', st.key === 1 || st.lamp, '#ffc21f'], null,
+      [['Alarm Horn', 'Off / On'], st.horns, '#ff2a2a', 1], [['Valve Primary Zone', 'Extinguishing Activated'], st.water, '#ff2a2a', 1], ['', st.lamp, '#ffc21f', 1], ['', false], [['Primary Zone', 'Blocked'], st.lamp, '#ffc21f'], ['', false]];
+    rightRows.forEach((r, i) => { if (!r) return; const v = 0.385 + i * 0.065; led(0.66, v, r[1], r[2]); label(0.69, v, 0.17, 0.052, r[0]); if (r[3]) btn(0.91, v, 0.05, 0.035); });
+    hot.push({ act: 'int', ...btn(0.43, 0.62, 0.06, 0.04, false, '🔈') }, { act: 'ext', ...btn(0.55, 0.62, 0.06, 0.04, true, 'ext') },
+      { act: 'lamp', ...btn(0.43, 0.69, 0.06, 0.04, false, '◐') }, { act: 'reset', ...btn(0.55, 0.69, 0.06, 0.04, true, 'Reset') },
+      { act: 'firectl', ...btn(0.43, 0.76, 0.06, 0.04, false, '○') }, { act: 'onoff', ...btn(0.55, 0.76, 0.06, 0.04, true, '⏻') });
+    g.fillStyle = '#d6d8da'; g.beginPath(); g.arc(X(0.49), Y(0.875), W * 0.03, 0, 7); g.fill(); g.strokeStyle = '#333'; g.lineWidth = Math.max(1.5, W / 220);
+    g.beginPath(); const ka = st.key ? -0.7 : 0; g.moveTo(X(0.49) - Math.sin(ka) * W * 0.025, Y(0.875) - Math.cos(ka) * W * 0.025); g.lineTo(X(0.49) + Math.sin(ka) * W * 0.025, Y(0.875) + Math.cos(ka) * W * 0.025); g.stroke();
+    hot.push({ act: 'key', x: 0.45, y: 0.84, w: 0.08, h: 0.07 });
+  } else { // Minimax FMZ 5000: grey inset with the LCD
+    g.fillStyle = '#8f949a'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#e9ebe6'; g.fillRect(X(0.05), Y(0.03), X(0.08), Y(0.07)); g.fillRect(X(0.15), Y(0.03), X(0.08), Y(0.07));
+    g.fillStyle = '#c62828'; g.font = `bold ${f * 0.7}px Arial`; g.fillText('🔥', X(0.065), Y(0.088)); g.fillText('⚠', X(0.165), Y(0.088));
+    g.fillStyle = '#a7ae9f'; g.fillRect(X(0.4), Y(0.02), X(0.26), Y(0.2)); g.fillStyle = '#1e241a';
+    const lcd = st.lcd || ['FLAMEX INC.', ''];
+    lcd.slice(0, 4).forEach((t, i) => { g.font = `${i === 0 && !st.fireOn ? 'bold ' + f * 1.05 : f * 0.62}px ${i === 0 && !st.fireOn ? 'Georgia' : 'Courier New'}`; g.fillText(t, X(0.42), Y(0.08 + i * (st.fireOn ? 0.045 : 0.09))); });
+    led(0.72, 0.08, true, '#3dff6a');
+    const L = [['Group 1', 'DET 10 Inch Duct'], '', '', '', ['Group 5', 'FM 10 Inch Duct'], '', ['Group 11', 'EXT 10 Inch Duct'], '', ['Group 13', 'Alarm Horn']];
+    const Lon = [st.fireOn, 0, 0, 0, st.water, 0, st.water, 0, st.horns];
+    L.forEach((t, i) => { const v = 0.2 + i * 0.091; led(0.03, v, Lon[i] || st.lamp, '#ff2a2a'); label(0.06, v, 0.2, 0.065, t || null); btn(0.31, v, 0.045, 0.045); });
+    const R = [['Operation', true, '#3dff6a'], ['System Fault', st.lamp], ['Power Supply Fault', st.lamp], ['', false], ['Reset', st.lamp], ['', false], ['', false], ['Audible Alarm off', st.extOff], ['Disabled', st.key === 1 || st.lamp], ['Test State', st.lamp], ['Mains Fault', st.lamp], ['Battery Fault', st.lamp], ['Earth Fault', st.lamp]];
+    R.forEach(([t, on, c], i) => { const v = 0.08 + i * 0.07; led(0.72, v, on, c || '#ffc21f'); label(0.75, v, 0.22, 0.05, t || null); });
+    btn(0.45, 0.38, 0.05, 0.05); btn(0.54, 0.38, 0.05, 0.05);
+    hot.push({ act: 'lamp', ...btn(0.45, 0.47, 0.05, 0.05, false, '◐') }); btn(0.54, 0.47, 0.05, 0.05); btn(0.63, 0.47, 0.05, 0.05); btn(0.54, 0.56, 0.05, 0.05);
+    hot.push({ act: 'int', ...btn(0.45, 0.67, 0.05, 0.05, false, '🔈') }, { act: 'ext', ...btn(0.54, 0.67, 0.05, 0.05, true, 'ext') }, { act: 'reset', ...btn(0.63, 0.67, 0.05, 0.05, true, 'Reset') });
+    btn(0.45, 0.78, 0.05, 0.05); hot.push({ act: 'onoff', ...btn(0.54, 0.78, 0.05, 0.05, false, '⏻') }); hot.push({ act: 'firectl', ...btn(0.63, 0.78, 0.05, 0.05, false, '○') });
+    g.fillStyle = '#d6d8da'; g.beginPath(); g.arc(X(0.54), Y(0.9), W * 0.025, 0, 7); g.fill(); g.strokeStyle = '#333'; g.lineWidth = Math.max(1.5, W / 220);
+    g.beginPath(); const ka = st.key ? -0.7 : 0; g.moveTo(X(0.54) - Math.sin(ka) * W * 0.02, Y(0.9) - Math.cos(ka) * W * 0.02); g.lineTo(X(0.54) + Math.sin(ka) * W * 0.02, Y(0.9) + Math.cos(ka) * W * 0.02); g.stroke();
+    hot.push({ act: 'key', x: 0.5, y: 0.85, w: 0.08, h: 0.1 });
+  }
+  return hot;
+}
+function fxLcd(z) {
+  const Z = S.flamex[z], ts = Z.msgT ? Z.msgT : null, water = Z.spray > 0 && S.valve[CT.flamex.panels[z].valve].open;
+  if (z !== 'B') return null;
+  if (!Z.fire) return ['FLAMEX INC.', new Date().toLocaleDateString('en-US') + ' ' + new Date().toTimeString().slice(0, 5)];
+  return ['1 Detect.group 1  Fire', ts ? ts.toTimeString().slice(0, 8) + ',' + String(ts.getMilliseconds()).padStart(3, '0') : '', 'DET 10 inch Duct', water ? '5 Contr.group 11 Ext. released' : ''];
+}
+// a box from the real (Paper City) wall model, by material, west of the switches
+function kitBox(matRe) {
+  if (!gW) return null; const b = new THREE.Box3(), v = new THREE.Vector3(); gW.scene.updateMatrixWorld(true);
+  gW.scene.traverse(o => { if (!o.isMesh || !matRe.test(o.material.name)) return; const P = o.geometry.attributes.position; for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (v.x < 8.9) b.expandByPoint(v); } });
+  return b.isEmpty() ? null : b;
+}
 const FXFACE = {};
 for (const z of ['A', 'B']) {
   const n = NODE[CT.flamex.panels[z].node]; if (!n) continue;
-  const b = new THREE.Box3().setFromObject(n), sz = b.getSize(new THREE.Vector3()), ctr = b.getCenter(new THREE.Vector3());
-  const W = 256, H = Math.round(256 * sz.y / sz.x);
+  let b = new THREE.Box3().setFromObject(n);
+  const kb = kitBox(z === 'A' ? /EL_Plastic_Enclosure/ : /EL_Paint_PanelWhite/);
+  if (kb) { const s0 = kb.getSize(new THREE.Vector3()); b = z === 'A' // the faceplate inside the FLE box / the grey inset in the Minimax door (photos 60, 61)
+    ? new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.1, kb.min.y + s0.y * 0.04, kb.min.z), new THREE.Vector3(kb.max.x - s0.x * 0.06, kb.max.y - s0.y * 0.04, kb.max.z))
+    : new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.22, kb.max.y - s0.y * 0.64, kb.min.z), new THREE.Vector3(kb.min.x + s0.x * 0.77, kb.max.y - s0.y * 0.31, kb.max.z)); }
+  const sz = b.getSize(new THREE.Vector3()), ctr = b.getCenter(new THREE.Vector3());
+  const W = 512, H = Math.round(512 * sz.y / sz.x);
   const tex = canvasTex(W, H, () => {});
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(sz.x * 0.92, sz.y * 0.92), new THREE.MeshBasicMaterial({ map: tex }));
-  m.position.set(ctr.x, ctr.y, b.max.z + 0.003); world.add(m);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(sz.x * (kb ? 1 : 0.92), sz.y * (kb ? 1 : 0.92)), new THREE.MeshBasicMaterial({ map: tex }));
+  m.position.set(ctr.x, ctr.y, b.max.z + (kb && z === 'A' ? -0.012 : 0.003)); world.add(m);
   tagClick(m, 'panel_' + z, 'panel');
   n.traverse(o => { if (o.isMesh) { o.userData.ctl = 'panel_' + z; o.userData.act = 'panel'; } });
   FXFACE[z] = { tex, W, H, last: '' };
 }
 function drawFxFace(z, blink) {
   const F = FXFACE[z]; if (!F) return;
-  const Z = S.flamex[z], lamp = Z.lamp > 0;
-  const key = [Z.fire && blink, Z.key, lamp, Z.spray > 0 && S.valve[CT.flamex.panels[z].valve].open, Z.horns].join();
+  const st = fxState(z, blink); st.lcd = fxLcd(z);
+  const key = [st.fire, st.key, st.lamp, st.water, st.horns, st.extOff, (st.lcd || []).join('|')].join();
   if (key === F.last) return; F.last = key;
-  const g = F.tex.userData.g, W = F.W, H = F.H;
-  g.fillStyle = z === 'A' ? '#8f969f' : '#e9e7e2'; g.fillRect(0, 0, W, H);
-  if (z === 'B') { g.fillStyle = '#c62828'; g.fillRect(W - 70, 10, 60, 14); g.fillStyle = '#fff'; g.font = 'bold 10px Arial'; g.fillText('MINIMAX', W - 66, 21); }
-  const fx = z === 'A' ? 14 : W * 0.22, fy = z === 'A' ? 14 : H * 0.36, fw = z === 'A' ? W - 28 : W * 0.56, fh = z === 'A' ? H - 28 : H * 0.3;
-  g.fillStyle = '#9aa1aa'; g.fillRect(fx, fy, fw, fh);
-  const led = (x, y, on, col, label) => { g.fillStyle = on ? col : '#444'; g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = 'bold 11px Arial'; g.fillText(label, x + 10, y + 4); };
-  led(fx + 12, fy + 16, (Z.fire && blink) || lamp, '#ff2a2a', 'Fire');
-  led(fx + 12, fy + 34, lamp, '#ffd21f', 'Fault');
-  led(fx + 12, fy + 52, Z.key === 1 || lamp, '#ffd21f', z === 'A' ? 'Supervisory' : 'Disabled');
-  led(fx + fw * 0.58, fy + 16, true, '#3dff6a', 'Operation');
-  led(fx + fw * 0.58, fy + 34, (Z.spray > 0 && S.valve[CT.flamex.panels[z].valve].open) || lamp, '#ff2a2a', 'Extinguish');
-  led(fx + fw * 0.58, fy + 52, Z.horns || lamp, '#ff2a2a', 'Horn');
-  g.fillStyle = '#333'; g.font = 'bold 12px Arial'; g.fillText((z === 'A' ? 'FLE 5000' : 'FLAMEX') + '  key ' + Z.key, fx + 8, fy + fh - 8);
+  drawPanelFace(z, F.tex.userData.g, F.W, F.H, st);
   F.tex.needsUpdate = true;
 }
 
@@ -2263,16 +2337,12 @@ function renderPanel() {
     const right = [led(true, 'gr', 'Operation'), led(lamp, 'y', 'System fault'), led(lamp, 'y', z === 'A' ? 'Mains Fault / Battery Fault' : 'Power Supply Fault'), led(Z.key === 1 || lamp, 'y', z === 'A' ? 'Test State' : 'Disabled'), led((Z.extOff && Z.fire) || lamp, 'y', 'Audible alarm off')];
     const ts = Z.msgT ? Z.msgT : null;
     const lcd = z === 'B' ? (Z.fire ? `1 Detect.group 1\nFire\n${ts ? ts.toTimeString().slice(0, 8) + ',' + String(ts.getMilliseconds()).padStart(3, '0') + ' ' + ts.toLocaleDateString('en-GB').replace(/\//g, '.').replace(/\.(\d\d)(\d\d)$/, '.$2') : ''}\nDET 10 inch Duct${water ? '\n5 Contr. group 11\nExt. sys. released' : ''}` : `FLAMEX INC.\n${new Date().toLocaleDateString('en-US')} ${new Date().toTimeString().slice(0, 5)}`) : '';
-    body = `<div class="fx"><div style="font:700 11px Arial;margin-bottom:4px">${esc(P.printed_title)} · ${esc(P.model)}</div>
-      ${z === 'B' ? `<div class="lcd g" style="margin:0 auto 8px;width:fit-content">${esc(lcd)}</div>` : ''}
-      <div class="face"><div class="col">${left.join('')}</div>
-      <div class="mid">
-        <button class="fb" data-fx="int" title="Buzzer off">int</button><button class="fb red" data-fx="ext" title="External alarms off">ext</button>
-        <button class="fb" data-fx="lamp" title="Lamp test">lamp</button><button class="fb red" data-fx="reset" title="Reset">Reset</button>
-        <button class="fb" data-fx="firectl" title="Fire control off">fire ctl</button><button class="fb" data-fx="onoff" title="On/Off">on/off</button>
-        <div class="key"><button class="${Z.key ? 'k1' : ''}" data-fx="key" title="Key 0 / 1"></button><small>key: ${Z.key} ${Z.key ? '(bypass)' : '(active)'}</small></div>
-      </div>
-      <div class="col">${right.join('')}</div></div></div>
+    const fcv = document.createElement('canvas'); fcv.width = 560; fcv.height = z === 'A' ? 640 : 432;
+    const fst = fxState(z, true); fst.lcd = fxLcd(z); const fhot = drawPanelFace(z, fcv.getContext('2d'), fcv.width, fcv.height, fst);
+    const realFace = `<div class="fxreal"><img src="${fcv.toDataURL('image/png')}" alt="">${fhot.map(h => `<button class="fxhot" data-fx="${h.act}" title="${h.act}" style="left:${(h.x * 100).toFixed(2)}%;top:${(h.y * 100).toFixed(2)}%;width:${(h.w * 100).toFixed(2)}%;height:${(h.h * 100).toFixed(2)}%"></button>`).join('')}</div>
+      <div class="note">key: ${Z.key} ${Z.key ? '(bypass)' : '(active)'}</div>`;
+    body = `<div class="fx"><div style="font:700 11px Arial;margin-bottom:4px">${esc(P.printed_title)} · ${esc(P.model)}</div>${realFace}
+</div>
       <div class="fxinfo">
         <span>${t4(U.water)}</span><span class="${water ? 'bad' : ''}"><b>${water ? esc(tx(U.spraying, L1)) : '-'}</b> <b id="sprayT"></b> <span class="note">(${CT.flamex.spray_time_s} s ${esc(tx(U.typical, L1))})</span></span>
         <span>${t4(U.valve)}</span><span>${esc(tx(v.open ? U.open : U.closed, L1))} <button class="minib" data-valve="${vId}">${esc(tx(v.open ? U.closed : U.open, L1))}</button> <button class="minib" data-lock="${vId}">${esc(tx(v.locked ? U.remove_lock : U.lock_tag, L1))}</button></span>
