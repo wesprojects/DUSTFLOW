@@ -81,74 +81,6 @@
  },
  "steps": [
   {
-   "id": "closed",
-   "title": {
-    "en": "The shop is closed",
-    "es": "El taller está cerrado",
-    "fr": "L'atelier est fermé",
-    "sw": "Karakana imefungwa"
-   },
-   "map": [],
-   "phases": [
-    {
-     "state": "closed",
-     "vp": "overview",
-     "dur": 6,
-     "cap": {
-      "en": "Everything is off. The Eatons are on, but every starter is off.",
-      "es": "Todo está apagado. Los Eaton están encendidos, pero los arrancadores están apagados.",
-      "fr": "Tout est arrêté. Les Eaton sont en marche, mais les démarreurs sont arrêtés.",
-      "sw": "Kila kitu kimezimwa. Eaton ziko wazi, lakini vianzishi vyote vimezimwa."
-     },
-     "labels": [
-      {
-       "a": "overview.shop",
-       "accent": "#5d6570",
-       "text": {
-        "en": "Laminate shop",
-        "es": "Taller de laminado",
-        "fr": "Atelier de stratifié",
-        "sw": "Karakana ya laminati"
-       }
-      },
-      {
-       "a": "overview.shed",
-       "accent": "#5d6570",
-       "text": {
-        "en": "Dust collector",
-        "es": "Colector de polvo",
-        "fr": "Dépoussiéreur",
-        "sw": "Kikusanya vumbi"
-       }
-      }
-     ]
-    },
-    {
-     "vp": "overview",
-     "cam": {
-      "position": [
-       11.2,
-       6.8,
-       -28.6
-      ],
-      "target": [
-       4.4,
-       2.8,
-       -21.0
-      ],
-      "hfov_deg": 61.9
-     },
-     "dur": 6,
-     "cap": {
-      "en": "Nothing spins and no air moves. All gates are closed. Flamex is on watch.",
-      "es": "Nada gira y el aire no se mueve. Todas las compuertas están cerradas. Flamex está vigilando.",
-      "fr": "Rien ne tourne, l'air ne bouge pas. Toutes les vannes sont fermées. Flamex surveille.",
-      "sw": "Hakuna kinachozunguka, hewa haisogei. Vali zote zimefungwa. Flamex inalinda."
-     }
-    }
-   ]
-  },
-  {
    "id": "start",
    "title": {
     "en": "Start the dust collector, one system at a time",
@@ -190,10 +122,10 @@
       ]
      ],
      "cap": {
-      "en": "1. Starter 1 (right) and the airlock box: the rotary airlock.",
-      "es": "1. Arrancador 1 (derecha) y la caja de la válvula: la válvula rotativa.",
-      "fr": "1. Démarreur 1 (à droite) et le boîtier de l'écluse : l'écluse rotative.",
-      "sw": "1. Kianzishi 1 (kulia) na kisanduku cha vali: vali ya kuzunguka."
+      "en": "Start the dust collector at the wall, right to left. 1. Starter 1 and the airlock box: the rotary airlock.",
+      "es": "Encienda el colector en la pared, de derecha a izquierda. 1. Arrancador 1 y la caja de la válvula: la válvula rotativa.",
+      "fr": "Démarrez le dépoussiéreur au mur, de droite à gauche. 1. Démarreur 1 et le boîtier de l'écluse : l'écluse rotative.",
+      "sw": "Washa kikusanya vumbi ukutani, kulia kwenda kushoto. 1. Kianzishi 1 na kisanduku cha vali: vali ya kuzunguka."
      },
      "labels": [
       {
