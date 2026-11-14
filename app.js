@@ -814,8 +814,15 @@ function photoFace(g, id, w, h, z) { // the real panel, cut from the owner's pho
   m.position.set(0, 0, z); g.add(m); tagClick(m, id, 'panel'); return m;
 }
 function buildEaton(c) {
-  const g = faceGroup(c), [w, h, d] = c.size;
-  const body = boxMesh(w, h, d, lam(0xa9aeb3)); g.add(body); tagClick(body, c.id, 'panel');
+  const g = faceGroup(c), [w, h, d] = c.size, outside = /^eaton_out_/.test(c.id);
+  const body = boxMesh(w, h, d, lam(outside ? 0xaab5c0 : 0xa9aeb3)); g.add(body); tagClick(body, c.id, 'panel');
+  if (outside) { // STAND-IN from photo 77 (no Paper City model exists): outdoor switch, rain lip, hinge pins, cable down to the conduit bank
+    const lip = boxMesh(w + 0.016, 0.01, d + 0.02, lam(0xaab5c0)); lip.position.set(0, h / 2 + 0.005, 0.006); g.add(lip);
+    for (const k of [-1, 1]) { const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.03, 8), lam(0x7d858d)); pin.position.set(-w / 2 - 0.004, k * h * 0.3, d / 2 - 0.006); g.add(pin); }
+    const drop = Math.max(0.1, c.pos[1] - h / 2 - 1.685); // down to the top conduit of the bank
+    const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, drop, 8), lam(0x15171a)); cab.position.set(w * 0.15, -h / 2 - drop / 2, -d * 0.2); g.add(cab);
+    const nip = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.03, 10), lam(0x8d959c)); nip.position.set(w * 0.15, -h / 2 - 0.012, -d * 0.2); g.add(nip);
+  }
   if (PANEL_PHOTOS[c.id]) photoFace(g, c.id, w, h, d / 2 + 0.0015);
   else { const face = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, w * 0.6), new THREE.MeshBasicMaterial({ map: EATON_TEX }));
     face.position.set(-w * 0.05, h * 0.12, d / 2 + 0.002); g.add(face); tagClick(face, c.id, 'panel'); }
@@ -954,6 +961,11 @@ function buildHose(c) {
   tagClick(ring, c.id, 'toggle');
   CTL3[c.id] = { g, ring, c };
 }
+function buildOutsideJBox() { // STAND-IN junction box beside the third outside switch (photo 77)
+  const a = CT.controls.find(x => x.id === 'eaton_out_blower'), b = CT.controls.find(x => x.id === 'eaton_out_airlock'); if (!a || !b) return;
+  const g = faceGroup({ pos: [(a.pos[0] + b.pos[0]) / 2, a.pos[1] - a.size[1] / 2 + 0.05, a.pos[2]], face: a.face });
+  g.add(boxMesh(0.07, 0.08, 0.06, lam(0xaab5c0)));
+}
 function buildOutsideDressing() { // three conduits along the outside face, junction box, drops to the switches
   const outs = CT.controls.filter(c => c.type === 'eaton' && c.where === 'outside');
   const zf = -19.05;
@@ -962,17 +974,14 @@ function buildOutsideDressing() { // three conduits along the outside face, junc
     const len = 8.4 - 5.6, m = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, len, 12), cm);
     m.rotation.z = Math.PI / 2; m.position.set(5.6 + len / 2, y, zf - 0.06 - i * 0.0); world.add(m);
   });
-  for (const c of outs) {
-    const p = V3(c.pos), m = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, p.y - 1.65 - c.size[1] / 2, 8), cm);
-    m.position.set(p.x, 1.65 + (p.y - 1.65 - c.size[1] / 2) / 2, zf - 0.05); world.add(m);
-  }
-  const jb = boxMesh(0.2, 0.2, 0.1, lam(0xa9aeb3)); jb.position.set(8.25, 2.45, zf - 0.05); world.add(jb);
+  // photo 77: black cables drop from each switch into the conduit bank (built with the switch), small junction box by the third
 }
 for (const c of CT.controls) {
   ({ eaton: buildEaton, starter: buildStarter, airlock_box: buildAirlockBox, gate_panel: buildGatePanel, air_valve: buildAirValve,
     ball_valve: buildBallValve, hatch: buildHatch, bucket: buildBucket, hose_coupling: buildHose })[c.type]?.(c);
 }
 buildOutsideDressing();
+buildOutsideJBox();
 useRealWall();
 // Flamex panels in the model: overlay a live face (LEDs) and make them clickable
 const FXFACE = {};
