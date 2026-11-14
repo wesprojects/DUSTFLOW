@@ -603,7 +603,7 @@ const cloneMatFor = (nodeName) => { // per-node material clones (for tinting / c
 
 // ---------------------------------------------------------------- visibility layers
 const HIDE_TOUR = new Set(); // nodes the current tour stop hides
-const TOG = { xray: false, shed_walls: true, shed_roof: true, shop_wall: true, shop_roof: false, ceiling: false, labels: true, sound: false, follow: true };
+const TOG = { xray: true, shed_walls: true, shed_roof: true, shop_wall: true, shop_roof: false, ceiling: false, labels: true, sound: false, follow: true };
 const roomOf = (...cats) => Object.keys(ROOMCAT).filter(n => cats.includes(ROOMCAT[n]) && NODE[n]);
 const ROOM_WALLN = roomOf('WallN');
 const groupNodes = {
@@ -1054,10 +1054,10 @@ const STREAMS = SC.streams.map((s, si) => {
   const cs = segs.find(g => g.name === 'cone and airlock');
   if (cs) { const yTop = SC.airlock_pockets.center[1] + SC.airlock_pockets.radius_m[1]; pileBase = cs.s1; for (let i = 0; i < P.length - 1; i++) { if (cum[i] >= cs.s0 && cum[i] <= cs.s1 && P[i].y <= yTop) { pileBase = cum[i]; break; } } }
   return { ...s, si, P, cum, N, B, segs, pileBase, L: cum[cum.length - 1], mat, isAir, color: new THREE.Color(mat.display_hex), firstDrive,
-    shape: mat.particle === 'arrow' ? 1 : 0, radius: mat.real_radius_m || ({ clean_air: 0.007, air_fine_dust: 0.009, return_air: 0.009 }[s.material] ?? 0.01), minPx: mat.min_radius_px || 1.5, streakS: mat.streak_s || 0 };
+    shape: mat.particle === 'arrow' ? 1 : 0, radius: mat.real_radius_m || ({ clean_air: 0.007, air_fine_dust: 0.009, return_air: 0.009 }[s.material] ?? 0.01), minPx: mat.min_radius_px || 1.5, streakS: (mat.streak_s || 0) * (isAir ? 0.4 : 0.7) }; // short soft streaks read as moving air, not straws
 });
 let total = 0;
-for (const s of STREAMS) { s.count = Math.max(1, Math.round(s.density_per_m * s.length_m * (s.mat.density_multiplier || 1))); total += s.count; }
+for (const s of STREAMS) { s.count = Math.max(1, Math.round(s.density_per_m * s.length_m * (s.mat.density_multiplier || 1) * (s.isAir ? 1.8 : 1))); total += s.count; }
 const BUDGET = +(Q.get('budget') || 17500);
 const scaleK = total > BUDGET ? BUDGET / total : 1;
 let NP = 0;
@@ -1137,6 +1137,7 @@ const pMat = new THREE.ShaderMaterial({
       float d = length(vec2(dx, y));
       if (d > r) discard;
       float a = vC.a;
+      if (vLen > 0.5) { float t = clamp(x / vLen, 0.0, 1.0); a *= t * t; } // the tail fades out: a soft wisp, not a straw
       if (vShape > 1.5) a *= pow(1.0 - d/r, 1.6);
       else a *= clamp((r - d) / max(0.9, r * 0.55), 0.0, 1.0); // soft round edge
       gl_FragColor = vec4(vC.rgb, a);
@@ -1552,7 +1553,7 @@ function rideAt(P, d) { // point at distance d along the path
 }
 function startRide(r, ph) {
   const P = ridePath(r); if (!P) return false;
-  if (r.dot) { RIDE = { P, dur: ph.dur || 5, t: 0, dot: true }; rideDot.visible = true; return false; } // the camera plays the video's shot
+  if (r.dot) { RIDE = { P, dur: ph.dur || 5, t: 0, dot: true }; rideDot.visible = false; return false; } // the camera plays the video's shot
   const dur = r.flamex ? (ph.dur || 1.5) : Math.max(ph.dur || 5, P.len / (r.speed || 2.0));
   // the camera keeps the side it is on now (continuity), a steady distance and height
   const p0 = rideAt(P, 0), side = camera.position.clone().sub(p0); side.y = 0;
@@ -1569,7 +1570,7 @@ function startRide(r, ph) {
   for (let pass = 0; pass < 3; pass++) cams = cams.map((c, j) => { const a = cams[Math.max(0, j - 2)], b = cams[Math.max(0, j - 1)], d = cams[Math.min(cams.length - 1, j + 1)], e = cams[Math.min(cams.length - 1, j + 2)]; return c.clone().add(a).add(b).add(d).add(e).multiplyScalar(0.2); });
   RIDE = { P, cams, dur, t: 0, n, follow: r.flamex || null };
   ph._rideDur = dur;
-  CAMANIM = null; rideDot.visible = true;
+  CAMANIM = null;
   return true;
 }
 function stepRide(dt) {
@@ -1578,7 +1579,7 @@ function stepRide(dt) {
   let f = clamp(RIDE.t / RIDE.dur, 0, 1), g = f < 0.06 ? smooth(f / 0.06) * 0.06 : f; // ease out of the start
   if (RIDE.follow) { const sp = DEMO && DEMO.sparks.find(x => x.zone === RIDE.follow); g = sp ? clamp((sp.s || 0) / RIDE.P.len, 0, 1) : 1; } // the dot is the spark
   const d = RIDE.P.len * g, q = rideAt(RIDE.P, d), qa = rideAt(RIDE.P, d + 0.6);
-  rideDot.position.copy(q);
+  rideDot.position.copy(q); rideDot.visible = false; // no marker: the flow itself shows the dust
   if (RIDE.dot || (ST && ST.paused)) return; // dot only, or the user is looking around
   const x = g * RIDE.n, j = Math.floor(x), c = RIDE.cams[Math.min(j, RIDE.n)].clone().lerp(RIDE.cams[Math.min(j + 1, RIDE.n)], x - j);
   const k = 1 - Math.exp(-dt * 2.2); // soft follow: no jerks on bends
@@ -1739,9 +1740,11 @@ function applyScene(vpId) { // what a viewpoint hides, cuts open and makes see-t
   const v = VPS.find(x => x.id === vpId);
   HIDE_TOUR.clear(); tourOverride.clear();
   if (!v) { applyVisibility(); return; }
-  for (const n of v.hide) if (!/_cut$/.test(n)) HIDE_TOUR.add(n);
+  // only walls, roofs and the shed frame open up for a view; machines, ducts and pipes always stay in play (x-ray)
+  const OPENS = /^(Ctx_Wall|Enc__|Frame__|DC_Enclosure_Door|Room_Wall|Room_Roof|Room_Overhead)/;
+  for (const n of v.hide) if (!/_cut$/.test(n) && OPENS.test(n)) HIDE_TOUR.add(n);
   if (v.hide.some(n => CTX_WALL.includes(n))) for (const n of ROOM_WALLN) HIDE_TOUR.add(n); // the shop's own north wall hides with the explainer's
-  for (const [k, sk] of Object.entries(SKINS)) if (v.hide.some(n => n.startsWith(SKIN_PRE[k]))) HIDE_TOUR.add(sk.name);
+
   for (const c of Object.values(CUT)) if (c.pieces.length) setCutOpen(c.key, v.cutaway && c.hide.some(n => v.hide.includes(n)), true);
   EXPL.target = v.explode ? 1 : 0;
   applyVisibility();
@@ -2585,7 +2588,7 @@ function goFlow(id) { // tap a box: fly there, open it up, and show its card
 // ---------- left rail + one drawer (Training, Explore, Controls, Air flow map, Settings); closed by default
 let MOREOPEN = false;
 let RAIL = null;
-let USER_XRAY = false; // the Settings choice; tour steps that look inside a duct switch x-ray on for that step only
+let USER_XRAY = true; // the Settings choice; tour steps that look inside a duct switch x-ray on for that step only
 const RAILS = [
   { id: 'training', icon: '▶', t: L4('Training', 'Formación', 'Formation', 'Mafunzo') },
   { id: 'explore', icon: '◎', t: L4('Explore', 'Explorar', 'Explorer', 'Gundua') },
@@ -2888,6 +2891,7 @@ resetScene(true);
 applyVisibility();
 resize();
 applyStop(0, false);
+setXray(USER_XRAY); // ducts and pipes see-through from the start
 if (HERO) { LSRC.view = []; refreshLabels(); } // first load: no labels, just the Start training button
 // scripted states for tests: ?shot=<viewpoint>&system=on|off&xray=1&cut=cyclone&panel=collector&proc=...&flamex=demo&ft=4&warm=3&walk=1
 if (Q.get('system') === 'off') { systemOff(); for (const m of Object.keys(LV)) LV[m] = 0; for (const g of Object.keys(gateLv)) gateLv[g] = 0; initFlow(false); }
