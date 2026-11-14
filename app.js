@@ -244,7 +244,7 @@ function toast(o, kind = '') {
 window.addEventListener('error', e => { console.error('app error', e.message); });
 
 // ---------------------------------------------------------------- load
-async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }
+async function getJSON(u) { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }
 const loader = new GLTFLoader();
 // the collector and its ducts keep the explainer video's plain look (Wes 11-13); ?cskins loads the textured collector
 const USE_CSKINS = Q.has('cskins');
@@ -1483,8 +1483,103 @@ function fovFor(k) {
   if (asp >= 16 / 9 - 0.01) return k.vfov_deg_16x9 || 2 * Math.atan(Math.tan(h / 2) / asp) * 180 / Math.PI;
   return Math.min(80, 2 * Math.atan(Math.tan(h / 2) / asp) * 180 / Math.PI);
 }
+// clear shot: every camera move checks the line of sight from the subject to the camera. If a wall, roof or machine is in
+// the way (or the camera would sit inside one), it swings around the subject (other side, higher, closer) and takes the
+// first clear view, nearest to the planned one. A high view over the open ceiling is the last resort.
+const shotRay = new THREE.Raycaster();
+function shotBlockers() {
+  const L = [];
+  scene.traverse(o => {
+    if (!o.isMesh || !o.visible || o.renderOrder >= 6) return;
+    const m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!m || !m.visible || (m.transparent && m.opacity < 0.6)) return;
+    let vis = true; o.traverseAncestors(p => { if (!p.visible) vis = false; }); if (vis) L.push(o);
+  });
+  return L;
+}
+function shotClear(T, P, L) {
+  const dir = P.clone().sub(T), d = dir.length(); if (d < 0.05) return true; dir.multiplyScalar(1 / d);
+  shotRay.set(T, dir); shotRay.near = Math.min(0.9, d * 0.3); shotRay.far = d + 0.35;
+  return shotRay.intersectObjects(L, false).length === 0;
+}
+function clearShot(key, L = shotBlockers()) {
+  const T = V3(key.target), P = V3(key.position);
+  if (shotClear(T, P, L)) return key;
+  const off = P.clone().sub(T), d = off.length();
+  const az0 = Math.atan2(off.x, off.z), el0 = Math.asin(clamp(off.y / Math.max(d, 1e-6), -1, 1));
+  const els = [el0, 0.5, 0.75, 1.0, 1.25].map(e => clamp(e, 0.2, 1.4));
+  const azs = [0, 20, -20, 40, -40, 65, -65, 90, -90, 125, -125, 160, -160, 180].map(a => a * Math.PI / 180);
+  let best = null;
+  for (const sc of [1, 0.75, 1.3, 0.55]) for (const el of els) for (const da of azs) {
+    const r = d * sc, az = az0 + da;
+    const C = new THREE.Vector3(T.x + r * Math.cos(el) * Math.sin(az), T.y + r * Math.sin(el), T.z + r * Math.cos(el) * Math.cos(az));
+    if (C.y < T.y - 0.5 || C.y < 0.6) continue;
+    if (!shotClear(T, C, L)) continue;
+    const score = Math.abs(da) + Math.abs(el - el0) * 1.5 + Math.abs(Math.log(sc)) * 1.2;
+    if (!best || score < best.score) best = { C, score };
+    if (best && best.score < 0.4) break;
+  }
+  const C = best ? best.C : new THREE.Vector3(T.x + d * 0.3 * Math.sin(az0), T.y + Math.max(6, d * 1.1), T.z + d * 0.3 * Math.cos(az0));
+  return { ...key, position: [C.x, C.y, C.z], target: [T.x, T.y, T.z] };
+}
+// the ride: one glowing dot travels the real flow path (scene.json streams) and the camera glides after it from a steady
+// side-and-above angle, checked clear of walls. One continuous shot per tour phase: no cuts, no jumping around.
+let RIDE = null;
+const rideDot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffb020, depthTest: false, transparent: true, opacity: 0.95 }));
+rideDot.renderOrder = 40; rideDot.visible = false;
+{ const halo = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffb020, depthTest: false, transparent: true, opacity: 0.28 })); halo.renderOrder = 39; rideDot.add(halo); }
+scene.add(rideDot);
+function ridePath(r) {
+  if (r.flamex) { const pts = SC.flamex.zones[r.flamex].spark_path.map(V3); const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + pts[i].distanceTo(pts[i - 1])); return { pts, L, len: L[L.length - 1] }; }
+  const st = SC.streams.find(x => x.id === r.stream); if (!st) return null;
+  const names = st.segments.map(g => g.name);
+  const i0 = r.from ? Math.max(0, names.indexOf(r.from)) : 0, i1 = r.to ? names.indexOf(r.to) : names.length - 1;
+  const pts = []; for (let i = i0; i <= (i1 < 0 ? names.length - 1 : i1); i++) for (const q of st.segments[i].pts) { const v = V3(q); if (!pts.length || pts[pts.length - 1].distanceTo(v) > 0.02) pts.push(v); }
+  if (pts.length < 2) return null;
+  const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  return { pts, L, len: L[L.length - 1] };
+}
+function rideAt(P, d) { // point at distance d along the path
+  d = clamp(d, 0, P.len); let i = 1; while (i < P.L.length - 1 && P.L[i] < d) i++;
+  const f = (d - P.L[i - 1]) / Math.max(1e-6, P.L[i] - P.L[i - 1]); return P.pts[i - 1].clone().lerp(P.pts[i], clamp(f, 0, 1));
+}
+function startRide(r, ph) {
+  const P = ridePath(r); if (!P) return false;
+  const dur = r.flamex ? (ph.dur || 1.5) : Math.max(ph.dur || 5, P.len / (r.speed || 2.0));
+  // the camera keeps the side it is on now (continuity), a steady distance and height
+  const p0 = rideAt(P, 0), side = camera.position.clone().sub(p0); side.y = 0;
+  if (side.lengthSq() < 0.01) side.set(1, 0, 1);
+  if (r.side) side.set(r.side[0], 0, r.side[1]);
+  side.normalize();
+  const D = r.dist || 3.6, H = r.height || 2.0, Bl = shotBlockers(), n = Math.max(10, Math.ceil(P.len / 1.2));
+  let cams = [];
+  for (let j = 0; j <= n; j++) {
+    const q = rideAt(P, P.len * j / n), plan = q.clone().addScaledVector(side, D); plan.y = q.y + H;
+    const k = clearShot({ position: [plan.x, plan.y, plan.z], target: [q.x, q.y, q.z] }, Bl);
+    cams.push(V3(k.position));
+  }
+  for (let pass = 0; pass < 3; pass++) cams = cams.map((c, j) => { const a = cams[Math.max(0, j - 2)], b = cams[Math.max(0, j - 1)], d = cams[Math.min(cams.length - 1, j + 1)], e = cams[Math.min(cams.length - 1, j + 2)]; return c.clone().add(a).add(b).add(d).add(e).multiplyScalar(0.2); });
+  RIDE = { P, cams, dur, t: 0, n, follow: r.flamex || null };
+  ph._rideDur = dur;
+  CAMANIM = null; rideDot.visible = true;
+  return true;
+}
+function stepRide(dt) {
+  if (!RIDE) { rideDot.visible = false; return; }
+  if (!(ST && ST.paused)) RIDE.t += dt;
+  let f = clamp(RIDE.t / RIDE.dur, 0, 1), g = f < 0.06 ? smooth(f / 0.06) * 0.06 : f; // ease out of the start
+  if (RIDE.follow) { const sp = DEMO && DEMO.sparks.find(x => x.zone === RIDE.follow); g = sp ? clamp((sp.s || 0) / RIDE.P.len, 0, 1) : 1; } // the dot is the spark
+  const d = RIDE.P.len * g, q = rideAt(RIDE.P, d), qa = rideAt(RIDE.P, d + 0.6);
+  rideDot.position.copy(q);
+  if (ST && ST.paused) return; // the user is looking around: the dot keeps its place, the camera is theirs
+  const x = g * RIDE.n, j = Math.floor(x), c = RIDE.cams[Math.min(j, RIDE.n)].clone().lerp(RIDE.cams[Math.min(j + 1, RIDE.n)], x - j);
+  const k = 1 - Math.exp(-dt * 2.2); // soft follow: no jerks on bends
+  camera.position.lerp(c, k); controls.target.lerp(q.clone().lerp(qa, 0.5), k);
+  camera.lookAt(controls.target);
+}
 function flyTo(key, dur = 0, after = null) {
   if (MODE === 'walk') return walkTo(key, dur, after); // keep the user's mode: the walker walks there instead
+  key = clearShot(key); RIDE = null;
   const to = { p: V3(key.position), t: V3(key.target), fov: key.hfov_deg ? fovFor(key) : camera.fov };
   const dist = camera.position.distanceTo(to.p) + 0.5 * controls.target.distanceTo(to.t);
   const d = RM ? 0.001 : Math.max(dur, clamp(1.0 + dist * 0.08, 1.2, 2.8)); // longer trips take longer, always eased
@@ -2293,16 +2388,21 @@ function storyPhase(k) {
   if (!stName && !seq) { for (let j = ST.k; j >= 0; j--) if (step.phases[j].state) { stName = step.phases[j].state; break; } soft = false; } // a jump: that phase's state
   if (stName) tourState(stName, soft);
   TOG.shed_walls = TOG.shed_roof = TOG.shop_wall = true;
+  if (ph.ride || ['cyclone', 'airlock', 'back', 'fan', 'filters', 'blower', 'flamex'].includes(ph.vp)) TOG.shed_walls = TOG.shed_roof = false; // the collector stays open to see the flow
   TOG.zones = ph.zones ? true : ST_ZONES0;
   applyScene(ph.vp);
-  setXray(!!ph.xray || USER_XRAY); // x-ray only where the step looks inside a duct
+  setXray(ph.xray !== false || USER_XRAY); // the whole demo is see-through, like the v3 video: dust and air visible everywhere
   const vw = ph.view ? CT.views[ph.view] : null;
   if (vw) applyViewVis(vw);
-  if (ph.demo === 'start') { TOG.follow = true; startDemo(); }
+  if (!ph.ride_keep) RIDE = null; // ride_keep: the camera keeps following the same dot into this phase
+  if (ph.demo === 'start') { TOG.follow = !ph.ride; startDemo(); } else if (ph.demo) TOG.follow = !RIDE;
+  if (ph.ride_keep && RIDE) { /* still following */ }
+  else if (ph.ride && MODE !== 'walk' && startRide(ph.ride, ph)) { /* the ride flies the camera */ }
+  else if (ph.demo === 'start') { /* the demo flies the camera */ }
   else if (ph.cam === 'none' || ph.demo) { /* the demo flies the camera */ }
   else if (vw) flyTo({ position: vw.position, target: vw.target });
   else if (ph.cam && ph.cam.position) flyTo(ph.cam);
-  else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); }
+  else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) { const ks = (ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j]); flyTo(ks[ks.length - 1]); } } // one steady, clear view per phase
   LSRC.story = (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: HEX[l.accent] || l.accent }));
   LSRC.max = 3; refreshLabels(); zoneLabels();
   highlightStory(ph.hl || []);
@@ -2318,7 +2418,7 @@ function stepStory(dt) {
   ST.t += dt;
   (ph.at || []).forEach(([t, a], j) => { if (ST.t >= t && !ST.fired.has(j)) { ST.fired.add(j); tourAct(a); } });
   if (ST.paused) return;
-  const done = ST.t >= (ph.dur || 5) && (untilOk(ph.until) || ST.t > 60);
+  const done = ST.t >= (ph._rideDur || ph.dur || 5) + (ph.ride ? 1.2 : 0) && (untilOk(ph.until) || ST.t > 60);
   if (!done) return;
   if (ST.k < step.phases.length - 1) { storyPhase(ST.k + 1); return; }
   if (ph.end) return; // end card: Replay / Shut down
@@ -2329,7 +2429,7 @@ function storyNext() { if (!ST) { storyStart(0); return; } storyStart(ST.i >= ST
 function storyPrev() { if (!ST) return; if (ST.k > 0) storyPhase(ST.k - 1); else storyStart(ST.i >= STORY.length ? STORY.length - 1 : Math.max(0, ST.i - 1)); }
 function storyStop() {
   if (!ST) return;
-  ST = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; setXray(USER_XRAY); refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
+  ST = null; RIDE = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; setXray(USER_XRAY); refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
   if (DEMO) endDemo();
   renderCaption(); renderSide(); updateFlow();
 }
@@ -2634,6 +2734,7 @@ function frameInner() {
   if (Q.has('dbg') && FRAMES % 20 === 1) console.log('[dce] frame ' + FRAMES + ' t ' + performance.now().toFixed(0) + ' cap ' + elCap.style.display + ' load ' + $('#loading').style.display);
   const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
   stepCam(dt);
+  stepRide(dt);
   { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
     const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);
     if (Math.abs(dn - camera.near) > 0.004) { camera.near = dn; camera.updateProjectionMatrix(); }
