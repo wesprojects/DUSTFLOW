@@ -251,9 +251,10 @@ const USE_CSKINS = Q.has('cskins');
 // the machines are the video's own (explainer.blend: Hendrick CNCs, machines_v3 edgebanders and conveyors); ?skins loads the older
 // assembled_v2 textured machines instead (they drew over the video's and did not match it)
 const USE_SKINS = Q.has('skins');
-const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room'].concat(USE_SKINS ? ['shop_skins'] : [], USE_CSKINS ? ['collector_skins'] : []);
+const USE_PW = Q.get('pw') !== '0'; // Paper City's real collector-wall controls and blast gate panel
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room'].concat(USE_PW ? ['paper_wall'] : [], USE_SKINS ? ['shop_skins'] : [], USE_CSKINS ? ['collector_skins'] : []);
 const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6 }; if (USE_SKINS) SIZES.shop_skins = 14e6; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6 }; if (USE_PW) SIZES.paper_wall = 1.7e6; if (USE_SKINS) SIZES.shop_skins = 14e6; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
@@ -266,7 +267,8 @@ function loadGLB(k, optional = false) {
 }
 
 let SC, CT, PR, TOUR;
-const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
+const [scj, ctj, prj, tourj, gW, PWJ, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
+  USE_PW ? loadGLB('paper_wall', true) : null, USE_PW ? getJSON('paper_wall.json').catch(() => null) : null,
   loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), USE_SKINS ? loadGLB('shop_skins', true) : null, USE_CSKINS ? loadGLB('collector_skins', true) : null]);
 TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
@@ -367,6 +369,7 @@ function prepRoomMat(m) {
   for (const t of [m.map, m.normalMap, m.roughnessMap, m.aoMap]) if (t) t.anisotropy = 4;
   if (m.transparent) m.depthWrite = false;
 }
+if (gW && PWJ) { world.add(gW.scene); gW.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); }
 for (const g of [gR, gK, gD]) {
   if (!g) continue;
   world.add(g.scene);
@@ -895,7 +898,7 @@ function buildGatePanel(c) {
     g.add(gb); g.add(rb); tagClick(gb, c.id, 'open', { gate: b.gate }); tagClick(rb, c.id, 'close', { gate: b.gate });
     btns[b.gate] = { gb, rb };
   });
-  CTL3[c.id] = { g, btns, c };
+  CTL3[c.id] = { g, btns, c, col };
 }
 function buildAirValve(c) {
   const g = faceGroup(c);
@@ -934,6 +937,7 @@ function buildHatch(c) {
     const wing = boxMesh(0.034, 0.006, 0.02, lam(0x2a2d31)); wing.position.set(k * L * 0.25, -S / 2 - 0.004, 0.028); door.add(wing); }
   const hole = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0x14161a })); hole.scale.set(L * 0.45, S * 0.45, 1); if (vert) hole.rotation.z = Math.PI / 2; hole.position.z = -0.001; g.add(hole);
   for (const m of [plate, rim, hole]) tagClick(m, c.id, 'toggle');
+  g.traverse(o => { if (o.isMesh) o.material = NO_DRAW; }); // the real door is in the duct model
   CTL3[c.id] = { g, piv, c, axis: vert ? 'y' : 'x' };
 }
 function buildBucket(c) {
@@ -969,6 +973,7 @@ for (const c of CT.controls) {
     ball_valve: buildBallValve, hatch: buildHatch, bucket: buildBucket, hose_coupling: buildHose })[c.type]?.(c);
 }
 buildOutsideDressing();
+useRealWall();
 // Flamex panels in the model: overlay a live face (LEDs) and make them clickable
 const FXFACE = {};
 for (const z of ['A', 'B']) {
@@ -1017,6 +1022,38 @@ function buildLockVisual(id) {
   tag.position.set(0.0, -0.07, 0.012); tag.rotation.z = 0.12; C.lockG.add(tag);
 }
 
+// Paper City's real models carry the boxes; the app's own handles, buttons and screens sit exactly where the real ones are
+function useRealWall() {
+  if (!gW || !PWJ) return;
+  const R = PWJ.removed, used = new Set();
+  const near = (key, p) => { let best = null, bd = 1e9; (R[key] || []).forEach((r, i) => { if (used.has(key + i)) return; const d = V3(r.center).distanceTo(p); if (d < bd) { bd = d; best = i; } }); if (best == null || bd > 0.35) return null; used.add(key + best); return R[key][best]; };
+  const hideBody = (C, keep) => C.g.traverse(o => { if (o.isMesh && !keep.some(k => k && (k === o || k.getObjectById(o.id)))) o.material = NO_DRAW; });
+  const at = (C, obj, r) => { C.g.updateMatrixWorld(true); obj.position.copy(C.g.worldToLocal(V3(r.center))); };
+  for (const [id, C] of Object.entries(CTL3)) {
+    const c = C.c, P = V3(c.pos);
+    if (c.type === 'eaton' && /^eaton_in_/.test(id)) {
+      const r = near('eaton_handle', P.clone().add(new THREE.Vector3(c.size[0] / 2, c.size[1] * 0.4, 0))); if (!r) continue;
+      hideBody(C, [C.piv, C.lockG]);
+      C.g.updateMatrixWorld(true); const H = C.g.worldToLocal(V3(r.center)), L = c.size[1] * 0.36, a = 0.35; // knob at the real handle in the ON pose
+      C.piv.position.set(H.x, H.y - L * Math.cos(a), H.z - L * Math.sin(a));
+    } else if (c.type === 'starter') {
+      const g = near('starter_green', P), rd = near('starter_red', P); if (!g || !rd) continue;
+      hideBody(C, [C.gb, C.rb]); at(C, C.gb, g); at(C, C.rb, rd);
+    } else if (c.type === 'airlock_box') {
+      const g = near('airlock_green', P), rd = near('airlock_red', P), l = near('airlock_lcd', P); if (!g || !rd || !l) continue;
+      const lcd = C.g.children.find(o => o.isMesh && o.material && o.material.map === C.tex);
+      hideBody(C, [C.gb, C.rb, lcd]); at(C, C.gb, g); at(C, C.rb, rd);
+      if (lcd) { at(C, lcd, l); lcd.position.z += 0.002; lcd.scale.set(Math.max(l.size[0], l.size[2]) / lcd.geometry.parameters.width, l.size[1] / lcd.geometry.parameters.height, 1); }
+    } else if (c.type === 'gate_panel') {
+      const gs = [...(R.gate_green || [])].sort((a, b) => a.center[2] - b.center[2]), rs = [...(R.gate_red || [])].sort((a, b) => a.center[2] - b.center[2]);
+      if (gs.length !== c.buttons.length || rs.length !== c.buttons.length) continue;
+      const keep = []; for (const B of Object.values(C.btns)) keep.push(B.gb, B.rb);
+      hideBody(C, keep); if (C.col) C.col.material = NO_DRAW;
+      c.buttons.forEach((b, i) => { const B = C.btns[b.gate]; at(C, B.gb, gs[i]); at(C, B.rb, rs[i]); });
+    }
+  }
+  console.log('[dce] real wall controls from Paper City: ' + Object.keys(R).map(k => k + ' ' + R[k].length).join(', '));
+}
 // update the look of the 3D controls each frame
 function syncControls3D(dt) {
   for (const [id, C] of Object.entries(CTL3)) {
