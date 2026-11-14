@@ -2688,6 +2688,53 @@ function resize() {
   pMat.uniforms.uVP.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
 }
 window.addEventListener('resize', resize);
+// the video's Workbench look: thin dark outlines (render.py outline 0.25,0.27,0.30) and cavity shading (Workbench cavity BOTH:
+// creases darker, ridges lighter). One cheap full-screen pass over the depth buffer; off at the two lowest quality levels.
+const POST = (() => {
+  if (Q.get('post') === '0') return null;
+  const rt = new THREE.WebGLRenderTarget(4, 4, { samples: renderer.capabilities.isWebGL2 ? 4 : 0, type: THREE.HalfFloatType });
+  rt.depthTexture = new THREE.DepthTexture(4, 4); rt.depthTexture.type = THREE.UnsignedIntType;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(4, 4) }, near: { value: 0.03 }, far: { value: 600 },
+      ink: { value: new THREE.Color(0.25, 0.27, 0.30) }, px: { value: 1 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, px; uniform vec3 ink; varying vec2 vUv;
+      float lin(vec2 p){ float d = texture2D(tDepth, p).x; float z = d * 2.0 - 1.0; return 2.0 * near * far / (far + near - z * (far - near)); }
+      void main(){
+        vec4 col = texture2D(tColor, vUv);
+        float dc = texture2D(tDepth, vUv).x;
+        if (dc >= 0.99999) {
+          gl_FragColor = col;
+          #include <colorspace_fragment>
+          return;
+        }
+        vec2 o = px / res; float c = lin(vUv);
+        float l = lin(vUv - vec2(o.x, 0.0)), r = lin(vUv + vec2(o.x, 0.0)), u = lin(vUv + vec2(0.0, o.y)), d = lin(vUv - vec2(0.0, o.y));
+        float jump = max(max(abs(l - c), abs(r - c)), max(abs(u - c), abs(d - c))) / c;
+        float edge = smoothstep(0.012, 0.035, jump);
+        vec2 o3 = o * 3.0;
+        float avg = (lin(vUv - vec2(o3.x, 0.0)) + lin(vUv + vec2(o3.x, 0.0)) + lin(vUv + vec2(0.0, o3.y)) + lin(vUv - vec2(0.0, o3.y))) * 0.25;
+        float cav = clamp((avg - c) / c * 18.0, -1.0, 1.0); // < 0 crease, > 0 ridge
+        cav *= 1.0 - edge;
+        col.rgb *= cav < 0.0 ? 1.0 + cav * 0.28 : 1.0 + cav * 0.10;
+        col.rgb = mix(col.rgb, ink, edge * 0.85);
+        gl_FragColor = col;
+        #include <colorspace_fragment>
+      }`,
+    depthTest: false, depthWrite: false
+  });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false;
+  const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  return { rt, mat, qs, qc };
+})();
+function renderFinal() {
+  if (!POST || QUAL.level <= 1) { renderer.setRenderTarget(null); renderer.render(scene, camera); return; }
+  const w = renderer.domElement.width, h = renderer.domElement.height;
+  if (POST.rt.width !== w || POST.rt.height !== h) { POST.rt.setSize(w, h); POST.mat.uniforms.res.value.set(w, h); POST.mat.uniforms.px.value = Math.max(1, renderer.getPixelRatio()); }
+  POST.mat.uniforms.near.value = camera.near; POST.mat.uniforms.far.value = camera.far;
+  renderer.setRenderTarget(POST.rt); renderer.render(scene, camera);
+  renderer.setRenderTarget(null); renderer.render(POST.qs, POST.qc);
+}
 function tick(dt) {
   SIM.t += dt;
   SM.stepLevels(dt);
@@ -2758,7 +2805,7 @@ function frameInner() {
   applySkins();
   if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
   if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
-  renderer.render(scene, camera);
+  renderFinal();
   stepQuality(rawDt);
   placeLabels(dt);
   uiAcc += dt;
