@@ -323,7 +323,6 @@
     "fr": "Suivez la poussière",
     "sw": "Fuata vumbi"
    },
-   "zone": "suction",
    "map": [
     "machines",
     "duct",
@@ -1014,7 +1013,6 @@
     {
      "state": "cnc1",
      "vp": "overview",
-     "zones": true,
      "dur": 12,
      "end": true,
      "cap": [
