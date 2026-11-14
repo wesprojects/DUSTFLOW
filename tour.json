@@ -408,112 +408,266 @@
     {
      "state": "cnc1",
      "vp": "machines",
-     "xray": true,
+     "cam": {
+      "vp": "machines",
+      "keys": [
+       0,
+       1
+      ]
+     },
      "dur": 5,
      "hl": [
       "Duct_Hose_CNC1"
      ],
+     "cap": {
+      "en": "CNC 1 runs. The hose pulls up the sawdust.",
+      "es": "CNC 1 funciona. La manguera sube el aserrín.",
+      "fr": "La CNC 1 tourne. Le tuyau aspire la sciure.",
+      "sw": "CNC 1 inafanya kazi. Bomba linavuta vumbi la mbao juu."
+     },
+     "labels": [
+      {
+       "a": "machines.cnc1",
+       "accent": "#f08a24",
+       "text": {
+        "en": "CNC 1 running",
+        "es": "CNC 1 en marcha",
+        "fr": "CNC 1 en marche",
+        "sw": "CNC 1 inafanya kazi"
+       }
+      }
+     ],
+     "xray": true,
      "ride": {
       "stream": "chips",
+      "dot": true,
       "from": "CNC 1 hose",
-      "to": "CNC 1 branch",
-      "speed": 1.0,
-      "dist": 3.0,
-      "height": 1.6
+      "to": "CNC 1 branch"
+     }
+    },
+    {
+     "vp": "machines",
+     "cam": {
+      "vp": "machines",
+      "keys": [
+       2,
+       3
+      ]
      },
+     "dur": 5,
      "cap": {
-      "en": "CNC 1 runs. The hose pulls the dust up.",
-      "es": "La CNC 1 funciona. La manguera sube el polvo.",
-      "fr": "La CNC 1 tourne. Le tuyau aspire la poussière.",
-      "sw": "CNC 1 inafanya kazi. Bomba linavuta vumbi juu."
+      "en": "Along the main duct to the north wall.",
+      "es": "Por el ducto principal hasta la pared norte.",
+      "fr": "Le long de la gaine principale jusqu'au mur nord.",
+      "sw": "Kupitia bomba kuu hadi ukuta wa kaskazini."
+     },
+     "labels": [
+      {
+       "a": "machines.trunk",
+       "accent": "#f08a24",
+       "text": {
+        "en": "Main duct",
+        "es": "Ducto principal",
+        "fr": "Gaine principale",
+        "sw": "Bomba kuu"
+       }
+      }
+     ],
+     "xray": true,
+     "ride": {
+      "stream": "chips",
+      "dot": true,
+      "from": "trunk",
+      "to": "trunk"
      }
     },
     {
      "vp": "wall",
+     "cam": {
+      "vp": "wall",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "Through the wall into the cyclone.",
+      "es": "Cruza la pared y entra al ciclón.",
+      "fr": "À travers le mur, dans le cyclone.",
+      "sw": "Kupitia ukuta hadi kimbunga."
+     },
+     "labels": [
+      {
+       "a": "wall.gap",
+       "accent": "#f08a24",
+       "text": {
+        "en": "Through the wall",
+        "es": "A través de la pared",
+        "fr": "À travers le mur",
+        "sw": "Kupitia ukuta"
+       }
+      }
+     ],
      "xray": true,
-     "dur": 6,
      "ride": {
       "stream": "chips",
-      "from": "trunk",
-      "to": "inlet box",
-      "speed": 2.6,
-      "dist": 4.0,
-      "height": 2.0
-     },
-     "cap": {
-      "en": "Along the main duct, through the wall, into the cyclone.",
-      "es": "Por el ducto principal, a través de la pared, al ciclón.",
-      "fr": "Le long de la gaine principale, à travers le mur, dans le cyclone.",
-      "sw": "Kupitia bomba kuu, kupitia ukuta, hadi kwenye kimbunga."
+      "dot": true,
+      "from": "12 in inlet spool",
+      "to": "inlet box"
      }
     },
     {
      "vp": "cyclone",
-     "xray": true,
-     "dur": 6,
+     "dur": 7,
      "hl": [
       "Cyc__barrel_liner",
       "Cyc__cone_liner"
      ],
+     "cap": {
+      "en": "The cyclone splits it. Chips fall, air rises.",
+      "es": "El ciclón lo separa. Las virutas caen, el aire sube.",
+      "fr": "Le cyclone sépare. Les copeaux tombent, l'air monte.",
+      "sw": "Kimbunga kinatenganisha. Vipande vinaanguka, hewa inapanda."
+     },
+     "labels": [
+      {
+       "a": "cyclone.cone",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Chips fall",
+        "es": "Las virutas caen",
+        "fr": "Les copeaux tombent",
+        "sw": "Vipande vinaanguka"
+       }
+      },
+      {
+       "a": "cyclone.core",
+       "accent": "#d9b100",
+       "text": {
+        "en": "Air rises",
+        "es": "El aire sube",
+        "fr": "L'air monte",
+        "sw": "Hewa inapanda"
+       }
+      }
+     ],
+     "xray": true,
      "ride": {
       "stream": "chips",
+      "dot": true,
       "from": "wall spiral",
-      "to": "cone and airlock",
-      "speed": 1.6,
-      "dist": 3.2,
-      "height": 1.0
+      "to": "cone and airlock"
+     }
+    },
+    {
+     "vp": "airlock",
+     "cam": {
+      "vp": "airlock",
+      "keys": [
+       0,
+       1
+      ]
      },
+     "dur": 5,
      "cap": {
-      "en": "The cyclone spins. Chips fall to the airlock. Air goes up the middle.",
-      "es": "El ciclón gira. Las virutas caen a la válvula. El aire sube por el centro.",
-      "fr": "Le cyclone tourne. Les copeaux tombent dans l'écluse. L'air monte au centre.",
-      "sw": "Kimbunga kinazunguka. Vipande vinaanguka kwenye vali. Hewa inapanda katikati."
+      "en": "The airlock drops the chips into the chip loop.",
+      "es": "La válvula deja caer las virutas al circuito.",
+      "fr": "L'écluse fait tomber les copeaux dans la boucle.",
+      "sw": "Vali inadondosha vipande kwenye mzunguko."
+     },
+     "labels": [
+      {
+       "a": "airlock.al",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Rotary airlock",
+        "es": "Válvula rotativa",
+        "fr": "Écluse rotative",
+        "sw": "Vali ya kuzunguka"
+       }
+      }
+     ],
+     "xray": true,
+     "ride": {
+      "stream": "chips",
+      "dot": true,
+      "from": "cone and airlock",
+      "to": "floor line to blower"
      }
     },
     {
      "vp": "back",
+     "cam": {
+      "vp": "back",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 5,
+     "cap": {
+      "en": "The blower sends them out to the roll-off.",
+      "es": "El soplador las manda al contenedor.",
+      "fr": "La soufflante les envoie à la benne.",
+      "sw": "Kipuliza kinavipeleka kwenye kontena."
+     },
+     "labels": [
+      {
+       "a": "back.pile",
+       "accent": "#9a6b3c",
+       "text": {
+        "en": "Chips land here",
+        "es": "Las virutas caen aquí",
+        "fr": "Les copeaux arrivent ici",
+        "sw": "Vipande vinatua hapa"
+       }
+      }
+     ],
      "xray": true,
-     "dur": 7,
      "ride": {
       "stream": "chips",
-      "from": "floor line to blower",
-      "to": "into the roll-off",
-      "speed": 2.2,
-      "dist": 3.8,
-      "height": 2.2
-     },
-     "cap": {
-      "en": "The transfer blower pushes the chips to the roll-off.",
-      "es": "El soplador de transferencia lleva las virutas al contenedor.",
-      "fr": "La soufflante de transfert pousse les copeaux vers la benne.",
-      "sw": "Kipuliza cha kuhamisha kinasukuma vipande hadi kwenye kontena."
+      "dot": true,
+      "from": "blower eye",
+      "to": "into the roll-off"
      }
     },
     {
      "vp": "fan",
-     "xray": true,
-     "dur": 5,
-     "hl": [
-      "Fan__scroll",
-      "Fan__scroll_liner"
+     "cam": {
+      "vp": "fan",
+      "keys": [
+       0,
+       1
+      ]
+     },
+     "dur": 4.5,
+     "cap": {
+      "en": "The air goes up through the main fan.",
+      "es": "El aire sube por el ventilador principal.",
+      "fr": "L'air monte par le ventilateur principal.",
+      "sw": "Hewa inapanda kupitia feni kuu."
+     },
+     "labels": [
+      {
+       "a": "fan.fan",
+       "accent": "#d9b100",
+       "text": {
+        "en": "Main fan",
+        "es": "Ventilador principal",
+        "fr": "Ventilateur principal",
+        "sw": "Feni kuu"
+       }
+      }
      ],
+     "xray": true,
      "ride": {
       "stream": "air_0",
-      "speed": 1.6,
-      "dist": 3.0,
-      "height": 1.4
-     },
-     "cap": {
-      "en": "The air goes up through the main fan to the filters.",
-      "es": "El aire sube por el ventilador principal a los filtros.",
-      "fr": "L'air monte par le ventilateur principal vers les filtres.",
-      "sw": "Hewa inapanda kupitia feni kuu hadi kwenye vichujio."
+      "dot": true
      }
     },
     {
      "vp": "filters",
-     "xray": true,
-     "dur": 7,
      "cam": {
       "vp": "filters",
       "keys": [
@@ -521,12 +675,56 @@
        1
       ]
      },
+     "dur": 5.5,
      "cap": {
-      "en": "The filters catch the fine dust. Clean air comes out. Fine dust drops into the drum.",
-      "es": "Los filtros atrapan el polvo fino. Sale aire limpio. El polvo fino cae al tambor.",
-      "fr": "Les filtres retiennent la poussière fine. L'air propre sort. La poussière fine tombe dans le fût.",
-      "sw": "Vichujio vinashika vumbi laini. Hewa safi inatoka. Vumbi laini linaanguka kwenye pipa."
-     }
+      "en": "The filters catch the fine dust. Clean air leaves.",
+      "es": "Los filtros atrapan el polvo fino. Sale aire limpio.",
+      "fr": "Les filtres retiennent la poussière fine. L'air propre sort.",
+      "sw": "Vichujio vinanasa vumbi laini. Hewa safi inatoka."
+     },
+     "labels": [
+      {
+       "a": "filters.clean",
+       "accent": "#3b82f6",
+       "text": {
+        "en": "Clean air out",
+        "es": "Sale aire limpio",
+        "fr": "Air propre",
+        "sw": "Hewa safi inatoka"
+       }
+      }
+     ],
+     "xray": true
+    },
+    {
+     "vp": "filters",
+     "cam": {
+      "vp": "filters",
+      "keys": [
+       2,
+       3
+      ]
+     },
+     "dur": 4.5,
+     "cap": {
+      "en": "Fine dust falls into the drum.",
+      "es": "El polvo fino cae al tambor.",
+      "fr": "La poussière fine tombe dans le fût.",
+      "sw": "Vumbi laini linaanguka kwenye pipa."
+     },
+     "labels": [
+      {
+       "a": "filters.drum",
+       "accent": "#7d8590",
+       "text": {
+        "en": "Fine dust drum",
+        "es": "Tambor de polvo fino",
+        "fr": "Fût de poussière fine",
+        "sw": "Pipa la vumbi laini"
+       }
+      }
+     ],
+     "xray": true
     }
    ]
   },
@@ -544,6 +742,7 @@
      "state": "cnc1",
      "vp": "flamex",
      "demo": "start",
+     "cam": "none",
      "until": {
       "path": "flamex.A.fire",
       "eq": true
@@ -567,17 +766,13 @@
        }
       }
      ],
-     "xray": true,
-     "ride": {
-      "flamex": "A",
-      "dist": 4.5,
-      "height": 2.4
-     }
+     "xray": true
     },
     {
      "vp": "flamex",
      "demo": "keep",
-     "dur": 3.5,
+     "cam": "none",
+     "dur": 2.5,
      "cap": {
       "en": "Water sprays across the duct. Horns, strobes and the panel go on.",
       "es": "El agua rocía el ducto. Se encienden sirenas, luces y el panel.",
@@ -606,8 +801,7 @@
        }
       }
      ],
-     "xray": true,
-     "ride_keep": true
+     "xray": true
     },
     {
      "vp": "flamex",

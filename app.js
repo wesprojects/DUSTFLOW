@@ -1545,6 +1545,7 @@ function rideAt(P, d) { // point at distance d along the path
 }
 function startRide(r, ph) {
   const P = ridePath(r); if (!P) return false;
+  if (r.dot) { RIDE = { P, dur: ph.dur || 5, t: 0, dot: true }; rideDot.visible = true; return false; } // the camera plays the video's shot
   const dur = r.flamex ? (ph.dur || 1.5) : Math.max(ph.dur || 5, P.len / (r.speed || 2.0));
   // the camera keeps the side it is on now (continuity), a steady distance and height
   const p0 = rideAt(P, 0), side = camera.position.clone().sub(p0); side.y = 0;
@@ -1571,7 +1572,7 @@ function stepRide(dt) {
   if (RIDE.follow) { const sp = DEMO && DEMO.sparks.find(x => x.zone === RIDE.follow); g = sp ? clamp((sp.s || 0) / RIDE.P.len, 0, 1) : 1; } // the dot is the spark
   const d = RIDE.P.len * g, q = rideAt(RIDE.P, d), qa = rideAt(RIDE.P, d + 0.6);
   rideDot.position.copy(q);
-  if (ST && ST.paused) return; // the user is looking around: the dot keeps its place, the camera is theirs
+  if (RIDE.dot || (ST && ST.paused)) return; // dot only, or the user is looking around
   const x = g * RIDE.n, j = Math.floor(x), c = RIDE.cams[Math.min(j, RIDE.n)].clone().lerp(RIDE.cams[Math.min(j + 1, RIDE.n)], x - j);
   const k = 1 - Math.exp(-dt * 2.2); // soft follow: no jerks on bends
   camera.position.lerp(c, k); controls.target.lerp(q.clone().lerp(qa, 0.5), k);
@@ -1579,7 +1580,7 @@ function stepRide(dt) {
 }
 function flyTo(key, dur = 0, after = null) {
   if (MODE === 'walk') return walkTo(key, dur, after); // keep the user's mode: the walker walks there instead
-  key = clearShot(key); RIDE = null;
+  key = clearShot(key); if (RIDE && !RIDE.dot) RIDE = null;
   const to = { p: V3(key.position), t: V3(key.target), fov: key.hfov_deg ? fovFor(key) : camera.fov };
   const dist = camera.position.distanceTo(to.p) + 0.5 * controls.target.distanceTo(to.t);
   const d = RM ? 0.001 : Math.max(dur, clamp(1.0 + dist * 0.08, 1.2, 2.8)); // longer trips take longer, always eased
@@ -1604,7 +1605,8 @@ function playKeys(keys, intro = 0) {
   let ks = [keys[0]];
   for (let i = 1; i < keys.length; i++) { if (keys[i].t - keys[i - 1].t < 0.15) break; ks.push(keys[i]); }
   const t0 = ks[0].t; ks = ks.map(k => ({ ...k, t: k.t - t0 }));
-  flyTo(ks[0], intro, () => { if (ks.length > 1 && !RM && MODE !== 'walk') CAMANIM = { keys: ks, t: 0 }; });
+  const L = shotBlockers(), okAll = ks.every(k => shotClear(V3(k.target), V3(k.position), L));
+  flyTo(ks[0], intro, () => { if (okAll && ks.length > 1 && !RM && MODE !== 'walk') CAMANIM = { keys: ks, t: 0 }; });
 }
 function camAt(keys, t) {
   let i = 0; while (i < keys.length - 1 && keys[i + 1].t <= t) i++;
@@ -2388,7 +2390,6 @@ function storyPhase(k) {
   if (!stName && !seq) { for (let j = ST.k; j >= 0; j--) if (step.phases[j].state) { stName = step.phases[j].state; break; } soft = false; } // a jump: that phase's state
   if (stName) tourState(stName, soft);
   TOG.shed_walls = TOG.shed_roof = TOG.shop_wall = true;
-  if (ph.ride || ['cyclone', 'airlock', 'back', 'fan', 'filters', 'blower', 'flamex'].includes(ph.vp)) TOG.shed_walls = TOG.shed_roof = false; // the collector stays open to see the flow
   TOG.zones = ph.zones ? true : ST_ZONES0;
   applyScene(ph.vp);
   setXray(ph.xray !== false || USER_XRAY); // the whole demo is see-through, like the v3 video: dust and air visible everywhere
@@ -2402,7 +2403,7 @@ function storyPhase(k) {
   else if (ph.cam === 'none' || ph.demo) { /* the demo flies the camera */ }
   else if (vw) flyTo({ position: vw.position, target: vw.target });
   else if (ph.cam && ph.cam.position) flyTo(ph.cam);
-  else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) { const ks = (ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j]); flyTo(ks[ks.length - 1]); } } // one steady, clear view per phase
+  else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); } // the video's shot, checked clear
   LSRC.story = (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: HEX[l.accent] || l.accent }));
   LSRC.max = 3; refreshLabels(); zoneLabels();
   highlightStory(ph.hl || []);
