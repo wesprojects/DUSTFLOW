@@ -613,7 +613,7 @@ const groupNodes = {
   shop_roof: roomOf('Roof')
 };
 const CUTHIDE = new Set(); // cut pieces hidden by open cross sections
-const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear', ...((CT.wall_layout || {}).hide || [])]); // placeholder block and the old wall dressing
+const EXTRA_HIDE = new Set(['Ctx_WallLo_Switchgear', 'DC_GapConduits', ...((CT.wall_layout || {}).hide || [])]); // placeholder block and the old wall dressing
 // with the whole shop loaded, its own floor and north wall replace the explainer's cropped slab and plain wall pieces
 const CTX_WALL = [...SC.groups.shop_wall_high, ...SC.groups.shop_wall_low].filter(n => !/Flex|Card/.test(n));
 if (gR) for (const n of ['Ctx_ShopFloorSlab', ...CTX_WALL]) EXTRA_HIDE.add(n);
@@ -802,11 +802,20 @@ const EATON_TEX = canvasTex(128, 96, (g, w, h) => {
   g.fillStyle = '#fff'; g.fillRect(14, 10, 100, 70); g.fillStyle = '#1d3d8f'; g.font = 'bold 20px Arial'; g.fillText('EATON', 30, 32);
   g.fillStyle = '#c00'; g.font = 'bold 14px Arial'; g.fillText('ON', 76, 52); g.fillText('OFF', 72, 72); g.fillStyle = '#333'; g.font = '10px Arial'; g.fillText('Safety Switch', 22, 48);
 });
+const PANEL_PHOTOS = { eaton_in_left: 'panels/eaton_left.jpg', eaton_in_right: 'panels/eaton_right.jpg', starter1: 'panels/starter1.jpg',
+  starter2: 'panels/starter2.jpg', starter3: 'panels/starter3.jpg', airlock_box: 'panels/airlock_box.jpg', gate_panel: 'panels/gate_panel.jpg' };
+const texLoader = new THREE.TextureLoader();
+function photoFace(g, id, w, h, z) { // the real panel, cut from the owner's photo, on the front of the box
+  const t = texLoader.load(PANEL_PHOTOS[id]); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, color: 0xe6e6e6 }));
+  m.position.set(0, 0, z); g.add(m); tagClick(m, id, 'panel'); return m;
+}
 function buildEaton(c) {
   const g = faceGroup(c), [w, h, d] = c.size;
   const body = boxMesh(w, h, d, lam(0xa9aeb3)); g.add(body); tagClick(body, c.id, 'panel');
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, w * 0.6), new THREE.MeshBasicMaterial({ map: EATON_TEX }));
-  face.position.set(-w * 0.05, h * 0.12, d / 2 + 0.002); g.add(face); tagClick(face, c.id, 'panel');
+  if (PANEL_PHOTOS[c.id]) photoFace(g, c.id, w, h, d / 2 + 0.0015);
+  else { const face = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, w * 0.6), new THREE.MeshBasicMaterial({ map: EATON_TEX }));
+    face.position.set(-w * 0.05, h * 0.12, d / 2 + 0.002); g.add(face); tagClick(face, c.id, 'panel'); }
   // handle on the right side: pivot near its lower end, up = ON
   const piv = new THREE.Group(); piv.position.set(w / 2 + 0.014, h * 0.05, d * 0.1); g.add(piv);
   const lever = boxMesh(0.016, h * 0.36, 0.03, lam(0x707478)); lever.position.y = h * 0.18; piv.add(lever);
@@ -822,12 +831,13 @@ function buildStarter(c) {
     x.fillStyle = '#f4f4f0'; x.fillRect(0, 0, W, H); x.fillStyle = '#111'; x.font = 'bold 30px Arial'; x.fillText(c.number, 8, 34);
     if (c.printed) { x.font = 'bold 13px Arial'; x.fillText(c.printed, 34, 30); }
   }) }));
-  lab.position.set(0, h * 0.3, d / 2 + 0.002); g.add(lab);
+  lab.position.set(0, h * 0.3, d / 2 + 0.002); if (PANEL_PHOTOS[c.id]) photoFace(g, c.id, w, h, d / 2 + 0.0015); else g.add(lab);
   const mk = (col, emi) => new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.014, 20), lam(col, { emissive: emi }));
   const gb = mk(0x2ea043, 0x000000), rb = mk(0xd22222, 0x000000);
   for (const b of [gb, rb]) { b.rotation.x = Math.PI / 2; g.add(b); }
-  if (c.buttons === 'stacked') { gb.position.set(0, 0.0, d / 2 + 0.007); rb.position.set(0, -h * 0.28, d / 2 + 0.007); }
-  else { gb.position.set(-w * 0.2, -h * 0.2, d / 2 + 0.007); rb.position.set(w * 0.2, -h * 0.2, d / 2 + 0.007); }
+  // buttons where they are on the real starters (photo 62)
+  if (c.buttons === 'stacked') { gb.position.set(w * 0.3, 0.0, d / 2 + 0.007); rb.position.set(w * 0.3, -h * 0.27, d / 2 + 0.007); }
+  else { gb.position.set(-w * 0.29, -h * 0.26, d / 2 + 0.007); rb.position.set(w * 0.02, -h * 0.26, d / 2 + 0.007); }
   tagClick(gb, c.id, 'start'); tagClick(rb, c.id, 'stop');
   CTL3[c.id] = { g, gb, rb, c };
 }
@@ -844,11 +854,14 @@ function buildAirlockBox(c) {
   const mk = (col) => new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.014, 20), lam(col));
   const gb = mk(0x2ea043), rb = mk(0xd22222);
   for (const b of [gb, rb]) { b.rotation.x = Math.PI / 2; g.add(b); }
-  gb.position.set(-w * 0.33, h * 0.18, d / 2 + 0.007); rb.position.set(-w * 0.33, -h * 0.14, d / 2 + 0.007);
+  const real = !!PANEL_PHOTOS[c.id]; // buttons and screen where they are on the real box (photo 62)
+  if (real) { gb.position.set(-w * 0.24, h * 0.32, d / 2 + 0.007); rb.position.set(-w * 0.24, h * 0.11, d / 2 + 0.007); }
+  else { gb.position.set(-w * 0.33, h * 0.18, d / 2 + 0.007); rb.position.set(-w * 0.33, -h * 0.14, d / 2 + 0.007); }
   tagClick(gb, c.id, 'on'); tagClick(rb, c.id, 'off');
-  const tex = canvasTex(160, 48, lcdDraw(c.lcd_on.split('|')));
-  const lcd = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.55, w * 0.165), new THREE.MeshBasicMaterial({ map: tex }));
-  lcd.position.set(w * 0.15, h * 0.12, d / 2 + 0.002); g.add(lcd); tagClick(lcd, c.id, 'panel');
+  if (PANEL_PHOTOS[c.id]) photoFace(g, c.id, w, h, d / 2 + 0.0015);
+  const tex = canvasTex(160, 48, lcdDraw(c.lcd_off.split('|'))); // OFF until the green button is pressed
+  const lcd = new THREE.Mesh(new THREE.PlaneGeometry(real ? w * 0.4 : w * 0.55, real ? w * 0.12 : w * 0.165), new THREE.MeshBasicMaterial({ map: tex }));
+  lcd.position.set(w * 0.15, real ? h * 0.24 : h * 0.12, d / 2 + 0.003); g.add(lcd); tagClick(lcd, c.id, 'panel');
   CTL3[c.id] = { g, gb, rb, tex, c, lcdOn: null };
 }
 function buildGatePanel(c) {
@@ -866,19 +879,19 @@ function buildGatePanel(c) {
       x.fillText(a, cx, 24); x.fillText(bb || '', cx, 24 + fs + 3);
     });
   }) }));
-  plate.position.set(0, -h * 0.22, d / 2 + 0.003); g.add(plate);
+  plate.position.set(0, -h * 0.22, d / 2 + 0.003); const realPanel = !!PANEL_PHOTOS[c.id]; if (realPanel) photoFace(g, c.id, w, h, d / 2 + 0.0015); else g.add(plate);
   const inner = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.85, h * 0.5), new THREE.MeshBasicMaterial({ map: canvasTex(256, 160, (x, W, H) => {
     x.fillStyle = '#5a6068'; x.fillRect(0, 0, W, H); x.fillStyle = '#dcdcdc'; x.fillRect(150, 30, 90, 70); x.strokeStyle = '#999'; x.strokeRect(150, 30, 90, 70);
     x.fillStyle = '#fff'; x.beginPath(); x.arc(70, 50, 30, 0, 7); x.fill(); x.strokeStyle = '#222'; x.lineWidth = 3; x.stroke();
     x.strokeStyle = '#c00'; x.beginPath(); x.moveTo(70, 50); x.lineTo(88, 34); x.stroke();
     x.strokeStyle = '#e44'; x.lineWidth = 1; for (let i = 0; i < 18; i++) { x.beginPath(); x.moveTo(10 + i * 13, 110); x.lineTo(20 + i * 12, 150); x.stroke(); }
   }) }));
-  inner.position.set(0, h * 0.18, d / 2 + 0.002); g.add(inner);
+  inner.position.set(0, h * 0.18, d / 2 + 0.002); if (!realPanel) g.add(inner);
   const btns = {};
   c.buttons.forEach((b, i) => {
-    const x = -w * 0.9 / 2 + w * 0.9 * (i + 0.5) / 5;
+    const x = realPanel ? w * ([0.284, 0.425, 0.565, 0.698, 0.843][i] - 0.5) : -w * 0.9 / 2 + w * 0.9 * (i + 0.5) / 5; // photo 67 button columns
     const gb = boxMesh(0.034, 0.03, 0.016, lam(0x1e8f3a)), rb = boxMesh(0.034, 0.03, 0.016, lam(0xb81d1d));
-    gb.position.set(x, -h * 0.25, d / 2 + 0.008); rb.position.set(x, -h * 0.33, d / 2 + 0.008);
+    gb.position.set(x, realPanel ? -h * 0.275 : -h * 0.25, d / 2 + 0.008); rb.position.set(x, realPanel ? -h * 0.345 : -h * 0.33, d / 2 + 0.008);
     g.add(gb); g.add(rb); tagClick(gb, c.id, 'open', { gate: b.gate }); tagClick(rb, c.id, 'close', { gate: b.gate });
     btns[b.gate] = { gb, rb };
   });
@@ -904,12 +917,24 @@ function buildBallValve(c) {
 function buildHatch(c) {
   const g = new THREE.Group(); g.position.copy(V3(c.pos));
   const n = V3(c.normal).normalize(); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n); world.add(g);
-  const piv = new THREE.Group(); piv.position.set(0, c.size[1] / 2, 0); g.add(piv);
-  const plate = boxMesh(c.size[0], c.size[1], 0.012, lam(0x9aa3ab)); plate.position.y = -c.size[1] / 2; piv.add(plate);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), lam(0x333333)); knob.position.set(0, -c.size[1] * 0.85, 0.012); piv.add(knob);
-  const hole = new THREE.Mesh(new THREE.PlaneGeometry(c.size[0] * 0.9, c.size[1] * 0.9), new THREE.MeshBasicMaterial({ color: 0x14161a })); hole.position.z = -0.004; g.add(hole);
-  tagClick(plate, c.id, 'toggle'); tagClick(knob, c.id, 'toggle'); tagClick(hole, c.id, 'toggle');
-  CTL3[c.id] = { g, piv, c };
+  // the real HINGE CLEANOUT door (ducting_v2 NOTES 5, photos 65-66, 91): hinge on a long side, latch dogs on the other
+  const [sw, sh] = c.size, vert = sh > sw, L = Math.max(sw, sh), S = Math.min(sw, sh);
+  const piv = new THREE.Group(); g.add(piv);
+  const door = new THREE.Group(); piv.add(door);
+  if (vert) { door.rotation.z = Math.PI / 2; piv.position.set(-sw / 2, 0, 0); door.position.x = sw / 2; } else { piv.position.set(0, sh / 2, 0); door.position.y = -sh / 2; }
+  const oval = (rx, ry, t, mat) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, t, 36), mat); m.rotation.x = Math.PI / 2; m.scale.set(rx, 1, ry); return m; };
+  const rim = oval(L / 2 + 0.008, S / 2 + 0.008, 0.008, lam(0x15171a)); rim.position.z = -0.002; g.add(rim);
+  const cast = lam(0xb9bdc1, { map: canvasTex(256, 128, (x, W, H) => {
+    x.fillStyle = '#b9bdc1'; x.fillRect(0, 0, W, H); x.fillStyle = '#8e9398'; x.textAlign = 'center';
+    x.font = 'bold 22px Arial'; x.fillText('HINGE CLEANOUT', W / 2, H * 0.42); if (c.id === 'hatch_cnc') { x.font = 'bold 34px Arial'; x.fillText('12', W / 2, H * 0.8); }
+  }) });
+  const plate = oval(L / 2, S / 2, 0.012, [lam(0xb9bdc1), cast, lam(0xb9bdc1)]); plate.position.z = 0.006; door.add(plate);
+  for (const k of [-1, 0, 1]) { const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, L * 0.14, 10), lam(0x6d7277)); kn.rotation.z = Math.PI / 2; kn.position.set(k * L * 0.28, S / 2, 0.01); door.add(kn); }
+  for (const k of [-1, 1]) { const dog = boxMesh(0.03, 0.012, 0.012, lam(0x2a2d31)); dog.position.set(k * L * 0.25, -S / 2 - 0.004, 0.016); door.add(dog);
+    const wing = boxMesh(0.034, 0.006, 0.02, lam(0x2a2d31)); wing.position.set(k * L * 0.25, -S / 2 - 0.004, 0.028); door.add(wing); }
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(1, 36), new THREE.MeshBasicMaterial({ color: 0x14161a })); hole.scale.set(L * 0.45, S * 0.45, 1); if (vert) hole.rotation.z = Math.PI / 2; hole.position.z = -0.001; g.add(hole);
+  for (const m of [plate, rim, hole]) tagClick(m, c.id, 'toggle');
+  CTL3[c.id] = { g, piv, c, axis: vert ? 'y' : 'x' };
 }
 function buildBucket(c) {
   const g = new THREE.Group(); g.position.copy(V3(c.pos)); world.add(g);
@@ -1004,7 +1029,7 @@ function syncControls3D(dt) {
       for (const [gk, B] of Object.entries(C.btns)) { const o = S.gates[gk]; B.gb.material.emissive.setHex(o ? 0x2fd35a : 0); B.rb.material.emissive.setHex(o ? 0 : 0xc02020); }
     } else if (c.type === 'ball_valve') { const tgt = S.valve[id].open ? 0 : Math.PI / 2; C.piv.rotation.y += (tgt - C.piv.rotation.y) * Math.min(1, dt * 10); }
     else if (c.type === 'air_valve') { const tgt = S.air.on ? 0 : Math.PI / 2; C.piv.rotation.z += (tgt - C.piv.rotation.z) * Math.min(1, dt * 10); }
-    else if (c.type === 'hatch') { const tgt = S.hatch[id].open ? -1.9 : 0; C.piv.rotation.x += (tgt - C.piv.rotation.x) * Math.min(1, dt * 8); }
+    else if (c.type === 'hatch') { const ax = C.axis || 'x', tgt = S.hatch[id].open ? (ax === 'y' ? -1.9 : -1.9) : 0; C.piv.rotation[ax] += (tgt - C.piv.rotation[ax]) * Math.min(1, dt * 8); }
     else if (c.type === 'bucket') {
       C.g.visible = S.bucket.placed || (PROC && PROC.id === 'flamex_weekly') || PANEL === 'flamex_A';
       const tp = V3(S.bucket.placed ? c.placed_pos : c.pos); C.g.position.lerp(tp, Math.min(1, dt * 6));
@@ -2428,6 +2453,7 @@ function untilOk(u) { if (!u) return true; const v = getPath(u.path); return 'eq
 function stepStory(dt) {
   if (!ST) return;
   const step = curStep(), ph = step.phases[ST.k];
+  if (CAMANIM && CAMANIM.d && !ph.demo) return; // nothing happens until the camera is there
   ST.t += dt;
   (ph.at || []).forEach(([t, a], j) => { if (ST.t >= t && !ST.fired.has(j)) { ST.fired.add(j); tourAct(a); } });
   if (ST.paused) return;
