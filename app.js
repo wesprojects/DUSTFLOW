@@ -251,10 +251,11 @@ const USE_CSKINS = Q.has('cskins');
 // the machines are the video's own (explainer.blend: Hendrick CNCs, machines_v3 edgebanders and conveyors); ?skins loads the older
 // assembled_v2 textured machines instead (they drew over the video's and did not match it)
 const USE_SKINS = Q.has('skins');
-const USE_PW = Q.get('pw') !== '0'; // Paper City's real collector-wall controls and blast gate panel
-const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room'].concat(USE_PW ? ['paper_wall'] : [], USE_SKINS ? ['shop_skins'] : [], USE_CSKINS ? ['collector_skins'] : []);
+const USE_PW = Q.get('pw') !== '0';
+const USE_MTEX = Q.get('mtex') !== '0'; // Paper City's machines with their own textures (same objects as the video's) // Paper City's real collector-wall controls and blast gate panel
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room'].concat(USE_PW ? ['paper_wall'] : [], USE_MTEX ? ['machines_tex'] : [], USE_SKINS ? ['shop_skins'] : [], USE_CSKINS ? ['collector_skins'] : []);
 const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6 }; if (USE_PW) SIZES.paper_wall = 1.7e6; if (USE_SKINS) SIZES.shop_skins = 14e6; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6 }; if (USE_PW) SIZES.paper_wall = 7.1e6; if (USE_MTEX) SIZES.machines_tex = 15.9e6; if (USE_SKINS) SIZES.shop_skins = 14e6; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
@@ -267,8 +268,8 @@ function loadGLB(k, optional = false) {
 }
 
 let SC, CT, PR, TOUR;
-const [scj, ctj, prj, tourj, gW, PWJ, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
-  USE_PW ? loadGLB('paper_wall', true) : null, USE_PW ? getJSON('paper_wall.json').catch(() => null) : null,
+const [scj, ctj, prj, tourj, gT, gW, PWJ, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
+  USE_MTEX ? loadGLB('machines_tex', true) : null, USE_PW ? loadGLB('paper_wall', true) : null, USE_PW ? getJSON('paper_wall.json').catch(() => null) : null,
   loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), USE_SKINS ? loadGLB('shop_skins', true) : null, USE_CSKINS ? loadGLB('collector_skins', true) : null]);
 TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
@@ -450,6 +451,21 @@ for (const g of [gS, gC, gM]) g.scene.traverse(o => {
 const KEEP_FLAT = /^CNC[12]_Spoilboard/; // the solid bed board: the kit's own MDF texture shows the vacuum plumbing
 for (const n of Object.keys(NODE)) if (isSkinned(n) && !KEEP_FLAT.test(n) && NODE[n].parent && !ROOMCAT[n]) NODE[n].traverse(o => { if (o.isMesh && !KEEP_FLAT.test(o.name)) o.userData.noDraw = true; });
 for (const o of pickables) if (o.userData.noDraw) o.material = NO_DRAW;
+// office-PC shading for Paper City's textured parts: keep the colour atlas, drop the normal / roughness maps
+const texLamCache = new Map();
+function texLambert(m) {
+  if (texLamCache.has(m)) return texLamCache.get(m);
+  const l = new THREE.MeshLambertMaterial({ map: m.map || null, color: m.color ? m.color.clone() : new THREE.Color(0xffffff), name: m.name, side: THREE.DoubleSide,
+    transparent: m.transparent || m.opacity < 1, opacity: m.opacity ?? 1, depthWrite: !(m.transparent || m.opacity < 1), alphaTest: m.alphaTest || 0 });
+  if (l.map) l.map.anisotropy = 4;
+  texLamCache.set(m, l); return l;
+}
+for (const g of [gT, gW]) if (g) g.scene.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(texLambert) : texLambert(o.material); });
+if (gT) { // Paper City's textured machines are what you see; the flat copies stay for clicks, labels and highlights
+  gT.scene.traverse(o => { if (o.name) o.name = 'Tex_' + o.name; if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  world.add(gT.scene);
+  gM.scene.traverse(o => { if (o.isMesh) { o.userData.noDraw = true; o.material = NO_DRAW; } });
+}
 // no z-fighting on the CNC beds: the kit's MDF board sat in exactly the same place as the solid bed board. Hide the kit's
 // board, lift the solid one 6 mm and keep its corner mark drawn on top of it
 if (gK) gK.scene.traverse(o => { const m = o.isMesh && (Array.isArray(o.material) ? o.material[0] : o.material); if (m && /^Skin_CNC/.test(o.name) && /Spoilboard_MDF/.test(m.name)) o.visible = false; });
