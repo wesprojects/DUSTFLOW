@@ -246,9 +246,11 @@ window.addEventListener('error', e => { console.error('app error', e.message); }
 // ---------------------------------------------------------------- load
 async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }
 const loader = new GLTFLoader();
-const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins', 'collector_skins'];
+// the collector and its ducts keep the explainer video's plain look (Wes 11-13); ?cskins loads the textured collector
+const USE_CSKINS = Q.has('cskins');
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins'].concat(USE_CSKINS ? ['collector_skins'] : []);
 const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6, shop_skins: 14e6, collector_skins: 8e6 }; // updated by the real sizes as they arrive
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6, shop_skins: 14e6 }; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
@@ -262,7 +264,7 @@ function loadGLB(k, optional = false) {
 
 let SC, CT, PR, TOUR;
 const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
-  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true), loadGLB('collector_skins', true)]);
+  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true), USE_CSKINS ? loadGLB('collector_skins', true) : null]);
 TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
 
@@ -435,9 +437,16 @@ for (const g of [gS, gC, gM]) g.scene.traverse(o => {
     if (g === gC) { o.castShadow = true; o.receiveShadow = true; }
   }
 });
-const KEEP_FLAT = /^CNC[12]_Spoilboard/; // the assembled CNC kits have no spoilboard: without it the open bed showed the plumbing under it
+const KEEP_FLAT = /^CNC[12]_Spoilboard/; // the solid bed board: the kit's own MDF texture shows the vacuum plumbing
 for (const n of Object.keys(NODE)) if (isSkinned(n) && !KEEP_FLAT.test(n) && NODE[n].parent && !ROOMCAT[n]) NODE[n].traverse(o => { if (o.isMesh && !KEEP_FLAT.test(o.name)) o.userData.noDraw = true; });
 for (const o of pickables) if (o.userData.noDraw) o.material = NO_DRAW;
+// no z-fighting on the CNC beds: the kit's MDF board sat in exactly the same place as the solid bed board. Hide the kit's
+// board, lift the solid one 6 mm and keep its corner mark drawn on top of it
+if (gK) gK.scene.traverse(o => { const m = o.isMesh && (Array.isArray(o.material) ? o.material[0] : o.material); if (m && /^Skin_CNC/.test(o.name) && /Spoilboard_MDF/.test(m.name)) o.visible = false; });
+for (const k of ['CNC1_Spoilboard', 'CNC2_Spoilboard']) if (NODE[k]) {
+  NODE[k].position.y += 0.006; NODE[k].updateMatrixWorld(true);
+  NODE[k].traverse(o => { if (o.isMesh && /__dec$/.test(o.name)) { o.material = o.material.clone(); Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); } });
+}
 for (const n of ['Ctx_Ground', 'Pad__slab']) if (NODE[n]) NODE[n].traverse(o => { if (o.isMesh) o.receiveShadow = true; });
 if (gR && NODE.Ctx_Ground) { // the explainer's ground stopped at x 30; the shop goes to 36.6 and the back lot beyond
   const G = NODE.Ctx_Ground; G.updateMatrixWorld(true);
@@ -515,7 +524,7 @@ const ROLLOFF = (() => {
   };
   box(X0, E, YC - W / 2, YC + W / 2, ZB, ZT, brown); // the body, flat closed top
   for (const sy of [-1, 1]) box(X0 + 0.2, E - 0.1, YC + sy * 0.95 - 0.09, YC + sy * 0.95 + 0.09, Z0, ZB, dark); // rails
-  box(X0 - 0.03, E + 0.03, YC - W / 2 - 0.05, YC + W / 2 + 0.05, ZT - 0.1, ZT, dark); // top rim
+  box(X0 - 0.03, E + 0.03, YC - W / 2 - 0.05, YC + W / 2 + 0.05, ZT - 0.1, ZT + 0.012, dark); // top rim, 12 mm proud of the body top (no shared face)
   for (let x = X0 + 0.45; x < E - 0.3; x += 0.62) for (const sy of [-1, 1]) { // vertical side ribs
     const y = YC + sy * (W / 2 + 0.03); box(x - 0.04, x + 0.04, y - 0.03, y + 0.03, ZB, ZT - 0.1, dark);
   }
@@ -2625,6 +2634,10 @@ function frameInner() {
   if (Q.has('dbg') && FRAMES % 20 === 1) console.log('[dce] frame ' + FRAMES + ' t ' + performance.now().toFixed(0) + ' cap ' + elCap.style.display + ' load ' + $('#loading').style.display);
   const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
   stepCam(dt);
+  { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
+    const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);
+    if (Math.abs(dn - camera.near) > 0.004) { camera.near = dn; camera.updateProjectionMatrix(); }
+  }
   if (MODE === 'orbit' && !CAMANIM) controls.update();
   stepWalk(dt);
   stepFly(dt);
