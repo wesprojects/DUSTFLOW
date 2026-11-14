@@ -248,9 +248,12 @@ async function getJSON(u) { const r = await fetch(u, { cache: 'no-cache' }); if 
 const loader = new GLTFLoader();
 // the collector and its ducts keep the explainer video's plain look (Wes 11-13); ?cskins loads the textured collector
 const USE_CSKINS = Q.has('cskins');
-const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room', 'shop_skins'].concat(USE_CSKINS ? ['collector_skins'] : []);
+// the machines are the video's own (explainer.blend: Hendrick CNCs, machines_v3 edgebanders and conveyors); ?skins loads the older
+// assembled_v2 textured machines instead (they drew over the video's and did not match it)
+const USE_SKINS = Q.has('skins');
+const GLBS = ['machines', 'shop_interior', 'collector', 'shop_room'].concat(USE_SKINS ? ['shop_skins'] : [], USE_CSKINS ? ['collector_skins'] : []);
 const prog = Object.fromEntries(GLBS.map(k => [k, 0]));
-const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6, shop_skins: 14e6 }; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
+const SIZES = { machines: 8814524, shop_interior: 3786016, collector: 3200392, shop_room: 17e6 }; if (USE_SKINS) SIZES.shop_skins = 14e6; if (USE_CSKINS) SIZES.collector_skins = 8e6; // updated by the real sizes as they arrive
 function updLoad() {
   const t = Object.keys(prog).reduce((a, k) => a + prog[k], 0), T = Object.values(SIZES).reduce((a, b) => a + b, 0);
   $('#loadbar').style.width = Math.round(100 * t / T) + '%';
@@ -264,7 +267,7 @@ function loadGLB(k, optional = false) {
 
 let SC, CT, PR, TOUR;
 const [scj, ctj, prj, tourj, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
-  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), loadGLB('shop_skins', true), USE_CSKINS ? loadGLB('collector_skins', true) : null]);
+  loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), USE_SKINS ? loadGLB('shop_skins', true) : null, USE_CSKINS ? loadGLB('collector_skins', true) : null]);
 TOUR = tourj;
 SC = scj; CT = ctj; PR = prj;
 
@@ -373,6 +376,10 @@ for (const g of [gR, gK, gD]) {
     if (cat && o.name) ROOMCAT[o.name] = cat;
     if (o.userData && o.userData.skin_of) SKINS[o.userData.skin_of] = o;
   });
+  if (g === gR && !USE_SKINS) { // the shop model's own machines (assembled_v2) stay out: the video's machines are shown
+    const drop = []; g.scene.traverse(o => { if (o.userData && o.userData.room_cat === 'Machines') drop.push(o); });
+    for (const o of drop) { if (o.parent) o.parent.remove(o); delete ROOMCAT[o.name]; }
+  }
   // identical parts written once (same geometry + material) -> one InstancedMesh each
   const same = new Map();
   g.scene.traverse(o => { if (o.isMesh) { const k = o.geometry.uuid + '|' + o.material.uuid; (same.get(k) || same.set(k, []).get(k)).push(o); } });
