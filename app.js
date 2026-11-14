@@ -802,8 +802,7 @@ const EATON_TEX = canvasTex(128, 96, (g, w, h) => {
   g.fillStyle = '#fff'; g.fillRect(14, 10, 100, 70); g.fillStyle = '#1d3d8f'; g.font = 'bold 20px Arial'; g.fillText('EATON', 30, 32);
   g.fillStyle = '#c00'; g.font = 'bold 14px Arial'; g.fillText('ON', 76, 52); g.fillText('OFF', 72, 72); g.fillStyle = '#333'; g.font = '10px Arial'; g.fillText('Safety Switch', 22, 48);
 });
-const PANEL_PHOTOS = { eaton_in_left: 'panels/eaton_left.jpg', eaton_in_right: 'panels/eaton_right.jpg', starter1: 'panels/starter1.jpg',
-  starter2: 'panels/starter2.jpg', starter3: 'panels/starter3.jpg', airlock_box: 'panels/airlock_box.jpg', gate_panel: 'panels/gate_panel.jpg' };
+const PANEL_PHOTOS = {}; // no photos pasted on boxes (Wes 11-14): these parts get the real Paper City models instead
 const texLoader = new THREE.TextureLoader();
 function photoFace(g, id, w, h, z) { // the real panel, cut from the owner's photo, on the front of the box
   const t = texLoader.load(PANEL_PHOTOS[id]); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
