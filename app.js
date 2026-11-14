@@ -475,6 +475,21 @@ if (gT) { // Paper City's textured machines are what you see; the flat copies st
   gT.scene.updateMatrixWorld(true);
   gM.scene.traverse(o => { if (o.isMesh) { o.userData.noDraw = true; o.material = NO_DRAW; } });
 }
+{ // the panel saw faces into the shop with its A-frame against the south wall (photo 68): turn it 180 deg about its own centre
+  const parts = [...Object.keys(NODE).filter(n => /^PanelSaw_/.test(n) && NODE[n].parent && !/^PanelSaw_/.test(NODE[n].parent.name)).map(n => NODE[n]),
+    ...(gT ? gT.scene.children.filter(o => /^Tex_PanelSaw_/.test(o.name)) : [])];
+  const frame = (gT && gT.scene.getObjectByName('Tex_PanelSaw_PanelSaw')) || NODE.PanelSaw_PanelSaw;
+  const bb = frame ? new THREE.Box3().setFromObject(frame) : new THREE.Box3();
+  if (!bb.isEmpty()) { // turn in place: about the frame's own centre, in world space (parents may carry their own transforms)
+    const c = bb.getCenter(new THREE.Vector3());
+    const M = new THREE.Matrix4().makeTranslation(c.x, c.y, c.z).multiply(new THREE.Matrix4().makeRotationY(Math.PI)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -c.y, -c.z));
+    for (const o of parts) {
+      o.updateMatrixWorld(true);
+      const W = M.clone().multiply(o.matrixWorld), L = o.parent ? o.parent.matrixWorld.clone().invert().multiply(W) : W;
+      L.decompose(o.position, o.quaternion, o.scale); o.updateMatrixWorld(true);
+    }
+  }
+}
 // no z-fighting on the CNC beds: the kit's MDF board sat in exactly the same place as the solid bed board. Hide the kit's
 // board, lift the solid one 6 mm and keep its corner mark drawn on top of it
 if (gK) gK.scene.traverse(o => { const m = o.isMesh && (Array.isArray(o.material) ? o.material[0] : o.material); if (m && /^Skin_CNC/.test(o.name) && /Spoilboard_MDF/.test(m.name)) o.visible = false; });
