@@ -262,7 +262,7 @@ function updLoad() {
 }
 const GLB_EXT = '.glb';
 function loadGLB(k, optional = false) {
-  return new Promise((res, rej) => loader.load(k + GLB_EXT, g => { prog[k] = SIZES[k]; updLoad(); res(g); },
+  return new Promise((res, rej) => loader.load(k + GLB_EXT + '?v=' + (typeof BUILD !== 'undefined' ? BUILD : ''), g => { prog[k] = SIZES[k]; updLoad(); res(g); },
     e => { if (e.total) SIZES[k] = e.total; if (e.loaded) { prog[k] = e.loaded; updLoad(); } },
     err => { if (optional) { console.warn('[dce] optional ' + k + ' not loaded', err); prog[k] = SIZES[k]; res(null); } else rej(err); }));
 }
@@ -464,6 +464,15 @@ for (const g of [gT, gW]) if (g) g.scene.traverse(o => { if (o.isMesh) o.materia
 if (gT) { // Paper City's textured machines are what you see; the flat copies stay for clicks, labels and highlights
   gT.scene.traverse(o => { if (o.name) o.name = 'Tex_' + o.name; if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   world.add(gT.scene);
+  // each textured part sits exactly where the video's copy is (the edgebanders, conveyors and panel saw were placed
+  // 0.3-0.9 m differently in the source file; the app's ducts connect to the video's placement)
+  gT.scene.updateMatrixWorld(true); let moved = 0;
+  for (const o of [...gT.scene.children]) {
+    const f = NODE[o.name.replace(/^Tex_/, '')]; if (!f) continue;
+    const a = new THREE.Box3().setFromObject(f), b = new THREE.Box3().setFromObject(o); if (a.isEmpty() || b.isEmpty()) continue;
+    const d = a.min.clone().sub(b.min); if (d.length() > 0.002 && d.length() < 3) { o.position.add(d); moved++; }
+  }
+  gT.scene.updateMatrixWorld(true);
   gM.scene.traverse(o => { if (o.isMesh) { o.userData.noDraw = true; o.material = NO_DRAW; } });
 }
 // no z-fighting on the CNC beds: the kit's MDF board sat in exactly the same place as the solid bed board. Hide the kit's
