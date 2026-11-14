@@ -700,6 +700,7 @@ const blClipMats = blClipDef ? blClipDef.applies_to.flatMap(n => cloneMatFor(n))
 const CUTSWEEP = new Set(); // cut pieces in mid-sweep (overlays skip them)
 function setCutOpen(k, open, quiet = false) {
   const c = CUT[k]; if (!c) return;
+  if (k === 'ducts') open = false; // the ducts are always see-through: never slice their tops off
   c.open = open;
   if (!quiet) renderSide();
 }
