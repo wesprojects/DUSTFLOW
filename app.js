@@ -1110,14 +1110,23 @@ for (const z of ['A', 'B']) {
   const n = NODE[CT.flamex.panels[z].node]; if (!n) continue;
   let b = new THREE.Box3().setFromObject(n);
   const kb = kitBox(z === 'A' ? /EL_Plastic_Enclosure/ : /EL_Paint_PanelWhite/);
+  let inset = null;
+  if (kb && z === 'B') { // the printed inset is part of the model's decal sheet: find its triangles on the door front
+    const sz0 = kb.getSize(new THREE.Vector3()), v = new THREE.Vector3(); inset = new THREE.Box3();
+    gW.scene.traverse(o => { if (!o.isMesh || !/Decals/.test(o.material.name)) return; const P = o.geometry.attributes.position;
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld);
+        if (v.x > kb.min.x + 0.05 * sz0.x && v.x < kb.max.x - 0.05 * sz0.x && v.y < kb.max.y - 0.25 * sz0.y && v.y > kb.min.y + 0.15 * sz0.y && v.z > kb.max.z - 0.03) inset.expandByPoint(v); } });
+    if (inset.isEmpty()) inset = null;
+  }
   if (kb) { const s0 = kb.getSize(new THREE.Vector3()); b = z === 'A' // the faceplate inside the FLE box / the grey inset in the Minimax door (photos 60, 61)
     ? new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.1, kb.min.y + s0.y * 0.04, kb.min.z), new THREE.Vector3(kb.max.x - s0.x * 0.06, kb.max.y - s0.y * 0.04, kb.max.z))
-    : new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.22, kb.max.y - s0.y * 0.64, kb.min.z), new THREE.Vector3(kb.min.x + s0.x * 0.77, kb.max.y - s0.y * 0.31, kb.max.z)); }
+    : (inset ? new THREE.Box3(new THREE.Vector3(inset.min.x, inset.min.y, kb.min.z), new THREE.Vector3(inset.max.x, inset.max.y, Math.max(kb.max.z, inset.max.z)))
+      : new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.22, kb.max.y - s0.y * 0.64, kb.min.z), new THREE.Vector3(kb.min.x + s0.x * 0.77, kb.max.y - s0.y * 0.31, kb.max.z))); }
   const sz = b.getSize(new THREE.Vector3()), ctr = b.getCenter(new THREE.Vector3());
   const W = 512, H = Math.round(512 * sz.y / sz.x);
   const tex = canvasTex(W, H, () => {});
   const m = new THREE.Mesh(new THREE.PlaneGeometry(sz.x * (kb ? 1 : 0.92), sz.y * (kb ? 1 : 0.92)), new THREE.MeshBasicMaterial({ map: tex }));
-  m.position.set(ctr.x, ctr.y, b.max.z + (kb && z === 'A' ? -0.012 : 0.003)); world.add(m);
+  m.position.set(ctr.x, ctr.y, b.max.z + (kb && z === 'A' ? -0.012 : 0.004)); world.add(m);
   tagClick(m, 'panel_' + z, 'panel');
   n.traverse(o => { if (o.isMesh) { o.userData.ctl = 'panel_' + z; o.userData.act = 'panel'; } });
   FXFACE[z] = { tex, W, H, last: '' };
@@ -1166,7 +1175,14 @@ function useRealWall() {
       const g = near('airlock_green', P), rd = near('airlock_red', P), l = near('airlock_lcd', P); if (!g || !rd || !l) continue;
       const lcd = C.g.children.find(o => o.isMesh && o.material && o.material.map === C.tex);
       hideBody(C, [C.gb, C.rb, lcd]); at(C, C.gb, g); at(C, C.rb, rd);
-      if (lcd) { at(C, lcd, l); lcd.position.z += 0.002; lcd.scale.set(Math.max(l.size[0], l.size[2]) / lcd.geometry.parameters.width, l.size[1] / lcd.geometry.parameters.height, 1); }
+      if (lcd) { // cover exactly the model's printed screen (its decal on the box front), just in front of it
+        const v = new THREE.Vector3(), scr = new THREE.Box3(), P0 = V3(c.pos);
+        gW.scene.traverse(o => { if (!o.isMesh || !/Decals/.test(o.material.name)) return; const P = o.geometry.attributes.position;
+          for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (Math.abs(v.x - P0.x) < c.size[0] * 0.7 && Math.abs(v.y - P0.y) < c.size[1] * 0.7 && Math.abs(v.z - P0.z) < 0.15) scr.expandByPoint(v); } });
+        if (!scr.isEmpty()) { const ctr = scr.getCenter(new THREE.Vector3()), sz = scr.getSize(new THREE.Vector3()); C.g.updateMatrixWorld(true); lcd.position.copy(C.g.worldToLocal(ctr.setZ(scr.max.z + 0.003)));
+          lcd.scale.set(Math.max(sz.x, 0.02) / lcd.geometry.parameters.width, Math.max(sz.y, 0.01) / lcd.geometry.parameters.height, 1); }
+        else { at(C, lcd, l); lcd.position.z += 0.009; lcd.scale.set(Math.max(l.size[0], l.size[2]) / lcd.geometry.parameters.width, l.size[1] / lcd.geometry.parameters.height, 1); }
+        lcd.renderOrder = 3; }
     } else if (c.type === 'gate_panel') {
       const gs = [...(R.gate_green || [])].sort((a, b) => a.center[2] - b.center[2]), rs = [...(R.gate_red || [])].sort((a, b) => a.center[2] - b.center[2]);
       if (gs.length !== c.buttons.length || rs.length !== c.buttons.length) continue;
