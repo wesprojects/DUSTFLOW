@@ -443,7 +443,11 @@
       "dot": true,
       "from": "CNC 1 hose",
       "to": "CNC 1 branch"
-     }
+     },
+     "vl": [
+      "machines.cnc1",
+      "machines.g1"
+     ]
     },
     {
      "vp": "machines",
@@ -479,7 +483,10 @@
       "dot": true,
       "from": "trunk",
       "to": "trunk"
-     }
+     },
+     "vl": [
+      "machines.trunk"
+     ]
     },
     {
      "vp": "wall",
@@ -515,7 +522,11 @@
       "dot": true,
       "from": "12 in inlet spool",
       "to": "inlet box"
-     }
+     },
+     "vl": [
+      "wall.gap",
+      "wall.boot"
+     ]
     },
     {
      "vp": "cyclone",
@@ -558,7 +569,12 @@
       "dot": true,
       "from": "wall spiral",
       "to": "cone and airlock"
-     }
+     },
+     "vl": [
+      "cyclone.spin",
+      "cyclone.cone",
+      "cyclone.core"
+     ]
     },
     {
      "vp": "airlock",
@@ -593,7 +609,41 @@
       "stream": "chips",
       "dot": true,
       "from": "cone and airlock",
-      "to": "floor line to blower"
+      "to": "cone and airlock"
+     },
+     "vl": [
+      "airlock.al",
+      "airlock.al2"
+     ]
+    },
+    {
+     "vp": "blower",
+     "cam": {
+      "vp": "blower",
+      "keys": [
+       0,
+       1,
+       2
+      ]
+     },
+     "dur": 5.5,
+     "xray": true,
+     "vl": [
+      "blower.bl",
+      "blower.feed",
+      "blower.riser"
+     ],
+     "ride": {
+      "stream": "chips",
+      "dot": true,
+      "from": "floor line to blower",
+      "to": "riser"
+     },
+     "cap": {
+      "en": "The transfer blower pushes the chips up the riser.",
+      "es": "El soplador de transferencia empuja las virutas por el tubo vertical.",
+      "fr": "La soufflante de transfert pousse les copeaux dans la colonne montante.",
+      "sw": "Kipuliza cha kuhamisha kinasukuma vipande juu ya bomba la wima."
      }
     },
     {
@@ -607,10 +657,10 @@
      },
      "dur": 5,
      "cap": {
-      "en": "The blower sends them out to the roll-off.",
-      "es": "El soplador las manda al contenedor.",
-      "fr": "La soufflante les envoie à la benne.",
-      "sw": "Kipuliza kinavipeleka kwenye kontena."
+      "en": "Along the back of the shed and into the roll-off. The air comes back through the lower hose.",
+      "es": "Por detrás de la caseta hasta el contenedor. El aire regresa por la manguera de abajo.",
+      "fr": "Le long de l'arrière de l'abri jusqu'à la benne. L'air revient par le tuyau du bas.",
+      "sw": "Nyuma ya kibanda hadi kwenye kontena. Hewa inarudi kupitia bomba la chini."
      },
      "labels": [
       {
@@ -628,9 +678,14 @@
      "ride": {
       "stream": "chips",
       "dot": true,
-      "from": "blower eye",
+      "from": "line along the back of the shed",
       "to": "into the roll-off"
-     }
+     },
+     "vl": [
+      "back.line",
+      "back.pile",
+      "back.ret"
+     ]
     },
     {
      "vp": "fan",
@@ -664,7 +719,11 @@
      "ride": {
       "stream": "air_0",
       "dot": true
-     }
+     },
+     "vl": [
+      "fan.fan",
+      "fan.out"
+     ]
     },
     {
      "vp": "filters",
@@ -694,7 +753,11 @@
        }
       }
      ],
-     "xray": true
+     "xray": true,
+     "vl": [
+      "filters.cart",
+      "filters.clean"
+     ]
     },
     {
      "vp": "filters",
@@ -724,7 +787,11 @@
        }
       }
      ],
-     "xray": true
+     "xray": true,
+     "vl": [
+      "filters.drum",
+      "filters.drop"
+     ]
     }
    ]
   },

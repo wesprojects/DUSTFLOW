@@ -2404,7 +2404,9 @@ function storyPhase(k) {
   else if (vw) flyTo({ position: vw.position, target: vw.target });
   else if (ph.cam && ph.cam.position) flyTo(ph.cam);
   else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); } // the video's shot, checked clear
-  LSRC.story = (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: HEX[l.accent] || l.accent }));
+  LSRC.story = ph.vl // the video's own labels for this station
+    ? ph.vl.map(id => { const L = SC.labels.find(l => l.id === id); return L && L.anchor ? { key: id, text: L.text, a: id, accent: L.accent ? MAT[L.accent]?.display_hex : null } : null; }).filter(Boolean)
+    : (ph.labels || []).map((l, j) => ({ key: `s${ST.i}_${ST.k}_${j}`, text: l.text, a: l.a, accent: HEX[l.accent] || l.accent }));
   LSRC.max = 3; refreshLabels(); zoneLabels();
   highlightStory(ph.hl || []);
   highlightControls([]); // the labels point at the controls; no rings over them
