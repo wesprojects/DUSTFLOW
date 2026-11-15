@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.38';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.38';
+import { createSim } from './sim.js?v=2026-11-15.39';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.39';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -698,6 +698,7 @@ function applyVisibility() {
     if (g) vis = TOG[g];
     if (HIDE_TOUR.has(name) && !(g && TOG[g] && tourOverride.has(g))) vis = false;
     if (CUTHIDE.has(name)) vis = false;
+    if (ST && /^(Enc__|Frame__|DC_Enclosure_Door)/.test(name)) vis = false; // the dust collection tour shows the collector with the shed taken away
     if (EXTRA_HIDE.has(name)) vis = false;
     if (n.userData.slideHidden) vis = false;
     if (OVERHEAD_OFF && ROOMCAT[name] === 'Overhead') vis = false;
@@ -2948,6 +2949,7 @@ function storyStart(i, k = 0) {
   STOP = -1; LSRC.view = []; CAPO = null;
   ST = { i: clamp(i, 0, STORY.length), k: -1, t: 0, paused: false, fired: new Set(), endT: null };
   storyPhase(k);
+  applyVisibility(); // the shed is taken away for the tour
 }
 function storyPhase(k) {
   const step = curStep(), ph = step.phases[clamp(k, 0, step.phases.length - 1)];
@@ -3021,6 +3023,7 @@ function storyPrev() { if (!ST) return; if (ST.k > 0) storyPhase(ST.k - 1); else
 function storyStop() {
   if (!ST) return;
   ST = null; RIDE = null; STCAP = null; LSRC.story = []; TOG.zones = ST_ZONES0; setXray(USER_XRAY); refreshLabels(); zoneLabels(); highlightStory([]); hlGroup.clear();
+  applyVisibility(); // the shed comes back
   if (DEMO) endDemo();
   renderCaption(); renderSide(); updateFlow();
 }
