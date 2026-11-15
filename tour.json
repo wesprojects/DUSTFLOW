@@ -840,16 +840,12 @@
      "demo": "keep",
      "cam": "none",
      "panel": "flamex_A",
-     "until": {
-      "path": "flamex.A.spray",
-      "eq": 0
-     },
-     "dur": 1,
+     "dur": 3,
      "cap": {
-      "en": "The water stops after its set time.",
-      "es": "El agua para después de su tiempo.",
-      "fr": "L'eau s'arrête après son temps réglé.",
-      "sw": "Maji yanaacha baada ya muda wake."
+      "en": "The water keeps spraying until the panel is reset.",
+      "es": "El agua sigue hasta reiniciar el panel.",
+      "fr": "L'eau continue jusqu'au reset du panneau.",
+      "sw": "Maji yanaendelea hadi paneli ianzishwe upya."
      }
     },
     {
@@ -880,10 +876,10 @@
       ]
      ],
      "cap": {
-      "en": "Reset with the key at 1, then turn the key back to 0.",
-      "es": "Reinicie con la llave en 1 y regrese la llave a 0.",
-      "fr": "Réarmez avec la clé sur 1, puis remettez la clé sur 0.",
-      "sw": "Rudisha ufunguo ukiwa kwenye 1, kisha urudishe ufunguo kwenye 0."
+      "en": "Reset with the key at 1: the water stops. Then turn the key back to 0.",
+      "es": "Reset con la llave en 1: el agua se detiene. Luego llave a 0.",
+      "fr": "Reset avec la clé sur 1 : l'eau s'arrête. Puis clé sur 0.",
+      "sw": "Reset ufunguo ukiwa 1: maji yanasimama. Kisha ufunguo kwenye 0."
      }
     },
     {
@@ -934,10 +930,6 @@
      "rings": [
       "panel_B"
      ],
-     "until": {
-      "path": "flamex.B.spray",
-      "eq": 0
-     },
      "dur": 3,
      "at": [
       [
@@ -958,10 +950,10 @@
       ]
      ],
      "cap": {
-      "en": "Silence it the same way. The water stops on its own.",
-      "es": "Silencie igual. El agua para sola.",
-      "fr": "Même silence. L'eau s'arrête toute seule.",
-      "sw": "Nyamazisha vivyo hivyo. Maji yanaacha yenyewe."
+      "en": "Silence it the same way. The water keeps going until the reset.",
+      "es": "Se silencia igual. El agua sigue hasta el reset.",
+      "fr": "On coupe pareil. L'eau continue jusqu'au reset.",
+      "sw": "Zima honi vivyo hivyo. Maji yanaendelea hadi reset."
      }
     },
     {
@@ -992,10 +984,10 @@
       ]
      ],
      "cap": {
-      "en": "Reset, key back to 0. Flamex is on watch again.",
-      "es": "Reinicie y regrese la llave a 0. Flamex vigila otra vez.",
-      "fr": "Réarmez, clé sur 0. Flamex surveille de nouveau.",
-      "sw": "Rudisha, ufunguo kwenye 0. Flamex inalinda tena."
+      "en": "Reset: the water stops. Key back to 0. Flamex is on watch again.",
+      "es": "Reset: el agua se detiene. Llave a 0. Flamex vigila de nuevo.",
+      "fr": "Reset : l'eau s'arrête. Clé sur 0. Flamex surveille à nouveau.",
+      "sw": "Reset: maji yanasimama. Ufunguo kwenye 0. Flamex inalinda tena."
      }
     }
    ]

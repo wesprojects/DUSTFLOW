@@ -822,12 +822,12 @@
  "flamex": {
   "spray_time_s": 7,
   "spray_note": {
-   "en": "Spray time: 7 s is typical. This site's setting is not known.",
-   "es": "Tiempo de rociado: 7 s es lo típico. No se conoce el ajuste de este sitio.",
-   "fr": "Durée d'arrosage : 7 s typique. Le réglage de ce site n'est pas connu.",
-   "sw": "Muda wa kunyunyiza: s 7 ni kawaida. Mpangilio wa hapa haujulikani."
+   "en": "On this site the water keeps spraying until the panel is reset (key to bypass, then reset). The manual allows a set time of 1-350 s; this panel runs until reset.",
+   "es": "En este sitio el agua sigue hasta reiniciar el panel (llave en bypass y reset). El manual permite 1-350 s; este panel sigue hasta el reset.",
+   "fr": "Sur ce site l'eau continue jusqu'au reset du panneau (clé sur bypass, puis reset). Le manuel permet 1-350 s ; ce panneau continue jusqu'au reset.",
+   "sw": "Hapa maji yanaendelea hadi paneli ianzishwe upya (ufunguo kwenye bypass, kisha reset). Mwongozo unaruhusu s 1-350; paneli hii inaendelea hadi reset."
   },
-  "reset_block_s": 7,
+  "reset_block_s": 1,
   "lamp_test_s": 3,
   "ext_silences_strobes": true,
   "key_1_bypasses_trip": true,
@@ -876,7 +876,8 @@
     "detector_hatch": "hatch_riser",
     "valve": "valve_B"
    }
-  }
+  },
+  "spray_until_reset": true
  },
  "messages": {
   "needs_key": {

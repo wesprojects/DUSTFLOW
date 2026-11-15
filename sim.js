@@ -136,7 +136,7 @@ export function createSim(CT, SC, hooks = {}) {
     if (z.key === 1 && CT.flamex.key_1_bypasses_trip) return false;
     const was = z.fire;
     z.fire = true; z.buzzer = true; z.horns = true; z.extOff = false; z.by = by;
-    z.spray = Math.max(z.spray, CT.flamex.spray_time_s); z.sprayed = 0;
+    z.spray = CT.flamex.spray_until_reset ? 1e9 : Math.max(z.spray, CT.flamex.spray_time_s); z.sprayed = 0; // this site: until reset
     if (!was) { z.msgT = new Date(); z.detectT = H.now(); H.say(MSG.tripped, 'bad'); }
     result('panel_' + zone, 'trip', 'tripped', by);
     H.renderAll();

@@ -1,0 +1,108 @@
+{
+ "meta": {
+  "title": "DUSTFLOW training library",
+  "how": "Every package shows to everyone. A training pin shows only the packages listed for that pin. Edit pins here; publish to update."
+ },
+ "packages": [
+  {
+   "id": "tour",
+   "kind": "tour",
+   "minutes": 6,
+   "title": {
+    "en": "How dust collection works",
+    "es": "Cómo funciona la recolección de polvo",
+    "fr": "Comment fonctionne le dépoussiérage",
+    "sw": "Jinsi ukusanyaji wa vumbi unavyofanya kazi"
+   },
+   "summary": {
+    "en": "Start-up, blast gates, the dust path and spark detection.",
+    "es": "Arranque, compuertas, el camino del polvo y detección de chispas.",
+    "fr": "Démarrage, vannes, le chemin de la poussière et la détection d’étincelles.",
+    "sw": "Kuwasha, vali, njia ya vumbi na kugundua cheche."
+   }
+  },
+  {
+   "id": "flamex_weekly",
+   "proc": "flamex_weekly",
+   "minutes": 15,
+   "roles": [
+    "1",
+    "2",
+    "3"
+   ],
+   "title": {
+    "en": "Flamex weekly test",
+    "es": "Prueba semanal de Flamex",
+    "fr": "Test hebdomadaire Flamex",
+    "sw": "Jaribio la kila wiki la Flamex"
+   },
+   "summary": {
+    "en": "The 3-person weekly test: prep, interior test, exterior test. Pick your role.",
+    "es": "La prueba semanal de 3 personas: preparación, interior, exterior. Elija su rol.",
+    "fr": "Le test à 3 personnes : préparation, intérieur, extérieur. Choisissez votre rôle.",
+    "sw": "Jaribio la watu 3: maandalizi, ndani, nje. Chagua jukumu lako."
+   }
+  },
+  {
+   "id": "flamex_interior",
+   "proc": "flamex_interior",
+   "minutes": 8,
+   "title": {
+    "en": "Interior Flamex Panel (FLE 5000)",
+    "es": "Panel Flamex interior (FLE 5000)",
+    "fr": "Panneau Flamex intérieur (FLE 5000)",
+    "sw": "Paneli ya Flamex ya ndani (FLE 5000)"
+   },
+   "summary": {
+    "en": "Read the lights, use the key and buttons, reset after a trip.",
+    "es": "Leer las luces, usar la llave y botones, reiniciar tras un disparo.",
+    "fr": "Lire les voyants, utiliser la clé et les boutons, réinitialiser.",
+    "sw": "Soma taa, tumia ufunguo na vitufe, anzisha upya baada ya kuwaka."
+   }
+  },
+  {
+   "id": "flamex_exterior",
+   "proc": "flamex_exterior",
+   "minutes": 8,
+   "title": {
+    "en": "Exterior Flamex Panel (Minimax FMZ 5000)",
+    "es": "Panel Flamex exterior (Minimax FMZ 5000)",
+    "fr": "Panneau Flamex extérieur (Minimax FMZ 5000)",
+    "sw": "Paneli ya Flamex ya nje (Minimax FMZ 5000)"
+   },
+   "summary": {
+    "en": "Groups, the screen, key, ext, reset and int.",
+    "es": "Grupos, pantalla, llave, ext, reset e int.",
+    "fr": "Groupes, écran, clé, ext, reset et int.",
+    "sw": "Makundi, skrini, ufunguo, ext, reset na int."
+   }
+  },
+  {
+   "id": "loto_fan_airlock",
+   "proc": "loto_fan_airlock",
+   "minutes": 10,
+   "title": {
+    "en": "LOTO: dust collector fan and airlock maintenance",
+    "es": "LOTO: mantenimiento del ventilador del colector y la válvula rotativa",
+    "fr": "Consignation : entretien du ventilateur du dépoussiéreur et de l'écluse",
+    "sw": "LOTO: matengenezo ya feni ya kikusanya vumbi na vali ya kuzunguka"
+   },
+   "summary": {
+    "en": "Lock out and tag out the fan and the airlock.",
+    "es": "Bloqueo y etiquetado del ventilador y la válvula.",
+    "fr": "Consignation du ventilateur et de l’écluse.",
+    "sw": "Kufunga na kuweka lebo kwenye feni na vali."
+   }
+  }
+ ],
+ "pins": {
+  "1111": {
+   "name": "Example: Flamex test team (replace)",
+   "packages": [
+    "flamex_weekly",
+    "flamex_interior",
+    "flamex_exterior"
+   ]
+  }
+ }
+}

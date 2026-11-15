@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js';
+import { createSim } from './sim.js?v=2026-11-15.1';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.1';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -268,6 +268,7 @@ function loadGLB(k, optional = false) {
 }
 
 let SC, CT, PR, TOUR;
+const TRJ = await getJSON('trainings.json').catch(() => ({ packages: [], pins: {} }));
 const [scj, ctj, prj, tourj, gT, gW, PWJ, gM, gS, gC, gR, gK, gD] = await Promise.all([getJSON('scene.json'), getJSON('controls.json'), getJSON('procedures.json'), getJSON('tour.json'),
   USE_MTEX ? loadGLB('machines_tex', true) : null, USE_PW ? loadGLB('paper_wall', true) : null, USE_PW ? getJSON('paper_wall.json').catch(() => null) : null,
   loadGLB('machines'), loadGLB('shop_interior'), loadGLB('collector'), loadGLB('shop_room', true), USE_SKINS ? loadGLB('shop_skins', true) : null, USE_CSKINS ? loadGLB('collector_skins', true) : null]);
@@ -2136,6 +2137,7 @@ function clickControl(u) {
   const id = u.ctl, act = u.act;
   if (TOOL === 'flashlight') {
     const c = CTL[id];
+    if (c && c.type === 'hatch' && c.detector && !S.hatch[id].open) { toggleHatch(id); renderAll(); return; } // flashlight in hand: the first click opens the hatch
     if (c && c.type === 'hatch' && c.detector) { shine(c.zone); TOOL = null; document.body.classList.remove('tool-on'); renderAll(); return; }
   }
   if (/^panel_/.test(id)) { openPanel('flamex_' + id.slice(6)); return; }
@@ -2409,7 +2411,7 @@ function renderPanel() {
     body = `<div class="fx"><div style="font:700 11px Arial;margin-bottom:4px">${esc(P.printed_title)} · ${esc(P.model)}</div>${realFace}
 </div>
       <div class="fxinfo">
-        <span>${t4(U.water)}</span><span class="${water ? 'bad' : ''}"><b>${water ? esc(tx(U.spraying, L1)) : '-'}</b> <b id="sprayT"></b> <span class="note">(${CT.flamex.spray_time_s} s ${esc(tx(U.typical, L1))})</span></span>
+        <span>${t4(U.water)}</span><span class="${water ? 'bad' : ''}"><b>${water ? esc(tx(U.spraying, L1)) : '-'}</b> <b id="sprayT"></b> <span class="note">(${CT.flamex.spray_until_reset ? esc(tx(L4('until reset', 'hasta el reset', "jusqu'au reset", 'hadi reset'), L1)) : CT.flamex.spray_time_s + ' s ' + esc(tx(U.typical, L1))})</span></span>
         <span>${t4(U.valve)}</span><span>${esc(tx(v.open ? U.open : U.closed, L1))} <button class="minib" data-valve="${vId}">${esc(tx(v.open ? U.closed : U.open, L1))}</button> <button class="minib" data-lock="${vId}">${esc(tx(v.locked ? U.remove_lock : U.lock_tag, L1))}</button></span>
         <span>${t4(U.hatch)}</span><span>${esc(tx(S.hatch[hId].open ? U.open : U.closed, L1))} <button class="minib" data-hatch="${hId}">${esc(tx(U.open_hatch, L1))}</button></span>
         <span></span><span><button class="b" data-shine="${z}">🔦 ${b4(U.shine)}</button></span>
@@ -2475,10 +2477,10 @@ function stateForProcPaths() { // expose a few derived values to the condition p
   S.motor.fan.level = LV.fan; S.motor.blower.level = LV.blower; S.motor.airlock.level = LV.airlock;
   for (const [id, e] of Object.entries(S.eaton)) e.locked = !!e.locked;
 }
-function startProc(id) {
+function startProc(id, role = null) {
   storyStop();
   resetScene(true);
-  PROC = { id, i: 0, events: [], mistakes: 0, msg: null, done: [], skipped: [] };
+  PROC = { id, role, i: 0, events: [], mistakes: 0, msg: null, done: [], skipped: [] };
   enterStep();
 }
 function enterStep() {
@@ -2490,6 +2492,21 @@ function enterStep() {
   if (st.panel) openPanel(st.panel);
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
   highlightControls(st.highlight || []);
+  // someone else's step (the trainee picked a role), or a step the app always does (a test trip): the app performs it
+  const others = st.auto && (st.auto_always || (PROC.role && st.actor && !String(st.actor).split(/\s*\+\s*/).includes(PROC.role)));
+  PROC.auto = !!others;
+  if (others) {
+    if (st.tool) { TOOL = null; document.body.classList.remove('tool-on'); }
+    const me = PROC, acts = st.auto; let k = 0;
+    const nx = () => { if (PROC !== me || me.i !== P.steps.indexOf(st)) return;
+      if (k >= acts.length) {
+        if (st.cond && !st.ack && !st.quiz && !evalCond(st.cond) && acts.length && (me.retry = (me.retry || 0) + 1) < 90) { k = acts.length - 1; setTimeout(nx, 1000); return; } // e.g. reset waits for the spray to end
+        me.retry = 0; PROC.auto = false; if (st.ack || st.quiz || !st.cond) checkStep(true, true); else checkStep(false, true); return; }
+      const a = acts[k++];
+      try { if (a.fx) fxButton(a.fx[0], a.fx[1]); else if (a.shine) shine(a.shine); else if (a.ctl) clickControl({ ctl: a.ctl, act: a.act || 'toggle' }); } catch (e) { console.warn('[dce] auto step', e); }
+      renderAll(); setTimeout(nx, 800); };
+    setTimeout(nx, 1100);
+  }
   LSRC.proc = (st.highlight || []).filter(id => CTL[id] || /^panel_/.test(id)).slice(0, 3).map(id => ({ key: 'p_' + id, text: CTL[id] ? CTL[id].name : CT.flamex.panels[id.slice(6)].name, a: { ctl: id }, accent: '#2563eb' }));
   refreshLabels();
   renderProc();
@@ -2517,13 +2534,16 @@ function procOnEvent(ev) {
   checkStep();
 }
 listeners.push(procOnEvent);
-function checkStep(fromAck = false) {
+function checkStep(fromAck = false, fromAuto = false) {
   if (!PROC) return;
+  if (PROC.auto && !fromAuto) return; // the app is still doing this step
   const P = PROCDEF(), st = P.steps[PROC.i]; if (!st) return;
   stateForProcPaths();
+  if (st.quiz && !fromAck) return;
   if (st.ack && !fromAck) return;
   if (st.ack && st.check && !evalCond(st.check)) { PROC.msg = { kind: 'bad', o: U.check_failed }; PROC.mistakes++; renderProc(); return; }
-  if (!st.ack && !evalCond(st.cond)) return;
+  if (!st.ack && !st.quiz && st.cond && !evalCond(st.cond)) return;
+  if (!st.ack && !st.quiz && !st.cond && !fromAck) return;
   PROC.done.push(st.id); PROC.i++;
   if (TOOL && st.tool) { TOOL = null; document.body.classList.remove('tool-on'); }
   setTimeout(() => { if (PROC) { enterStep(); toast(U.good, 'ok'); } }, 250);
@@ -2539,17 +2559,20 @@ function renderProc() {
   if (P.source) html += `<div class="note">${t4(P.source)}</div>`;
   html += `<div class="prog"><div style="width:${100 * PROC.i / n}%"></div></div>`;
   if (!st) {
+    try { const D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); D[PROC.id] = new Date().toISOString().slice(0, 10); localStorage.setItem('dflow_done', JSON.stringify(D)); } catch (e) { /* storage blocked */ }
     html += `<div class="good">${t4(U.finished)} ${t4(U.mistakes)}: <b>${PROC.mistakes}</b></div><div class="acts"><button class="b" id="prRe">${b4(U.restart)}</button><button class="b" id="prX">${b4(U.exit)}</button></div>`;
   } else {
     if (partLabel) html += `<div class="note"><b>${t4(partLabel)}</b></div>`;
     html += `<div style="margin:4px 0 2px">${st.actor ? `<span class="actor">${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${esc(st.actor)}</span> ` : ''}<span class="note">${esc(tx(U.step, LANG === 'all' ? 'en' : LANG))} ${PROC.i + 1} / ${n}</span></div>`;
     html += `<div style="font-size:15px">${t4(st.text)}</div>`;
+    if (PROC.auto) html += `<div class="note">⏳ ${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${esc(st.actor || '')} …</div>`;
+    if (st.quiz) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${b4(o)}</button>`).join('')}</div>`;
     if (st.show === 'energy' && P.energy_sources) {
       html += `<div class="note" style="margin-top:6px"><b>${t4(U.energy)}</b></div><ul class="energy">${P.energy_sources.map(e => `<li><b>${esc(e.type)}</b>: ${t4(e.what)}${e.isolation.length ? ` → ${e.isolation.map(i => esc(tx(CTL[i]?.name, 'en'))).join(', ')}` : ''}${e.upstream ? ` <span class="note">(upstream: ${e.upstream.map(i => esc(tx(CTL[i]?.name, 'en'))).join(', ')})</span>` : ''}${e.note ? `<div class="note">${t4(e.note)}</div>` : ''}</li>`).join('')}</ul>`;
     }
     if (st.tool === 'flashlight') html += `<div class="note">🔦 ${t4(MSG.pick_flashlight)}</div>`;
     if (PROC.msg) html += `<div class="${PROC.msg.kind === 'bad' ? 'mist' : 'good'}">${t4(PROC.msg.o)}</div>`;
-    html += `<div class="acts">${st.ack ? `<button class="b go" id="prAck">${b4(U.done)}</button>` : ''}${st.optional ? `<button class="b" id="prSkip">${b4(U.skip)}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦 ${b4(U.flash_tool)}</button>` : ''}<button class="b" id="prX">${b4(U.exit)}</button></div>`;
+    html += `<div class="acts">${st.ack && !PROC.auto ? `<button class="b go" id="prAck">${b4(U.done)}</button>` : ''}${st.optional ? `<button class="b" id="prSkip">${b4(U.skip)}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦 ${b4(U.flash_tool)}</button>` : ''}<button class="b" id="prX">${b4(U.exit)}</button></div>`;
     html += `<div class="note">${t4(U.mistakes)}: ${PROC.mistakes}</div>`;
   }
   html += `<ol class="steps">${P.steps.map((s, k) => `<li class="${k < PROC.i ? 'done' : ''}">${esc(tx(s.text, LANG === 'all' ? 'en' : LANG)).slice(0, 70)}</li>`).join('')}</ol></div>`;
@@ -2559,6 +2582,10 @@ function renderProc() {
   if (q('#prX')) q('#prX').onclick = q('.x').onclick;
   if (q('#prRe')) q('#prRe').onclick = () => startProc(PROC.id);
   if (q('#prAck')) q('#prAck').onclick = () => checkStep(true);
+  el.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+    if (+b.dataset.opt === st.answer) { PROC.msg = null; checkStep(true); }
+    else { PROC.mistakes++; PROC.msg = { kind: 'bad', o: { en: 'Not quite. Try again.', es: 'No exactamente. Inténtelo de nuevo.', fr: 'Pas tout à fait. Réessayez.', sw: 'Si sahihi. Jaribu tena.' } }; renderProc(); }
+  });
   if (q('#prSkip')) q('#prSkip').onclick = () => { PROC.skipped.push(st.id); PROC.i++; enterStep(); };
   if (q('#prTool')) q('#prTool').onclick = () => { TOOL = 'flashlight'; document.body.classList.add('tool-on'); toast(MSG.pick_flashlight); };
   const li = el.querySelector('.steps li:not(.done)'); if (li) li.scrollIntoView({ block: 'nearest' });
@@ -2803,9 +2830,25 @@ const RAILS = [
   { id: 'flow', icon: '⇄', t: L4('Air flow map', 'Mapa del aire', "Carte de l'air", 'Ramani ya hewa') },
   { id: 'settings', icon: '⚙', t: L4('Settings', 'Ajustes', 'Réglages', 'Mipangilio') }
 ];
+// ---- training library: every package for everyone, or only those assigned to a training pin (trainings.json)
+let LIBPIN = ''; try { LIBPIN = localStorage.getItem('dflow_pin') || ''; } catch (e) { /* storage blocked */ }
+const LT = { lib: L4('Training library', 'Biblioteca de formación', 'Bibliothèque de formation', 'Maktaba ya mafunzo'), pin: L4('Training pin', 'PIN de formación', 'Code de formation', 'PIN ya mafunzo'),
+  all: L4('Show all', 'Ver todo', 'Tout afficher', 'Onyesha yote'), role: L4('Your role', 'Su rol', 'Votre rôle', 'Jukumu lako'), start: L4('Start', 'Iniciar', 'Commencer', 'Anza'),
+  min: L4('min', 'min', 'min', 'dak'), done: L4('Done', 'Hecho', 'Fait', 'Imekamilika'), bad: L4('Pin not found', 'PIN no encontrado', 'Code introuvable', 'PIN haipatikani') };
+function libraryHTML() {
+  let D = {}; try { D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); } catch (e) { /* storage blocked */ }
+  const pin = TRJ.pins && TRJ.pins[LIBPIN];
+  const list = (TRJ.packages || []).filter(p => !pin || pin.packages.includes(p.id));
+  const card = p => `<div class="trcard"><div class="trt">${b4(p.title)}${D[p.id] ? ` <span class="trok">✓ ${esc(D[p.id])}</span>` : ''}</div><div class="note">${t4(p.summary)}</div>
+    <div class="tra">${p.roles ? `<span class="note">${b4(LT.role)}:</span>${p.roles.map(r => `<button class="b" data-trstart="${p.id}" data-role="${r}">${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${r}</button>`).join('')}` : `<button class="b go" data-trstart="${p.id}">${b4(LT.start)}</button>`}<span class="note">~${p.minutes} ${esc(tx(LT.min, LANG === 'all' ? 'en' : LANG))}</span></div></div>`;
+  return `<div class="sec"><div class="hd">${b4(LT.lib)}</div>
+    <div class="trpin"><input id="trpin" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${esc(tx(LT.pin, LANG === 'all' ? 'en' : LANG))}" value="${esc(LIBPIN)}"><button class="b" id="trpinGo">OK</button>${LIBPIN ? `<button class="b" id="trpinAll">${b4(LT.all)}</button>` : ''}</div>
+    ${LIBPIN && !pin ? `<div class="mist">${t4(LT.bad)}</div>` : ''}${pin ? `<div class="note"><b>${esc(pin.name || '')}</b></div>` : ''}
+    <div class="trlist">${list.map(card).join('')}</div></div>`;
+}
 function drawerHTML(id) {
   const sec = (hd, body) => `<div class="sec"><div class="hd">${b4(hd)}</div>${body}</div>`;
-  if (id === 'training') return `<div class="dt">${b4(RAILS[0].t)}</div>
+  if (id === 'training') return `<div class="dt">${b4(RAILS[0].t)}</div>${libraryHTML()}
     ${sec(U.tour, `<div class="tour">${STORY.map((st, i) => `<button class="b ${ST && ST.i === i ? 'on' : ''}" data-story="${i}"><span class="n">${i + 1}</span><span>${b4(st.title)}</span></button>`).join('')}</div>`)}
     ${sec(U.procedures, `<div class="tour">${PR.procedures.map(p => `<button class="b ${PROC && PROC.id === p.id ? 'on' : ''}" data-proc="${p.id}">${b4(p.title)}</button>`).join('')}</div>`)}
     ${sec(U.flamex, `<button class="b wide ${DEMO ? 'on' : ''}" id="demo">${b4(U.flamex_run)}</button>
@@ -2867,6 +2910,10 @@ function renderSide() {
   on('#demo', () => { storyStop(); startDemo(); });
   on('[data-panel]', b => { storyStop(); openPanel(b.dataset.panel); const v = CT.views[b.dataset.view]; if (v) { flyTo({ position: v.position, target: v.target }, 1.2); applyViewVis(v); } });
   on('[data-proc]', b => startProc(b.dataset.proc));
+  on('[data-trstart]', b => { const p = (TRJ.packages || []).find(x => x.id === b.dataset.trstart); if (!p) return; if (p.kind === 'tour') storyStart(0); else startProc(p.proc, b.dataset.role || null); });
+  const setPin = v => { LIBPIN = String(v || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 12); try { localStorage.setItem('dflow_pin', LIBPIN); } catch (e) { /* storage blocked */ } renderSide(); };
+  on('#trpinGo', () => setPin(document.getElementById('trpin').value));
+  on('#trpinAll', () => setPin(''));
 }
 function renderAll() { renderSide(); renderInfo(); renderPanel(); renderProc(); renderHud(); }
 
@@ -3022,7 +3069,7 @@ function frameInner() {
   if (uiAcc > 0.25) {
     uiAcc = 0; renderHud(); updateFlow(); fitRight();
     if (SEL && SEL.part.motor) { const li = $('#info .facts li'); if (li) li.innerHTML = rpmLine(SEL.part.motor); }
-    if (PANEL) { renderPanel(); const st = $('#sprayT'); if (st && /^flamex_/.test(PANEL)) { const Z = S.flamex[PANEL.slice(-1)]; st.textContent = Z.spray > 0 ? Z.spray.toFixed(1) + ' s' : ''; } }
+    if (PANEL) { renderPanel(); const st = $('#sprayT'); if (st && /^flamex_/.test(PANEL)) { const Z = S.flamex[PANEL.slice(-1)]; st.textContent = Z.spray > 0 && Z.spray < 1e8 ? Z.spray.toFixed(1) + ' s' : Z.spray > 0 ? '' : ''; } }
     if (PANEL === 'collector' || PANEL === 'outside') { /* status text re-renders through the signature check */ }
   }
   fpsAcc += dt; fpsN++; if (fpsAcc > 1) { FPS = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; window.__fps = FPS; }
@@ -3139,7 +3186,7 @@ $('#loading').style.display = 'none';
   if (!seen || Q.has('hint')) { const el = document.createElement('div'); el.id = 'navhint'; el.innerHTML = t4(U.nav_hint); elStage.appendChild(el); setTimeout(() => el.classList.add('off'), 9000); setTimeout(() => el.remove(), 10000); }
 }
 window.__ready = true;
-window.__dce = { S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
+window.__dce = { startProc, fxButton, shine, clickControl, checkStep, S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
 console.log('[dce] ready ' + JSON.stringify({ particles: NTOT, flowParticles: NP, nodes: Object.keys(NODE).length }));
 if (Q.has('bench')) { const t0 = Date.now(); for (let n = 0; n < 120; n++) tick(1 / 60); console.log('[dce] bench tick ms ' + ((Date.now() - t0) / 120).toFixed(2)); }
 requestAnimationFrame(frame);

@@ -1,1497 +1,2352 @@
 {
-  "meta": {
-    "title": "Training procedures (data for the procedure engine in app.js)",
-    "engine": "Each step passes when its 'cond' is true (checked after every action and every frame) or, for 'ack' steps, when the trainee clicks Done. 'optional' steps can be skipped. 'mistakes' explain wrong actions. Condition types: all, any, not, eq [path, value], lt [path, value], gt [path, value], locked <control id>, unlocked <control id>, event {ctl, act, code?} (an action seen since the step started). Paths read the simulator state: eaton.<id>.on, eaton.<id>.locked, starter.<id>, motor.<fan|blower|airlock>.running, motor.<m>.level, flamex.<A|B>.key, flamex.<A|B>.fire, flamex.<A|B>.spray, hatch.<id>.open, hatch.<id>.cleaned, bucket.placed, hose.connected, gates.<CNC1|CNC2|EB1|EB2|PanelSaw>, valve.<valve_A|valve_B>.open, valve.<id>.locked, air.on, air.locked.",
-    "add_more": "Add a new object to 'procedures' for another machine. Controls it names must exist in controls.json (or be added there). This app is the pilot for factory-wide training."
-  },
-  "procedures": [
+ "meta": {
+  "title": "Training procedures (data for the procedure engine in app.js)",
+  "engine": "Each step passes when its 'cond' is true (checked after every action and every frame) or, for 'ack' steps, when the trainee clicks Done. 'optional' steps can be skipped. 'mistakes' explain wrong actions. Condition types: all, any, not, eq [path, value], lt [path, value], gt [path, value], locked <control id>, unlocked <control id>, event {ctl, act, code?} (an action seen since the step started). Paths read the simulator state: eaton.<id>.on, eaton.<id>.locked, starter.<id>, motor.<fan|blower|airlock>.running, motor.<m>.level, flamex.<A|B>.key, flamex.<A|B>.fire, flamex.<A|B>.spray, hatch.<id>.open, hatch.<id>.cleaned, bucket.placed, hose.connected, gates.<CNC1|CNC2|EB1|EB2|PanelSaw>, valve.<valve_A|valve_B>.open, valve.<id>.locked, air.on, air.locked.",
+  "add_more": "Add a new object to 'procedures' for another machine. Controls it names must exist in controls.json (or be added there). This app is the pilot for factory-wide training."
+ },
+ "procedures": [
+  {
+   "id": "flamex_weekly",
+   "kind": "flamex",
+   "title": {
+    "en": "Weekly Flamex test",
+    "es": "Prueba semanal de Flamex",
+    "fr": "Test hebdomadaire Flamex",
+    "sw": "Jaribio la kila wiki la Flamex"
+   },
+   "source": {
+    "en": "Conklin's Flamex Weekly Testing Process (3 pages), in order.",
+    "es": "Proceso semanal de prueba Flamex de Conklin (3 páginas), en orden.",
+    "fr": "Procédure hebdomadaire de test Flamex de Conklin (3 pages), dans l'ordre.",
+    "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki (kurasa 3), kwa mpangilio."
+   },
+   "people": {
+    "en": "3 people (Employee 1, 2 and 3)",
+    "es": "3 personas (empleado 1, 2 y 3)",
+    "fr": "3 personnes (employé 1, 2 et 3)",
+    "sw": "Watu 3 (mfanyakazi 1, 2 na 3)"
+   },
+   "start_state": "normal",
+   "steps": [
     {
-      "id": "flamex_weekly",
-      "kind": "flamex",
-      "title": {
-        "en": "Weekly Flamex test",
-        "es": "Prueba semanal de Flamex",
-        "fr": "Test hebdomadaire Flamex",
-        "sw": "Jaribio la kila wiki la Flamex"
-      },
-      "source": {
-        "en": "Conklin's Flamex Weekly Testing Process (3 pages), in order.",
-        "es": "Proceso semanal de prueba Flamex de Conklin (3 páginas), en orden.",
-        "fr": "Procédure hebdomadaire de test Flamex de Conklin (3 pages), dans l'ordre.",
-        "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki (kurasa 3), kwa mpangilio."
-      },
-      "people": {
-        "en": "3 people (Employee 1, 2 and 3)",
-        "es": "3 personas (empleado 1, 2 y 3)",
-        "fr": "3 personnes (employé 1, 2 et 3)",
-        "sw": "Watu 3 (mfanyakazi 1, 2 na 3)"
-      },
-      "start_state": "normal",
-      "steps": [
-        {
-          "id": "p1",
-          "part": {
-            "en": "Step 1 of 3: prep",
-            "es": "Paso 1 de 3: preparación",
-            "fr": "Étape 1 sur 3 : préparation",
-            "sw": "Hatua 1 kati ya 3: maandalizi"
-          },
-          "actor": "1",
-          "focus": "flamex_panels",
-          "panel": "flamex_A",
-          "highlight": [
-            "panel_A"
-          ],
-          "text": {
-            "en": "Turn the key on the Interior Flamex Panel to bypass (1).",
-            "es": "Gire la llave del panel Flamex interior a bypass (1).",
-            "fr": "Tournez la clé du panneau Flamex intérieur sur bypass (1).",
-            "sw": "Geuza ufunguo wa paneli ya ndani ya Flamex kwenda bypass (1)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.A.key",
-              1
-            ]
-          }
-        },
-        {
-          "id": "p2",
-          "actor": "2 + 3",
-          "focus": "cnc_hatch",
-          "highlight": [
-            "hatch_cnc",
-            "hatch_window",
-            "hatch_riser"
-          ],
-          "text": {
-            "en": "Open each hatch, clean out the debris, then close it. Click each hatch twice: open, then clean and close.",
-            "es": "Abra cada escotilla, limpie los residuos y ciérrela. Haga clic dos veces en cada una: abrir, luego limpiar y cerrar.",
-            "fr": "Ouvrez chaque trappe, retirez les débris, puis refermez-la. Cliquez deux fois sur chaque trappe : ouvrir, puis nettoyer et fermer.",
-            "sw": "Fungua kila kifuniko, safisha uchafu, kisha kifunge. Bofya kila kifuniko mara mbili: fungua, kisha safisha na funga."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "hatch.hatch_cnc.cleaned",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "hatch.hatch_cnc.open",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "hatch.hatch_window.cleaned",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "hatch.hatch_window.open",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "hatch.hatch_riser.cleaned",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "hatch.hatch_riser.open",
-                  false
-                ]
-              }
-            ]
-          },
-          "mistakes": [
-            {
-              "event": {
-                "ctl": "panel_A",
-                "act": "key",
-                "value": 0
-              },
-              "text": {
-                "en": "Keep the key at bypass until all hatches are cleaned and closed, as the test process says.",
-                "es": "Deje la llave en bypass hasta limpiar y cerrar todas las escotillas, como dice el proceso.",
-                "fr": "Laissez la clé sur bypass jusqu'à ce que toutes les trappes soient nettoyées et fermées, comme le dit la procédure.",
-                "sw": "Acha ufunguo kwenye bypass hadi vifuniko vyote visafishwe na kufungwa, kama mchakato unavyosema."
-              }
-            }
-          ]
-        },
-        {
-          "id": "p3",
-          "actor": "1",
-          "focus": "flamex_panels",
-          "panel": "flamex_A",
-          "highlight": [
-            "panel_A"
-          ],
-          "text": {
-            "en": "Turn the key back to active (0).",
-            "es": "Regrese la llave a activo (0).",
-            "fr": "Remettez la clé sur actif (0).",
-            "sw": "Rudisha ufunguo kwenye hai (0)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.A.key",
-              0
-            ]
-          }
-        },
-        {
-          "id": "i1",
-          "part": {
-            "en": "Step 2 of 3: interior test",
-            "es": "Paso 2 de 3: prueba interior",
-            "fr": "Étape 2 sur 3 : test intérieur",
-            "sw": "Hatua 2 kati ya 3: jaribio la ndani"
-          },
-          "actor": "1",
-          "focus": "flamex_panels",
-          "panel": "flamex_A",
-          "text": {
-            "en": "Make sure the key on the Interior Flamex Panel is at active (0).",
-            "es": "Asegúrese de que la llave del panel Flamex interior esté en activo (0).",
-            "fr": "Vérifiez que la clé du panneau Flamex intérieur est sur actif (0).",
-            "sw": "Hakikisha ufunguo wa paneli ya ndani ya Flamex uko kwenye hai (0)."
-          },
-          "ack": true,
-          "check": {
-            "eq": [
-              "flamex.A.key",
-              0
-            ]
-          }
-        },
-        {
-          "id": "i2",
-          "actor": "2",
-          "focus": "window_hatch",
-          "highlight": [
-            "hatch_window",
-            "bucket"
-          ],
-          "text": {
-            "en": "Open the hatch near the window and put the bucket under it.",
-            "es": "Abra la escotilla junto a la ventana y ponga la cubeta debajo.",
-            "fr": "Ouvrez la trappe près de la fenêtre et placez le seau dessous.",
-            "sw": "Fungua kifuniko karibu na dirisha na weka ndoo chini yake."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "hatch.hatch_window.open",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "bucket.placed",
-                  true
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "i3",
-          "actor": "3",
-          "focus": "cnc_hatch",
-          "highlight": [
-            "hatch_cnc"
-          ],
-          "tool": "flashlight",
-          "text": {
-            "en": "Open the hatch over the CNC and shine the flashlight in to trip the system.",
-            "es": "Abra la escotilla sobre el CNC y alumbre con la linterna para disparar el sistema.",
-            "fr": "Ouvrez la trappe au-dessus du CNC et éclairez avec la lampe pour déclencher le système.",
-            "sw": "Fungua kifuniko juu ya CNC na mulika tochi ndani ili kuwasha mfumo."
-          },
-          "cond": {
-            "event": {
-              "ctl": "panel_A",
-              "act": "trip"
-            }
-          }
-        },
-        {
-          "id": "i4",
-          "actor": "1 + 2",
-          "text": {
-            "en": "Check: Fire LED on, buzzer, horns and strobes on, water sprays into the bucket.",
-            "es": "Verifique: LED Fire encendido, zumbador, sirenas y luces, el agua cae en la cubeta.",
-            "fr": "Vérifiez : LED Fire allumée, buzzer, sirènes et flashs, l'eau tombe dans le seau.",
-            "sw": "Hakikisha: taa ya Fire imewaka, buzzer, honi na taa, maji yanaingia kwenye ndoo."
-          },
-          "ack": true,
-          "focus": "window_hatch"
-        },
-        {
-          "id": "i5",
-          "actor": "3",
-          "focus": "cnc_hatch",
-          "highlight": [
-            "hatch_cnc"
-          ],
-          "text": {
-            "en": "Once it has tripped, shut the CNC hatch.",
-            "es": "Cuando se haya disparado, cierre la escotilla del CNC.",
-            "fr": "Une fois déclenché, fermez la trappe du CNC.",
-            "sw": "Ukishawaka, funga kifuniko cha CNC."
-          },
-          "cond": {
-            "eq": [
-              "hatch.hatch_cnc.open",
-              false
-            ]
-          }
-        },
-        {
-          "id": "i6",
-          "actor": "1",
-          "focus": "flamex_panels",
-          "panel": "flamex_A",
-          "highlight": [
-            "panel_A"
-          ],
-          "text": {
-            "en": "Turn the key to bypass (1).",
-            "es": "Gire la llave a bypass (1).",
-            "fr": "Tournez la clé sur bypass (1).",
-            "sw": "Geuza ufunguo kwenda bypass (1)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.A.key",
-              1
-            ]
-          }
-        },
-        {
-          "id": "i7",
-          "actor": "1",
-          "panel": "flamex_A",
-          "text": {
-            "en": "Press ext.",
-            "es": "Pulse ext.",
-            "fr": "Appuyez sur ext.",
-            "sw": "Bonyeza ext."
-          },
-          "cond": {
-            "event": {
-              "ctl": "panel_A",
-              "act": "ext",
-              "code": [
-                "ext_off",
-                "ext_on"
-              ]
-            }
-          }
-        },
-        {
-          "id": "i8",
-          "actor": "1",
-          "panel": "flamex_A",
-          "text": {
-            "en": "Press reset.",
-            "es": "Pulse reset.",
-            "fr": "Appuyez sur reset.",
-            "sw": "Bonyeza reset."
-          },
-          "cond": {
-            "eq": [
-              "flamex.A.fire",
-              false
-            ]
-          }
-        },
-        {
-          "id": "i9",
-          "actor": "1",
-          "panel": "flamex_A",
-          "text": {
-            "en": "Turn the key back to active (0).",
-            "es": "Regrese la llave a activo (0).",
-            "fr": "Remettez la clé sur actif (0).",
-            "sw": "Rudisha ufunguo kwenye hai (0)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.A.key",
-              0
-            ]
-          }
-        },
-        {
-          "id": "i10",
-          "actor": "2",
-          "focus": "window_hatch",
-          "highlight": [
-            "hatch_window",
-            "bucket"
-          ],
-          "text": {
-            "en": "Once it has drained, wipe it dry, take the bucket away and shut the window hatch.",
-            "es": "Cuando haya escurrido, séquela con un trapo, retire la cubeta y cierre la escotilla de la ventana.",
-            "fr": "Une fois égouttée, essuyez-la, retirez le seau et fermez la trappe de la fenêtre.",
-            "sw": "Ikishamwaga maji, ifute kwa kitambaa, ondoa ndoo na funga kifuniko cha dirisha."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "hatch.hatch_window.open",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "bucket.placed",
-                  false
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "e1",
-          "part": {
-            "en": "Step 3 of 3: exterior test",
-            "es": "Paso 3 de 3: prueba exterior",
-            "fr": "Étape 3 sur 3 : test extérieur",
-            "sw": "Hatua 3 kati ya 3: jaribio la nje"
-          },
-          "actor": "1",
-          "focus": "rolloff_hose",
-          "highlight": [
-            "hose"
-          ],
-          "text": {
-            "en": "Use the ladder to unhook the hose from the dumpster.",
-            "es": "Use la escalera para desconectar la manguera del contenedor.",
-            "fr": "Avec l'échelle, décrochez le tuyau de la benne.",
-            "sw": "Tumia ngazi kutoa bomba kwenye kontena."
-          },
-          "cond": {
-            "eq": [
-              "hose.connected",
-              false
-            ]
-          }
-        },
-        {
-          "id": "e2",
-          "actor": "1",
-          "text": {
-            "en": "Go to the side of the shed with the hatch and tell Employee 2: \"ready check\".",
-            "es": "Vaya al lado de la caseta donde está la escotilla y diga al empleado 2: \"ready check\".",
-            "fr": "Allez du côté de l'abri où se trouve la trappe et dites à l'employé 2 : « ready check ».",
-            "sw": "Nenda upande wa kibanda wenye kifuniko na mwambie mfanyakazi 2: \"ready check\"."
-          },
-          "ack": true,
-          "focus": "riser_hatch"
-        },
-        {
-          "id": "e3",
-          "actor": "1",
-          "focus": "riser_hatch",
-          "highlight": [
-            "hatch_riser"
-          ],
-          "tool": "flashlight",
-          "text": {
-            "en": "Open the riser hatch and shine the light in to trip the system. Close the hatch once it trips.",
-            "es": "Abra la escotilla del tubo vertical y alumbre para disparar el sistema. Cierre la escotilla cuando se dispare.",
-            "fr": "Ouvrez la trappe de la colonne et éclairez pour déclencher le système. Fermez la trappe une fois déclenché.",
-            "sw": "Fungua kifuniko cha bomba la wima na mulika ili kuwasha mfumo. Funga kifuniko ukishawaka."
-          },
-          "cond": {
-            "all": [
-              {
-                "event": {
-                  "ctl": "panel_B",
-                  "act": "trip"
-                }
-              },
-              {
-                "eq": [
-                  "hatch.hatch_riser.open",
-                  false
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "e4",
-          "actor": "2",
-          "focus": "flamex_panels",
-          "panel": "flamex_B",
-          "highlight": [
-            "panel_B"
-          ],
-          "text": {
-            "en": "At the Exterior Flamex Panel: turn the key to bypass (1).",
-            "es": "En el panel Flamex exterior: gire la llave a bypass (1).",
-            "fr": "Au panneau Flamex extérieur : tournez la clé sur bypass (1).",
-            "sw": "Kwenye paneli ya nje ya Flamex: geuza ufunguo kwenda bypass (1)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.B.key",
-              1
-            ]
-          }
-        },
-        {
-          "id": "e5",
-          "actor": "2",
-          "panel": "flamex_B",
-          "text": {
-            "en": "Press ext.",
-            "es": "Pulse ext.",
-            "fr": "Appuyez sur ext.",
-            "sw": "Bonyeza ext."
-          },
-          "cond": {
-            "event": {
-              "ctl": "panel_B",
-              "act": "ext",
-              "code": [
-                "ext_off",
-                "ext_on"
-              ]
-            }
-          }
-        },
-        {
-          "id": "e6",
-          "actor": "2",
-          "panel": "flamex_B",
-          "text": {
-            "en": "Press reset.",
-            "es": "Pulse reset.",
-            "fr": "Appuyez sur reset.",
-            "sw": "Bonyeza reset."
-          },
-          "cond": {
-            "eq": [
-              "flamex.B.fire",
-              false
-            ]
-          }
-        },
-        {
-          "id": "e7",
-          "actor": "2",
-          "panel": "flamex_B",
-          "text": {
-            "en": "Turn the key back to active (0).",
-            "es": "Regrese la llave a activo (0).",
-            "fr": "Remettez la clé sur actif (0).",
-            "sw": "Rudisha ufunguo kwenye hai (0)."
-          },
-          "cond": {
-            "eq": [
-              "flamex.B.key",
-              0
-            ]
-          }
-        },
-        {
-          "id": "e8",
-          "actor": "2",
-          "panel": "flamex_B",
-          "text": {
-            "en": "Press the grey int button.",
-            "es": "Pulse el botón gris int.",
-            "fr": "Appuyez sur le bouton gris int.",
-            "sw": "Bonyeza kitufe cha kijivu int."
-          },
-          "cond": {
-            "event": {
-              "ctl": "panel_B",
-              "act": "int"
-            }
-          }
-        },
-        {
-          "id": "e9",
-          "actor": "1",
-          "focus": "rolloff_hose",
-          "highlight": [
-            "hose"
-          ],
-          "text": {
-            "en": "Use the ladder to reconnect the hose to the dumpster.",
-            "es": "Use la escalera para reconectar la manguera al contenedor.",
-            "fr": "Avec l'échelle, rebranchez le tuyau sur la benne.",
-            "sw": "Tumia ngazi kuunganisha tena bomba kwenye kontena."
-          },
-          "cond": {
-            "eq": [
-              "hose.connected",
-              true
-            ]
-          }
-        }
+     "id": "p1",
+     "part": {
+      "en": "Step 1 of 3: prep",
+      "es": "Paso 1 de 3: preparación",
+      "fr": "Étape 1 sur 3 : préparation",
+      "sw": "Hatua 1 kati ya 3: maandalizi"
+     },
+     "actor": "1",
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ],
+     "text": {
+      "en": "Turn the key on the Interior Flamex Panel to bypass (1).",
+      "es": "Gire la llave del panel Flamex interior a bypass (1).",
+      "fr": "Tournez la clé du panneau Flamex intérieur sur bypass (1).",
+      "sw": "Geuza ufunguo wa paneli ya ndani ya Flamex kwenda bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       1
       ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "key"
+       ]
+      }
+     ]
     },
     {
-      "id": "loto_fan_airlock",
-      "kind": "loto",
-      "title": {
-        "en": "LOTO: dust collector fan and airlock maintenance",
-        "es": "LOTO: mantenimiento del ventilador del colector y la válvula rotativa",
-        "fr": "Consignation : entretien du ventilateur du dépoussiéreur et de l'écluse",
-        "sw": "LOTO: matengenezo ya feni ya kikusanya vumbi na vali ya kuzunguka"
-      },
-      "template": {
-        "en": "Generic template (OSHA 1910.147). Not Conklin's written procedure yet.",
-        "es": "Plantilla genérica (OSHA 1910.147). Aún no es el procedimiento escrito de Conklin.",
-        "fr": "Modèle générique (OSHA 1910.147). Pas encore la procédure écrite de Conklin.",
-        "sw": "Kiolezo cha jumla (OSHA 1910.147). Bado si utaratibu ulioandikwa wa Conklin."
-      },
-      "equipment": [
-        {
-          "id": "fan",
-          "name": {
-            "en": "Dust collector main fan (20 HP)",
-            "es": "Ventilador principal del colector (20 HP)",
-            "fr": "Ventilateur principal du dépoussiéreur (20 HP)",
-            "sw": "Feni kuu ya kikusanya vumbi (HP 20)"
-          }
-        },
-        {
-          "id": "airlock",
-          "name": {
-            "en": "Rotary airlock (13 rpm gearmotor)",
-            "es": "Válvula rotativa (motorreductor de 13 rpm)",
-            "fr": "Écluse rotative (motoréducteur 13 tr/min)",
-            "sw": "Vali ya kuzunguka (mota ya gia rpm 13)"
-          }
-        },
-        {
-          "id": "blower",
-          "name": {
-            "en": "Transfer blower (moves air and chips through the airlock tee)",
-            "es": "Soplador de transferencia (mueve aire y virutas por la te de la válvula)",
-            "fr": "Ventilateur de transfert (fait passer l'air et les copeaux par le té de l'écluse)",
-            "sw": "Kipuliza cha kusafirisha (husukuma hewa na vipande kupitia T ya vali)"
-          }
-        }
-      ],
-      "energy_sources": [
-        {
-          "type": "electrical",
-          "what": {
-            "en": "Fan motor",
-            "es": "Motor del ventilador",
-            "fr": "Moteur du ventilateur",
-            "sw": "Mota ya feni"
-          },
-          "isolation": [
-            "eaton_out_fan"
-          ],
-          "upstream": [
-            "eaton_in_left"
-          ]
-        },
-        {
-          "type": "electrical",
-          "what": {
-            "en": "Airlock gearmotor",
-            "es": "Motorreductor de la válvula rotativa",
-            "fr": "Motoréducteur de l'écluse",
-            "sw": "Mota ya gia ya vali ya kuzunguka"
-          },
-          "isolation": [
-            "eaton_out_airlock"
-          ],
-          "upstream": [
-            "eaton_in_right"
-          ]
-        },
-        {
-          "type": "electrical",
-          "what": {
-            "en": "Transfer blower motor",
-            "es": "Motor del soplador de transferencia",
-            "fr": "Moteur du ventilateur de transfert",
-            "sw": "Mota ya kipuliza cha kusafirisha"
-          },
-          "isolation": [
-            "eaton_out_blower"
-          ],
-          "upstream": [
-            "eaton_in_right"
-          ]
-        },
-        {
-          "type": "mechanical",
-          "what": {
-            "en": "Fan and blower coasting after stop",
-            "es": "Ventilador y soplador girando por inercia tras parar",
-            "fr": "Ventilateur et soufflante qui tournent sur leur élan",
-            "sw": "Feni na kipuliza vikiendelea kuzunguka baada ya kusimama"
-          },
-          "isolation": [],
-          "note": {
-            "en": "Wait until nothing turns.",
-            "es": "Espere hasta que nada gire.",
-            "fr": "Attendez que rien ne tourne.",
-            "sw": "Subiri hadi hakuna kinachozunguka."
-          }
-        },
-        {
-          "type": "stored",
-          "what": {
-            "en": "Chips in the cone, the airlock pockets and the tee",
-            "es": "Virutas en el cono, las cavidades de la válvula y la te",
-            "fr": "Copeaux dans le cône, les poches de l'écluse et le té",
-            "sw": "Vipande kwenye koni, mifuko ya vali na T"
-          },
-          "isolation": [],
-          "note": {
-            "en": "They can fall or turn the rotor when opened. Block the rotor.",
-            "es": "Pueden caer o girar el rotor al abrir. Bloquee el rotor.",
-            "fr": "Ils peuvent tomber ou faire tourner le rotor à l'ouverture. Bloquez le rotor.",
-            "sw": "Vinaweza kuanguka au kuzungusha rota vikifunguliwa. Zuia rota."
-          }
-        },
-        {
-          "type": "pneumatic",
-          "what": {
-            "en": "Shop air to the blast-gate panel and gates",
-            "es": "Aire del taller al panel y las compuertas",
-            "fr": "Air de l'atelier vers le panneau et les vannes",
-            "sw": "Hewa ya karakana kwa paneli na vali za vumbi"
-          },
-          "isolation": [
-            "air_valve"
-          ],
-          "note": {
-            "en": "Needed only if the work opens the ducts or gates.",
-            "es": "Solo si el trabajo abre los ductos o las compuertas.",
-            "fr": "Seulement si le travail ouvre les gaines ou les vannes.",
-            "sw": "Inahitajika tu kazi ikifungua mabomba au vali."
-          }
-        },
-        {
-          "type": "water",
-          "what": {
-            "en": "Flamex water, zone A (sprays into the inlet duct) and zone B (output duct)",
-            "es": "Agua Flamex, zona A (rocía en el ducto de entrada) y zona B (ducto de salida)",
-            "fr": "Eau Flamex, zone A (pulvérise dans la gaine d'entrée) et zone B (gaine de sortie)",
-            "sw": "Maji ya Flamex, eneo A (hunyunyiza bomba la kuingia) na eneo B (bomba la kutoa)"
-          },
-          "isolation": [
-            "valve_A",
-            "valve_B"
-          ],
-          "note": {
-            "en": "Close and lock if the work is on that line.",
-            "es": "Cierre y bloquee si el trabajo es en esa línea.",
-            "fr": "Fermez et cadenassez si le travail porte sur cette ligne.",
-            "sw": "Funga na weka kufuli kazi ikiwa kwenye mstari huo."
-          }
-        }
-      ],
-      "start_state": "normal",
-      "steps": [
-        {
-          "id": "l1",
-          "part": {
-            "en": "Prepare",
-            "es": "Preparar",
-            "fr": "Préparer",
-            "sw": "Jiandae"
-          },
-          "text": {
-            "en": "Read the energy sources for this job and where each one is isolated.",
-            "es": "Lea las fuentes de energía de este trabajo y dónde se aísla cada una.",
-            "fr": "Lisez les sources d'énergie de ce travail et où chacune est isolée.",
-            "sw": "Soma vyanzo vya nishati vya kazi hii na mahali kila kimoja kinapotengwa."
-          },
-          "ack": true,
-          "show": "energy"
-        },
-        {
-          "id": "l2",
-          "text": {
-            "en": "Notify the affected people: the CNC, edgebander and panel saw operators. Dust collection is going down.",
-            "es": "Avise a las personas afectadas: operadores de CNC, canteadoras y sierra. La extracción de polvo se va a detener.",
-            "fr": "Prévenez les personnes concernées : opérateurs des CNC, plaqueuses et scie. L'aspiration va s'arrêter.",
-            "sw": "Wajulishe watu wanaohusika: waendeshaji wa CNC, mashine za kingo na msumeno. Ukusanyaji wa vumbi unasimama."
-          },
-          "ack": true
-        },
-        {
-          "id": "l3",
-          "part": {
-            "en": "Normal stop",
-            "es": "Paro normal",
-            "fr": "Arrêt normal",
-            "sw": "Kusimamisha kawaida"
-          },
-          "focus": "gate_panel",
-          "panel": "gate_panel",
-          "highlight": [
-            "gate_panel"
-          ],
-          "text": {
-            "en": "Close all blast gates: press red for each machine on the blast-gate panel.",
-            "es": "Cierre todas las compuertas: pulse rojo para cada máquina en el panel.",
-            "fr": "Fermez toutes les vannes : appuyez sur rouge pour chaque machine sur le panneau.",
-            "sw": "Funga vali zote: bonyeza nyekundu kwa kila mashine kwenye paneli."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "gates.CNC1",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "gates.CNC2",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "gates.EB1",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "gates.EB2",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "gates.PanelSaw",
-                  false
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l4",
-          "focus": "collector_wall",
-          "panel": "collector",
-          "highlight": [
-            "starter3"
-          ],
-          "text": {
-            "en": "Stop the dust collector fan: red button on starter 3.",
-            "es": "Detenga el ventilador del colector: botón rojo del arrancador 3.",
-            "fr": "Arrêtez le ventilateur du dépoussiéreur : bouton rouge du démarreur 3.",
-            "sw": "Simamisha feni ya kikusanya vumbi: kitufe chekundu cha kianzishi 3."
-          },
-          "cond": {
-            "eq": [
-              "starter.starter3",
-              false
-            ]
-          },
-          "mistakes": [
-            {
-              "event": {
-                "ctl": "eaton_in_left",
-                "act": "off"
-              },
-              "text": {
-                "en": "Stop at the starter first. A safety switch is not the normal way to stop a running motor.",
-                "es": "Detenga primero en el arrancador. El interruptor de seguridad no es la forma normal de parar un motor en marcha.",
-                "fr": "Arrêtez d'abord au démarreur. L'interrupteur de sécurité n'est pas la façon normale d'arrêter un moteur en marche.",
-                "sw": "Simamisha kwanza kwenye kianzishi. Swichi ya usalama si njia ya kawaida ya kusimamisha mota inayofanya kazi."
-              }
-            },
-            {
-              "event": {
-                "ctl": "eaton_out_fan",
-                "act": "off"
-              },
-              "text": {
-                "en": "Stop at the starter first. A safety switch is not the normal way to stop a running motor.",
-                "es": "Detenga primero en el arrancador. El interruptor de seguridad no es la forma normal de parar un motor en marcha.",
-                "fr": "Arrêtez d'abord au démarreur. L'interrupteur de sécurité n'est pas la façon normale d'arrêter un moteur en marche.",
-                "sw": "Simamisha kwanza kwenye kianzishi. Swichi ya usalama si njia ya kawaida ya kusimamisha mota inayofanya kazi."
-              }
-            }
-          ]
-        },
-        {
-          "id": "l5",
-          "panel": "collector",
-          "highlight": [
-            "starter1",
-            "airlock_box"
-          ],
-          "text": {
-            "en": "Stop the rotary airlock: red button on starter 1.",
-            "es": "Detenga la válvula rotativa: botón rojo del arrancador 1.",
-            "fr": "Arrêtez l'écluse rotative : bouton rouge du démarreur 1.",
-            "sw": "Simamisha vali ya kuzunguka: kitufe chekundu cha kianzishi 1."
-          },
-          "cond": {
-            "eq": [
-              "starter.starter1",
-              false
-            ]
-          }
-        },
-        {
-          "id": "l6",
-          "panel": "collector",
-          "highlight": [
-            "starter2"
-          ],
-          "text": {
-            "en": "Stop the transfer blower: red button on starter 2.",
-            "es": "Detenga el soplador de transferencia: botón rojo del arrancador 2.",
-            "fr": "Arrêtez le ventilateur de transfert : bouton rouge du démarreur 2.",
-            "sw": "Simamisha kipuliza cha kusafirisha: kitufe chekundu cha kianzishi 2."
-          },
-          "cond": {
-            "eq": [
-              "starter.starter2",
-              false
-            ]
-          }
-        },
-        {
-          "id": "l7",
-          "part": {
-            "en": "Isolate",
-            "es": "Aislar",
-            "fr": "Isoler",
-            "sw": "Tenga"
-          },
-          "focus": "outside_switches",
-          "panel": "outside",
-          "highlight": [
-            "eaton_out_fan",
-            "eaton_out_blower",
-            "eaton_out_airlock"
-          ],
-          "text": {
-            "en": "Turn OFF the outside shut-off of each motor: dust collector fan, transfer blower, rotary airlock. (Upstream option: the inside 60 A and 30 A switches.)",
-            "es": "Ponga en OFF el corte exterior de cada motor: ventilador del colector, soplador, válvula rotativa. (Opción aguas arriba: los interruptores interiores de 60 A y 30 A.)",
-            "fr": "Mettez sur OFF la coupure extérieure de chaque moteur : ventilateur, soufflante de transfert, écluse. (Option en amont : les interrupteurs intérieurs 60 A et 30 A.)",
-            "sw": "Weka OFF kizima cha nje cha kila mota: feni, kipuliza, vali ya kuzunguka. (Chaguo la juu: swichi za ndani za A 60 na A 30.)"
-          },
-          "cond": {
-            "all": [
-              {
-                "any": [
-                  {
-                    "eq": [
-                      "eaton.eaton_out_fan.on",
-                      false
-                    ]
-                  },
-                  {
-                    "eq": [
-                      "eaton.eaton_in_left.on",
-                      false
-                    ]
-                  }
-                ]
-              },
-              {
-                "any": [
-                  {
-                    "eq": [
-                      "eaton.eaton_out_blower.on",
-                      false
-                    ]
-                  },
-                  {
-                    "eq": [
-                      "eaton.eaton_in_right.on",
-                      false
-                    ]
-                  }
-                ]
-              },
-              {
-                "any": [
-                  {
-                    "eq": [
-                      "eaton.eaton_out_airlock.on",
-                      false
-                    ]
-                  },
-                  {
-                    "eq": [
-                      "eaton.eaton_in_right.on",
-                      false
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l8",
-          "panel": "outside",
-          "highlight": [
-            "eaton_out_fan",
-            "eaton_out_blower",
-            "eaton_out_airlock"
-          ],
-          "text": {
-            "en": "Put your own lock and a DANGER tag (name, date, reason) on each switch you turned off.",
-            "es": "Ponga su propio candado y una etiqueta de PELIGRO (nombre, fecha, motivo) en cada interruptor que apagó.",
-            "fr": "Posez votre propre cadenas et une étiquette DANGER (nom, date, motif) sur chaque interrupteur coupé.",
-            "sw": "Weka kufuli yako na lebo ya HATARI (jina, tarehe, sababu) kwenye kila swichi uliyozima."
-          },
-          "cond": {
-            "all": [
-              {
-                "any": [
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_out_fan.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_out_fan"
-                      }
-                    ]
-                  },
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_in_left.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_in_left"
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "any": [
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_out_blower.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_out_blower"
-                      }
-                    ]
-                  },
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_in_right.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_in_right"
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "any": [
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_out_airlock.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_out_airlock"
-                      }
-                    ]
-                  },
-                  {
-                    "all": [
-                      {
-                        "eq": [
-                          "eaton.eaton_in_right.on",
-                          false
-                        ]
-                      },
-                      {
-                        "locked": "eaton_in_right"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l9",
-          "part": {
-            "en": "Stored energy",
-            "es": "Energía almacenada",
-            "fr": "Énergie stockée",
-            "sw": "Nishati iliyohifadhiwa"
-          },
-          "focus": "fan",
-          "text": {
-            "en": "Wait until the fan and the blower have stopped turning.",
-            "es": "Espere hasta que el ventilador y el soplador dejen de girar.",
-            "fr": "Attendez l'arrêt complet du ventilateur et de la soufflante.",
-            "sw": "Subiri hadi feni na kipuliza viache kuzunguka."
-          },
-          "cond": {
-            "all": [
-              {
-                "lt": [
-                  "motor.fan.level",
-                  0.005
-                ]
-              },
-              {
-                "lt": [
-                  "motor.blower.level",
-                  0.005
-                ]
-              },
-              {
-                "lt": [
-                  "motor.airlock.level",
-                  0.005
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l10",
-          "focus": "airlock",
-          "text": {
-            "en": "Chips in the cone and the airlock can fall or turn the rotor when opened. Block the rotor before you reach in.",
-            "es": "Las virutas en el cono y la válvula pueden caer o girar el rotor al abrir. Bloquee el rotor antes de meter la mano.",
-            "fr": "Les copeaux du cône et de l'écluse peuvent tomber ou faire tourner le rotor à l'ouverture. Bloquez le rotor avant d'intervenir.",
-            "sw": "Vipande kwenye koni na vali vinaweza kuanguka au kuzungusha rota vikifunguliwa. Zuia rota kabla ya kuingiza mkono."
-          },
-          "ack": true
-        },
-        {
-          "id": "l11",
-          "optional": true,
-          "focus": "window_hatch",
-          "highlight": [
-            "valve_A",
-            "valve_B"
-          ],
-          "text": {
-            "en": "If the work is on a Flamex line, close its red ball valve and lock it.",
-            "es": "Si el trabajo es en una línea Flamex, cierre su válvula de bola roja y bloquéela.",
-            "fr": "Si le travail porte sur une ligne Flamex, fermez sa vanne à bille rouge et cadenassez-la.",
-            "sw": "Kazi ikiwa kwenye mstari wa Flamex, funga vali yake ya mpira nyekundu na weka kufuli."
-          },
-          "cond": {
-            "any": [
-              {
-                "all": [
-                  {
-                    "eq": [
-                      "valve.valve_A.open",
-                      false
-                    ]
-                  },
-                  {
-                    "locked": "valve_A"
-                  }
-                ]
-              },
-              {
-                "all": [
-                  {
-                    "eq": [
-                      "valve.valve_B.open",
-                      false
-                    ]
-                  },
-                  {
-                    "locked": "valve_B"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l12",
-          "optional": true,
-          "focus": "gate_panel",
-          "highlight": [
-            "air_valve"
-          ],
-          "text": {
-            "en": "If the work opens the ducts or gates, shut off and bleed the shop air to the gate panel and lock the valve.",
-            "es": "Si el trabajo abre ductos o compuertas, cierre y purgue el aire del panel y bloquee la válvula.",
-            "fr": "Si le travail ouvre les gaines ou les vannes, coupez et purgez l'air du panneau et cadenassez la vanne.",
-            "sw": "Kazi ikifungua mabomba au vali, zima na toa hewa ya paneli na weka kufuli kwenye vali."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "air.on",
-                  false
-                ]
-              },
-              {
-                "locked": "air_valve"
-              }
-            ]
-          }
-        },
-        {
-          "id": "l13",
-          "part": {
-            "en": "Verify zero energy",
-            "es": "Verificar energía cero",
-            "fr": "Vérifier l'absence d'énergie",
-            "sw": "Thibitisha hakuna nishati"
-          },
-          "focus": "collector_wall",
-          "panel": "collector",
-          "highlight": [
-            "starter3",
-            "starter2",
-            "starter1"
-          ],
-          "text": {
-            "en": "Try to start: press green on starters 3, 2 and 1. Nothing may start.",
-            "es": "Intente arrancar: pulse verde en los arrancadores 3, 2 y 1. Nada debe arrancar.",
-            "fr": "Essayez de démarrer : appuyez sur vert aux démarreurs 3, 2 et 1. Rien ne doit démarrer.",
-            "sw": "Jaribu kuwasha: bonyeza kijani kwenye vianzishi 3, 2 na 1. Hakuna kinachopaswa kuwaka."
-          },
-          "cond": {
-            "all": [
-              {
-                "event": {
-                  "ctl": "starter3",
-                  "act": "start",
-                  "code": [
-                    "locked_out",
-                    "no_power"
-                  ]
-                }
-              },
-              {
-                "event": {
-                  "ctl": "starter2",
-                  "act": "start",
-                  "code": [
-                    "locked_out",
-                    "no_power"
-                  ]
-                }
-              },
-              {
-                "event": {
-                  "ctl": "starter1",
-                  "act": "start",
-                  "code": [
-                    "locked_out",
-                    "no_power"
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        {
-          "id": "l14",
-          "panel": "collector",
-          "highlight": [
-            "starter3",
-            "starter2",
-            "starter1"
-          ],
-          "text": {
-            "en": "Return the controls to off: press red on starters 3, 2 and 1, so nothing restarts when power comes back.",
-            "es": "Regrese los mandos a apagado: pulse rojo en los arrancadores 3, 2 y 1, para que nada arranque al volver la energía.",
-            "fr": "Remettez les commandes à l'arrêt : rouge aux démarreurs 3, 2 et 1, pour que rien ne redémarre au retour du courant.",
-            "sw": "Rudisha vidhibiti kwenye kuzima: bonyeza nyekundu kwenye vianzishi 3, 2 na 1, ili hakuna kitakachowaka umeme ukirudi."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "starter.starter3",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "starter.starter2",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "starter.starter1",
-                  false
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l15",
-          "focus": "fan",
-          "text": {
-            "en": "Check that nothing moves: fan, airlock rotor and blower are still.",
-            "es": "Compruebe que nada se mueve: ventilador, rotor y soplador quietos.",
-            "fr": "Vérifiez que rien ne bouge : ventilateur, rotor et soufflante immobiles.",
-            "sw": "Hakikisha hakuna kinachosogea: feni, rota na kipuliza vimetulia."
-          },
-          "ack": true,
-          "check": {
-            "all": [
-              {
-                "eq": [
-                  "motor.fan.running",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "motor.airlock.running",
-                  false
-                ]
-              },
-              {
-                "eq": [
-                  "motor.blower.running",
-                  false
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l16",
-          "part": {
-            "en": "Work",
-            "es": "Trabajo",
-            "fr": "Travail",
-            "sw": "Kazi"
-          },
-          "text": {
-            "en": "Do the maintenance work.",
-            "es": "Haga el trabajo de mantenimiento.",
-            "fr": "Faites l'entretien.",
-            "sw": "Fanya kazi ya matengenezo."
-          },
-          "ack": true
-        },
-        {
-          "id": "l17",
-          "part": {
-            "en": "Restore",
-            "es": "Restablecer",
-            "fr": "Remise en service",
-            "sw": "Rejesha"
-          },
-          "text": {
-            "en": "Tools clear, guards and covers back on, rotor block removed.",
-            "es": "Herramientas retiradas, guardas y tapas puestas, bloqueo del rotor quitado.",
-            "fr": "Outils retirés, protections et capots remis, blocage du rotor enlevé.",
-            "sw": "Vifaa vimeondolewa, kinga na vifuniko vimerudishwa, kizuizi cha rota kimeondolewa."
-          },
-          "ack": true
-        },
-        {
-          "id": "l18",
-          "text": {
-            "en": "Everyone clear of the collector, the airlock and the shed.",
-            "es": "Todos lejos del colector, la válvula y la caseta.",
-            "fr": "Personne près du dépoussiéreur, de l'écluse et de l'abri.",
-            "sw": "Kila mtu yuko mbali na kikusanya, vali na kibanda."
-          },
-          "ack": true
-        },
-        {
-          "id": "l19",
-          "focus": "outside_switches",
-          "panel": "outside",
-          "text": {
-            "en": "Remove your own locks and tags (switches, and valves if you locked them).",
-            "es": "Quite sus propios candados y etiquetas (interruptores y válvulas si las bloqueó).",
-            "fr": "Retirez vos propres cadenas et étiquettes (interrupteurs, et vannes si cadenassées).",
-            "sw": "Ondoa kufuli na lebo zako (swichi, na vali kama ulizifunga)."
-          },
-          "cond": {
-            "all": [
-              {
-                "unlocked": "eaton_out_fan"
-              },
-              {
-                "unlocked": "eaton_out_blower"
-              },
-              {
-                "unlocked": "eaton_out_airlock"
-              },
-              {
-                "unlocked": "eaton_in_left"
-              },
-              {
-                "unlocked": "eaton_in_right"
-              },
-              {
-                "unlocked": "valve_A"
-              },
-              {
-                "unlocked": "valve_B"
-              },
-              {
-                "unlocked": "air_valve"
-              }
-            ]
-          }
-        },
-        {
-          "id": "l20",
-          "panel": "outside",
-          "text": {
-            "en": "Re-energize: switches ON, Flamex valves open, shop air on.",
-            "es": "Reenergizar: interruptores en ON, válvulas Flamex abiertas, aire del taller abierto.",
-            "fr": "Remettre sous tension : interrupteurs sur ON, vannes Flamex ouvertes, air ouvert.",
-            "sw": "Rudisha nishati: swichi ON, vali za Flamex wazi, hewa ya karakana imewashwa."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "eaton.eaton_out_fan.on",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "eaton.eaton_out_blower.on",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "eaton.eaton_out_airlock.on",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "eaton.eaton_in_left.on",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "eaton.eaton_in_right.on",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "valve.valve_A.open",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "valve.valve_B.open",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "air.on",
-                  true
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l21",
-          "focus": "collector_wall",
-          "panel": "collector",
-          "text": {
-            "en": "Start the system: green on starters 3, 2 and 1 (airlock box ON).",
-            "es": "Arranque el sistema: verde en los arrancadores 3, 2 y 1 (caja de la válvula en ON).",
-            "fr": "Démarrez le système : vert aux démarreurs 3, 2 et 1 (boîtier de l'écluse sur ON).",
-            "sw": "Washa mfumo: kijani kwenye vianzishi 3, 2 na 1 (kisanduku cha vali ON)."
-          },
-          "cond": {
-            "all": [
-              {
-                "eq": [
-                  "motor.fan.running",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "motor.blower.running",
-                  true
-                ]
-              },
-              {
-                "eq": [
-                  "motor.airlock.running",
-                  true
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "id": "l22",
-          "text": {
-            "en": "Tell the affected people that dust collection is back.",
-            "es": "Avise a las personas afectadas que la extracción volvió.",
-            "fr": "Prévenez les personnes concernées que l'aspiration est revenue.",
-            "sw": "Wajulishe watu wanaohusika kwamba ukusanyaji wa vumbi umerudi."
-          },
-          "ack": true
-        }
+     "id": "p2",
+     "actor": "2 + 3",
+     "focus": "cnc_hatch",
+     "highlight": [
+      "hatch_cnc",
+      "hatch_window",
+      "hatch_riser"
+     ],
+     "text": {
+      "en": "Open each hatch, clean out the debris, then close it. Click each hatch twice: open, then clean and close.",
+      "es": "Abra cada escotilla, limpie los residuos y ciérrela. Haga clic dos veces en cada una: abrir, luego limpiar y cerrar.",
+      "fr": "Ouvrez chaque trappe, retirez les débris, puis refermez-la. Cliquez deux fois sur chaque trappe : ouvrir, puis nettoyer et fermer.",
+      "sw": "Fungua kila kifuniko, safisha uchafu, kisha kifunge. Bofya kila kifuniko mara mbili: fungua, kisha safisha na funga."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "hatch.hatch_cnc.cleaned",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "hatch.hatch_cnc.open",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "hatch.hatch_window.cleaned",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "hatch.hatch_window.open",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "hatch.hatch_riser.cleaned",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "hatch.hatch_riser.open",
+         false
+        ]
+       }
       ]
+     },
+     "mistakes": [
+      {
+       "event": {
+        "ctl": "panel_A",
+        "act": "key",
+        "value": 0
+       },
+       "text": {
+        "en": "Keep the key at bypass until all hatches are cleaned and closed, as the test process says.",
+        "es": "Deje la llave en bypass hasta limpiar y cerrar todas las escotillas, como dice el proceso.",
+        "fr": "Laissez la clé sur bypass jusqu'à ce que toutes les trappes soient nettoyées et fermées, comme le dit la procédure.",
+        "sw": "Acha ufunguo kwenye bypass hadi vifuniko vyote visafishwe na kufungwa, kama mchakato unavyosema."
+       }
+      }
+     ],
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      },
+      {
+       "ctl": "hatch_cnc"
+      },
+      {
+       "ctl": "hatch_window"
+      },
+      {
+       "ctl": "hatch_window"
+      },
+      {
+       "ctl": "hatch_riser"
+      },
+      {
+       "ctl": "hatch_riser"
+      }
+     ]
+    },
+    {
+     "id": "p3",
+     "actor": "1",
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ],
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       0
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "key"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "i1",
+     "part": {
+      "en": "Step 2 of 3: interior test",
+      "es": "Paso 2 de 3: prueba interior",
+      "fr": "Étape 2 sur 3 : test intérieur",
+      "sw": "Hatua 2 kati ya 3: jaribio la ndani"
+     },
+     "actor": "1",
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "text": {
+      "en": "Make sure the key on the Interior Flamex Panel is at active (0).",
+      "es": "Asegúrese de que la llave del panel Flamex interior esté en activo (0).",
+      "fr": "Vérifiez que la clé du panneau Flamex intérieur est sur actif (0).",
+      "sw": "Hakikisha ufunguo wa paneli ya ndani ya Flamex uko kwenye hai (0)."
+     },
+     "ack": true,
+     "check": {
+      "eq": [
+       "flamex.A.key",
+       0
+      ]
+     },
+     "auto": []
+    },
+    {
+     "id": "i2",
+     "actor": "2",
+     "focus": "window_hatch",
+     "highlight": [
+      "hatch_window",
+      "bucket"
+     ],
+     "text": {
+      "en": "Open the hatch near the window and put the bucket under it.",
+      "es": "Abra la escotilla junto a la ventana y ponga la cubeta debajo.",
+      "fr": "Ouvrez la trappe près de la fenêtre et placez le seau dessous.",
+      "sw": "Fungua kifuniko karibu na dirisha na weka ndoo chini yake."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "hatch.hatch_window.open",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "bucket.placed",
+         true
+        ]
+       }
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_window"
+      },
+      {
+       "ctl": "bucket"
+      }
+     ]
+    },
+    {
+     "id": "i3",
+     "actor": "3",
+     "focus": "cnc_hatch",
+     "highlight": [
+      "hatch_cnc"
+     ],
+     "tool": "flashlight",
+     "text": {
+      "en": "Open the hatch over the CNC and shine the flashlight in to trip the system.",
+      "es": "Abra la escotilla sobre el CNC y alumbre con la linterna para disparar el sistema.",
+      "fr": "Ouvrez la trappe au-dessus du CNC et éclairez avec la lampe pour déclencher le système.",
+      "sw": "Fungua kifuniko juu ya CNC na mulika tochi ndani ili kuwasha mfumo."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_A",
+       "act": "trip"
+      }
+     },
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      },
+      {
+       "shine": "A"
+      }
+     ]
+    },
+    {
+     "id": "i4",
+     "actor": "1 + 2",
+     "text": {
+      "en": "Check: Fire LED on, buzzer, horns and strobes on, water sprays into the bucket.",
+      "es": "Verifique: LED Fire encendido, zumbador, sirenas y luces, el agua cae en la cubeta.",
+      "fr": "Vérifiez : LED Fire allumée, buzzer, sirènes et flashs, l'eau tombe dans le seau.",
+      "sw": "Hakikisha: taa ya Fire imewaka, buzzer, honi na taa, maji yanaingia kwenye ndoo."
+     },
+     "ack": true,
+     "focus": "window_hatch",
+     "auto": []
+    },
+    {
+     "id": "i5",
+     "actor": "3",
+     "focus": "cnc_hatch",
+     "highlight": [
+      "hatch_cnc"
+     ],
+     "text": {
+      "en": "Once it has tripped, shut the CNC hatch.",
+      "es": "Cuando se haya disparado, cierre la escotilla del CNC.",
+      "fr": "Une fois déclenché, fermez la trappe du CNC.",
+      "sw": "Ukishawaka, funga kifuniko cha CNC."
+     },
+     "cond": {
+      "eq": [
+       "hatch.hatch_cnc.open",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      }
+     ]
+    },
+    {
+     "id": "i6",
+     "actor": "1",
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ],
+     "text": {
+      "en": "Turn the key to bypass (1).",
+      "es": "Gire la llave a bypass (1).",
+      "fr": "Tournez la clé sur bypass (1).",
+      "sw": "Geuza ufunguo kwenda bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       1
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "key"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "i7",
+     "actor": "1",
+     "panel": "flamex_A",
+     "text": {
+      "en": "Press ext.",
+      "es": "Pulse ext.",
+      "fr": "Appuyez sur ext.",
+      "sw": "Bonyeza ext."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_A",
+       "act": "ext",
+       "code": [
+        "ext_off",
+        "ext_on"
+       ]
+      }
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "ext"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "i8",
+     "actor": "1",
+     "panel": "flamex_A",
+     "text": {
+      "en": "Press reset.",
+      "es": "Pulse reset.",
+      "fr": "Appuyez sur reset.",
+      "sw": "Bonyeza reset."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.fire",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "reset"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "i9",
+     "actor": "1",
+     "panel": "flamex_A",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       0
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "A",
+        "key"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "i10",
+     "actor": "2",
+     "focus": "window_hatch",
+     "highlight": [
+      "hatch_window",
+      "bucket"
+     ],
+     "text": {
+      "en": "Once it has drained, wipe it dry, take the bucket away and shut the window hatch.",
+      "es": "Cuando haya escurrido, séquela con un trapo, retire la cubeta y cierre la escotilla de la ventana.",
+      "fr": "Une fois égouttée, essuyez-la, retirez le seau et fermez la trappe de la fenêtre.",
+      "sw": "Ikishamwaga maji, ifute kwa kitambaa, ondoa ndoo na funga kifuniko cha dirisha."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "hatch.hatch_window.open",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "bucket.placed",
+         false
+        ]
+       }
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_window"
+      },
+      {
+       "ctl": "bucket"
+      }
+     ]
+    },
+    {
+     "id": "e1",
+     "part": {
+      "en": "Step 3 of 3: exterior test",
+      "es": "Paso 3 de 3: prueba exterior",
+      "fr": "Étape 3 sur 3 : test extérieur",
+      "sw": "Hatua 3 kati ya 3: jaribio la nje"
+     },
+     "actor": "1",
+     "focus": "rolloff_hose",
+     "highlight": [
+      "hose"
+     ],
+     "text": {
+      "en": "Use the ladder to unhook the hose from the dumpster.",
+      "es": "Use la escalera para desconectar la manguera del contenedor.",
+      "fr": "Avec l'échelle, décrochez le tuyau de la benne.",
+      "sw": "Tumia ngazi kutoa bomba kwenye kontena."
+     },
+     "cond": {
+      "eq": [
+       "hose.connected",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hose"
+      }
+     ]
+    },
+    {
+     "id": "e2",
+     "actor": "1",
+     "text": {
+      "en": "Go to the side of the shed with the hatch and tell Employee 2: \"ready check\".",
+      "es": "Vaya al lado de la caseta donde está la escotilla y diga al empleado 2: \"ready check\".",
+      "fr": "Allez du côté de l'abri où se trouve la trappe et dites à l'employé 2 : « ready check ».",
+      "sw": "Nenda upande wa kibanda wenye kifuniko na mwambie mfanyakazi 2: \"ready check\"."
+     },
+     "ack": true,
+     "focus": "riser_hatch",
+     "auto": []
+    },
+    {
+     "id": "e3",
+     "actor": "1",
+     "focus": "riser_hatch",
+     "highlight": [
+      "hatch_riser"
+     ],
+     "tool": "flashlight",
+     "text": {
+      "en": "Open the riser hatch and shine the light in to trip the system. Close the hatch once it trips.",
+      "es": "Abra la escotilla del tubo vertical y alumbre para disparar el sistema. Cierre la escotilla cuando se dispare.",
+      "fr": "Ouvrez la trappe de la colonne et éclairez pour déclencher le système. Fermez la trappe une fois déclenché.",
+      "sw": "Fungua kifuniko cha bomba la wima na mulika ili kuwasha mfumo. Funga kifuniko ukishawaka."
+     },
+     "cond": {
+      "all": [
+       {
+        "event": {
+         "ctl": "panel_B",
+         "act": "trip"
+        }
+       },
+       {
+        "eq": [
+         "hatch.hatch_riser.open",
+         false
+        ]
+       }
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_riser"
+      },
+      {
+       "shine": "B"
+      },
+      {
+       "ctl": "hatch_riser"
+      }
+     ]
+    },
+    {
+     "id": "e4",
+     "actor": "2",
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ],
+     "text": {
+      "en": "At the Exterior Flamex Panel: turn the key to bypass (1).",
+      "es": "En el panel Flamex exterior: gire la llave a bypass (1).",
+      "fr": "Au panneau Flamex extérieur : tournez la clé sur bypass (1).",
+      "sw": "Kwenye paneli ya nje ya Flamex: geuza ufunguo kwenda bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       1
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "key"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "e5",
+     "actor": "2",
+     "panel": "flamex_B",
+     "text": {
+      "en": "Press ext.",
+      "es": "Pulse ext.",
+      "fr": "Appuyez sur ext.",
+      "sw": "Bonyeza ext."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_B",
+       "act": "ext",
+       "code": [
+        "ext_off",
+        "ext_on"
+       ]
+      }
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "ext"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "e6",
+     "actor": "2",
+     "panel": "flamex_B",
+     "text": {
+      "en": "Press reset.",
+      "es": "Pulse reset.",
+      "fr": "Appuyez sur reset.",
+      "sw": "Bonyeza reset."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.fire",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "reset"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "e7",
+     "actor": "2",
+     "panel": "flamex_B",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       0
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "key"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "e8",
+     "actor": "2",
+     "panel": "flamex_B",
+     "text": {
+      "en": "Press the grey int button.",
+      "es": "Pulse el botón gris int.",
+      "fr": "Appuyez sur le bouton gris int.",
+      "sw": "Bonyeza kitufe cha kijivu int."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_B",
+       "act": "int"
+      }
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "int"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "e9",
+     "actor": "1",
+     "focus": "rolloff_hose",
+     "highlight": [
+      "hose"
+     ],
+     "text": {
+      "en": "Use the ladder to reconnect the hose to the dumpster.",
+      "es": "Use la escalera para reconectar la manguera al contenedor.",
+      "fr": "Avec l'échelle, rebranchez le tuyau sur la benne.",
+      "sw": "Tumia ngazi kuunganisha tena bomba kwenye kontena."
+     },
+     "cond": {
+      "eq": [
+       "hose.connected",
+       true
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hose"
+      }
+     ]
     }
-  ]
+   ],
+   "roles": [
+    "1",
+    "2",
+    "3"
+   ]
+  },
+  {
+   "id": "loto_fan_airlock",
+   "kind": "loto",
+   "title": {
+    "en": "LOTO: dust collector fan and airlock maintenance",
+    "es": "LOTO: mantenimiento del ventilador del colector y la válvula rotativa",
+    "fr": "Consignation : entretien du ventilateur du dépoussiéreur et de l'écluse",
+    "sw": "LOTO: matengenezo ya feni ya kikusanya vumbi na vali ya kuzunguka"
+   },
+   "template": {
+    "en": "Generic template (OSHA 1910.147). Not Conklin's written procedure yet.",
+    "es": "Plantilla genérica (OSHA 1910.147). Aún no es el procedimiento escrito de Conklin.",
+    "fr": "Modèle générique (OSHA 1910.147). Pas encore la procédure écrite de Conklin.",
+    "sw": "Kiolezo cha jumla (OSHA 1910.147). Bado si utaratibu ulioandikwa wa Conklin."
+   },
+   "equipment": [
+    {
+     "id": "fan",
+     "name": {
+      "en": "Dust collector main fan (20 HP)",
+      "es": "Ventilador principal del colector (20 HP)",
+      "fr": "Ventilateur principal du dépoussiéreur (20 HP)",
+      "sw": "Feni kuu ya kikusanya vumbi (HP 20)"
+     }
+    },
+    {
+     "id": "airlock",
+     "name": {
+      "en": "Rotary airlock (13 rpm gearmotor)",
+      "es": "Válvula rotativa (motorreductor de 13 rpm)",
+      "fr": "Écluse rotative (motoréducteur 13 tr/min)",
+      "sw": "Vali ya kuzunguka (mota ya gia rpm 13)"
+     }
+    },
+    {
+     "id": "blower",
+     "name": {
+      "en": "Transfer blower (moves air and chips through the airlock tee)",
+      "es": "Soplador de transferencia (mueve aire y virutas por la te de la válvula)",
+      "fr": "Ventilateur de transfert (fait passer l'air et les copeaux par le té de l'écluse)",
+      "sw": "Kipuliza cha kusafirisha (husukuma hewa na vipande kupitia T ya vali)"
+     }
+    }
+   ],
+   "energy_sources": [
+    {
+     "type": "electrical",
+     "what": {
+      "en": "Fan motor",
+      "es": "Motor del ventilador",
+      "fr": "Moteur du ventilateur",
+      "sw": "Mota ya feni"
+     },
+     "isolation": [
+      "eaton_out_fan"
+     ],
+     "upstream": [
+      "eaton_in_left"
+     ]
+    },
+    {
+     "type": "electrical",
+     "what": {
+      "en": "Airlock gearmotor",
+      "es": "Motorreductor de la válvula rotativa",
+      "fr": "Motoréducteur de l'écluse",
+      "sw": "Mota ya gia ya vali ya kuzunguka"
+     },
+     "isolation": [
+      "eaton_out_airlock"
+     ],
+     "upstream": [
+      "eaton_in_right"
+     ]
+    },
+    {
+     "type": "electrical",
+     "what": {
+      "en": "Transfer blower motor",
+      "es": "Motor del soplador de transferencia",
+      "fr": "Moteur du ventilateur de transfert",
+      "sw": "Mota ya kipuliza cha kusafirisha"
+     },
+     "isolation": [
+      "eaton_out_blower"
+     ],
+     "upstream": [
+      "eaton_in_right"
+     ]
+    },
+    {
+     "type": "mechanical",
+     "what": {
+      "en": "Fan and blower coasting after stop",
+      "es": "Ventilador y soplador girando por inercia tras parar",
+      "fr": "Ventilateur et soufflante qui tournent sur leur élan",
+      "sw": "Feni na kipuliza vikiendelea kuzunguka baada ya kusimama"
+     },
+     "isolation": [],
+     "note": {
+      "en": "Wait until nothing turns.",
+      "es": "Espere hasta que nada gire.",
+      "fr": "Attendez que rien ne tourne.",
+      "sw": "Subiri hadi hakuna kinachozunguka."
+     }
+    },
+    {
+     "type": "stored",
+     "what": {
+      "en": "Chips in the cone, the airlock pockets and the tee",
+      "es": "Virutas en el cono, las cavidades de la válvula y la te",
+      "fr": "Copeaux dans le cône, les poches de l'écluse et le té",
+      "sw": "Vipande kwenye koni, mifuko ya vali na T"
+     },
+     "isolation": [],
+     "note": {
+      "en": "They can fall or turn the rotor when opened. Block the rotor.",
+      "es": "Pueden caer o girar el rotor al abrir. Bloquee el rotor.",
+      "fr": "Ils peuvent tomber ou faire tourner le rotor à l'ouverture. Bloquez le rotor.",
+      "sw": "Vinaweza kuanguka au kuzungusha rota vikifunguliwa. Zuia rota."
+     }
+    },
+    {
+     "type": "pneumatic",
+     "what": {
+      "en": "Shop air to the blast-gate panel and gates",
+      "es": "Aire del taller al panel y las compuertas",
+      "fr": "Air de l'atelier vers le panneau et les vannes",
+      "sw": "Hewa ya karakana kwa paneli na vali za vumbi"
+     },
+     "isolation": [
+      "air_valve"
+     ],
+     "note": {
+      "en": "Needed only if the work opens the ducts or gates.",
+      "es": "Solo si el trabajo abre los ductos o las compuertas.",
+      "fr": "Seulement si le travail ouvre les gaines ou les vannes.",
+      "sw": "Inahitajika tu kazi ikifungua mabomba au vali."
+     }
+    },
+    {
+     "type": "water",
+     "what": {
+      "en": "Flamex water, zone A (sprays into the inlet duct) and zone B (output duct)",
+      "es": "Agua Flamex, zona A (rocía en el ducto de entrada) y zona B (ducto de salida)",
+      "fr": "Eau Flamex, zone A (pulvérise dans la gaine d'entrée) et zone B (gaine de sortie)",
+      "sw": "Maji ya Flamex, eneo A (hunyunyiza bomba la kuingia) na eneo B (bomba la kutoa)"
+     },
+     "isolation": [
+      "valve_A",
+      "valve_B"
+     ],
+     "note": {
+      "en": "Close and lock if the work is on that line.",
+      "es": "Cierre y bloquee si el trabajo es en esa línea.",
+      "fr": "Fermez et cadenassez si le travail porte sur cette ligne.",
+      "sw": "Funga na weka kufuli kazi ikiwa kwenye mstari huo."
+     }
+    }
+   ],
+   "start_state": "normal",
+   "steps": [
+    {
+     "id": "l1",
+     "part": {
+      "en": "Prepare",
+      "es": "Preparar",
+      "fr": "Préparer",
+      "sw": "Jiandae"
+     },
+     "text": {
+      "en": "Read the energy sources for this job and where each one is isolated.",
+      "es": "Lea las fuentes de energía de este trabajo y dónde se aísla cada una.",
+      "fr": "Lisez les sources d'énergie de ce travail et où chacune est isolée.",
+      "sw": "Soma vyanzo vya nishati vya kazi hii na mahali kila kimoja kinapotengwa."
+     },
+     "ack": true,
+     "show": "energy"
+    },
+    {
+     "id": "l2",
+     "text": {
+      "en": "Notify the affected people: the CNC, edgebander and panel saw operators. Dust collection is going down.",
+      "es": "Avise a las personas afectadas: operadores de CNC, canteadoras y sierra. La extracción de polvo se va a detener.",
+      "fr": "Prévenez les personnes concernées : opérateurs des CNC, plaqueuses et scie. L'aspiration va s'arrêter.",
+      "sw": "Wajulishe watu wanaohusika: waendeshaji wa CNC, mashine za kingo na msumeno. Ukusanyaji wa vumbi unasimama."
+     },
+     "ack": true
+    },
+    {
+     "id": "l3",
+     "part": {
+      "en": "Normal stop",
+      "es": "Paro normal",
+      "fr": "Arrêt normal",
+      "sw": "Kusimamisha kawaida"
+     },
+     "focus": "gate_panel",
+     "panel": "gate_panel",
+     "highlight": [
+      "gate_panel"
+     ],
+     "text": {
+      "en": "Close all blast gates: press red for each machine on the blast-gate panel.",
+      "es": "Cierre todas las compuertas: pulse rojo para cada máquina en el panel.",
+      "fr": "Fermez toutes les vannes : appuyez sur rouge pour chaque machine sur le panneau.",
+      "sw": "Funga vali zote: bonyeza nyekundu kwa kila mashine kwenye paneli."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "gates.CNC1",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "gates.CNC2",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "gates.EB1",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "gates.EB2",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "gates.PanelSaw",
+         false
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l4",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter3"
+     ],
+     "text": {
+      "en": "Stop the dust collector fan: red button on starter 3.",
+      "es": "Detenga el ventilador del colector: botón rojo del arrancador 3.",
+      "fr": "Arrêtez le ventilateur du dépoussiéreur : bouton rouge du démarreur 3.",
+      "sw": "Simamisha feni ya kikusanya vumbi: kitufe chekundu cha kianzishi 3."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter3",
+       false
+      ]
+     },
+     "mistakes": [
+      {
+       "event": {
+        "ctl": "eaton_in_left",
+        "act": "off"
+       },
+       "text": {
+        "en": "Stop at the starter first. A safety switch is not the normal way to stop a running motor.",
+        "es": "Detenga primero en el arrancador. El interruptor de seguridad no es la forma normal de parar un motor en marcha.",
+        "fr": "Arrêtez d'abord au démarreur. L'interrupteur de sécurité n'est pas la façon normale d'arrêter un moteur en marche.",
+        "sw": "Simamisha kwanza kwenye kianzishi. Swichi ya usalama si njia ya kawaida ya kusimamisha mota inayofanya kazi."
+       }
+      },
+      {
+       "event": {
+        "ctl": "eaton_out_fan",
+        "act": "off"
+       },
+       "text": {
+        "en": "Stop at the starter first. A safety switch is not the normal way to stop a running motor.",
+        "es": "Detenga primero en el arrancador. El interruptor de seguridad no es la forma normal de parar un motor en marcha.",
+        "fr": "Arrêtez d'abord au démarreur. L'interrupteur de sécurité n'est pas la façon normale d'arrêter un moteur en marche.",
+        "sw": "Simamisha kwanza kwenye kianzishi. Swichi ya usalama si njia ya kawaida ya kusimamisha mota inayofanya kazi."
+       }
+      }
+     ]
+    },
+    {
+     "id": "l5",
+     "panel": "collector",
+     "highlight": [
+      "starter1",
+      "airlock_box"
+     ],
+     "text": {
+      "en": "Stop the rotary airlock: red button on starter 1.",
+      "es": "Detenga la válvula rotativa: botón rojo del arrancador 1.",
+      "fr": "Arrêtez l'écluse rotative : bouton rouge du démarreur 1.",
+      "sw": "Simamisha vali ya kuzunguka: kitufe chekundu cha kianzishi 1."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter1",
+       false
+      ]
+     }
+    },
+    {
+     "id": "l6",
+     "panel": "collector",
+     "highlight": [
+      "starter2"
+     ],
+     "text": {
+      "en": "Stop the transfer blower: red button on starter 2.",
+      "es": "Detenga el soplador de transferencia: botón rojo del arrancador 2.",
+      "fr": "Arrêtez le ventilateur de transfert : bouton rouge du démarreur 2.",
+      "sw": "Simamisha kipuliza cha kusafirisha: kitufe chekundu cha kianzishi 2."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter2",
+       false
+      ]
+     }
+    },
+    {
+     "id": "l7",
+     "part": {
+      "en": "Isolate",
+      "es": "Aislar",
+      "fr": "Isoler",
+      "sw": "Tenga"
+     },
+     "focus": "outside_switches",
+     "panel": "outside",
+     "highlight": [
+      "eaton_out_fan",
+      "eaton_out_blower",
+      "eaton_out_airlock"
+     ],
+     "text": {
+      "en": "Turn OFF the outside shut-off of each motor: dust collector fan, transfer blower, rotary airlock. (Upstream option: the inside 60 A and 30 A switches.)",
+      "es": "Ponga en OFF el corte exterior de cada motor: ventilador del colector, soplador, válvula rotativa. (Opción aguas arriba: los interruptores interiores de 60 A y 30 A.)",
+      "fr": "Mettez sur OFF la coupure extérieure de chaque moteur : ventilateur, soufflante de transfert, écluse. (Option en amont : les interrupteurs intérieurs 60 A et 30 A.)",
+      "sw": "Weka OFF kizima cha nje cha kila mota: feni, kipuliza, vali ya kuzunguka. (Chaguo la juu: swichi za ndani za A 60 na A 30.)"
+     },
+     "cond": {
+      "all": [
+       {
+        "any": [
+         {
+          "eq": [
+           "eaton.eaton_out_fan.on",
+           false
+          ]
+         },
+         {
+          "eq": [
+           "eaton.eaton_in_left.on",
+           false
+          ]
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "eq": [
+           "eaton.eaton_out_blower.on",
+           false
+          ]
+         },
+         {
+          "eq": [
+           "eaton.eaton_in_right.on",
+           false
+          ]
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "eq": [
+           "eaton.eaton_out_airlock.on",
+           false
+          ]
+         },
+         {
+          "eq": [
+           "eaton.eaton_in_right.on",
+           false
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l8",
+     "panel": "outside",
+     "highlight": [
+      "eaton_out_fan",
+      "eaton_out_blower",
+      "eaton_out_airlock"
+     ],
+     "text": {
+      "en": "Put your own lock and a DANGER tag (name, date, reason) on each switch you turned off.",
+      "es": "Ponga su propio candado y una etiqueta de PELIGRO (nombre, fecha, motivo) en cada interruptor que apagó.",
+      "fr": "Posez votre propre cadenas et une étiquette DANGER (nom, date, motif) sur chaque interrupteur coupé.",
+      "sw": "Weka kufuli yako na lebo ya HATARI (jina, tarehe, sababu) kwenye kila swichi uliyozima."
+     },
+     "cond": {
+      "all": [
+       {
+        "any": [
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_out_fan.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_out_fan"
+           }
+          ]
+         },
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_in_left.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_in_left"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_out_blower.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_out_blower"
+           }
+          ]
+         },
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_in_right.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_in_right"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_out_airlock.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_out_airlock"
+           }
+          ]
+         },
+         {
+          "all": [
+           {
+            "eq": [
+             "eaton.eaton_in_right.on",
+             false
+            ]
+           },
+           {
+            "locked": "eaton_in_right"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l9",
+     "part": {
+      "en": "Stored energy",
+      "es": "Energía almacenada",
+      "fr": "Énergie stockée",
+      "sw": "Nishati iliyohifadhiwa"
+     },
+     "focus": "fan",
+     "text": {
+      "en": "Wait until the fan and the blower have stopped turning.",
+      "es": "Espere hasta que el ventilador y el soplador dejen de girar.",
+      "fr": "Attendez l'arrêt complet du ventilateur et de la soufflante.",
+      "sw": "Subiri hadi feni na kipuliza viache kuzunguka."
+     },
+     "cond": {
+      "all": [
+       {
+        "lt": [
+         "motor.fan.level",
+         0.005
+        ]
+       },
+       {
+        "lt": [
+         "motor.blower.level",
+         0.005
+        ]
+       },
+       {
+        "lt": [
+         "motor.airlock.level",
+         0.005
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l10",
+     "focus": "airlock",
+     "text": {
+      "en": "Chips in the cone and the airlock can fall or turn the rotor when opened. Block the rotor before you reach in.",
+      "es": "Las virutas en el cono y la válvula pueden caer o girar el rotor al abrir. Bloquee el rotor antes de meter la mano.",
+      "fr": "Les copeaux du cône et de l'écluse peuvent tomber ou faire tourner le rotor à l'ouverture. Bloquez le rotor avant d'intervenir.",
+      "sw": "Vipande kwenye koni na vali vinaweza kuanguka au kuzungusha rota vikifunguliwa. Zuia rota kabla ya kuingiza mkono."
+     },
+     "ack": true
+    },
+    {
+     "id": "l11",
+     "optional": true,
+     "focus": "window_hatch",
+     "highlight": [
+      "valve_A",
+      "valve_B"
+     ],
+     "text": {
+      "en": "If the work is on a Flamex line, close its red ball valve and lock it.",
+      "es": "Si el trabajo es en una línea Flamex, cierre su válvula de bola roja y bloquéela.",
+      "fr": "Si le travail porte sur une ligne Flamex, fermez sa vanne à bille rouge et cadenassez-la.",
+      "sw": "Kazi ikiwa kwenye mstari wa Flamex, funga vali yake ya mpira nyekundu na weka kufuli."
+     },
+     "cond": {
+      "any": [
+       {
+        "all": [
+         {
+          "eq": [
+           "valve.valve_A.open",
+           false
+          ]
+         },
+         {
+          "locked": "valve_A"
+         }
+        ]
+       },
+       {
+        "all": [
+         {
+          "eq": [
+           "valve.valve_B.open",
+           false
+          ]
+         },
+         {
+          "locked": "valve_B"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l12",
+     "optional": true,
+     "focus": "gate_panel",
+     "highlight": [
+      "air_valve"
+     ],
+     "text": {
+      "en": "If the work opens the ducts or gates, shut off and bleed the shop air to the gate panel and lock the valve.",
+      "es": "Si el trabajo abre ductos o compuertas, cierre y purgue el aire del panel y bloquee la válvula.",
+      "fr": "Si le travail ouvre les gaines ou les vannes, coupez et purgez l'air du panneau et cadenassez la vanne.",
+      "sw": "Kazi ikifungua mabomba au vali, zima na toa hewa ya paneli na weka kufuli kwenye vali."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "air.on",
+         false
+        ]
+       },
+       {
+        "locked": "air_valve"
+       }
+      ]
+     }
+    },
+    {
+     "id": "l13",
+     "part": {
+      "en": "Verify zero energy",
+      "es": "Verificar energía cero",
+      "fr": "Vérifier l'absence d'énergie",
+      "sw": "Thibitisha hakuna nishati"
+     },
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter3",
+      "starter2",
+      "starter1"
+     ],
+     "text": {
+      "en": "Try to start: press green on starters 3, 2 and 1. Nothing may start.",
+      "es": "Intente arrancar: pulse verde en los arrancadores 3, 2 y 1. Nada debe arrancar.",
+      "fr": "Essayez de démarrer : appuyez sur vert aux démarreurs 3, 2 et 1. Rien ne doit démarrer.",
+      "sw": "Jaribu kuwasha: bonyeza kijani kwenye vianzishi 3, 2 na 1. Hakuna kinachopaswa kuwaka."
+     },
+     "cond": {
+      "all": [
+       {
+        "event": {
+         "ctl": "starter3",
+         "act": "start",
+         "code": [
+          "locked_out",
+          "no_power"
+         ]
+        }
+       },
+       {
+        "event": {
+         "ctl": "starter2",
+         "act": "start",
+         "code": [
+          "locked_out",
+          "no_power"
+         ]
+        }
+       },
+       {
+        "event": {
+         "ctl": "starter1",
+         "act": "start",
+         "code": [
+          "locked_out",
+          "no_power"
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "l14",
+     "panel": "collector",
+     "highlight": [
+      "starter3",
+      "starter2",
+      "starter1"
+     ],
+     "text": {
+      "en": "Return the controls to off: press red on starters 3, 2 and 1, so nothing restarts when power comes back.",
+      "es": "Regrese los mandos a apagado: pulse rojo en los arrancadores 3, 2 y 1, para que nada arranque al volver la energía.",
+      "fr": "Remettez les commandes à l'arrêt : rouge aux démarreurs 3, 2 et 1, pour que rien ne redémarre au retour du courant.",
+      "sw": "Rudisha vidhibiti kwenye kuzima: bonyeza nyekundu kwenye vianzishi 3, 2 na 1, ili hakuna kitakachowaka umeme ukirudi."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "starter.starter3",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "starter.starter2",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "starter.starter1",
+         false
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l15",
+     "focus": "fan",
+     "text": {
+      "en": "Check that nothing moves: fan, airlock rotor and blower are still.",
+      "es": "Compruebe que nada se mueve: ventilador, rotor y soplador quietos.",
+      "fr": "Vérifiez que rien ne bouge : ventilateur, rotor et soufflante immobiles.",
+      "sw": "Hakikisha hakuna kinachosogea: feni, rota na kipuliza vimetulia."
+     },
+     "ack": true,
+     "check": {
+      "all": [
+       {
+        "eq": [
+         "motor.fan.running",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "motor.airlock.running",
+         false
+        ]
+       },
+       {
+        "eq": [
+         "motor.blower.running",
+         false
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l16",
+     "part": {
+      "en": "Work",
+      "es": "Trabajo",
+      "fr": "Travail",
+      "sw": "Kazi"
+     },
+     "text": {
+      "en": "Do the maintenance work.",
+      "es": "Haga el trabajo de mantenimiento.",
+      "fr": "Faites l'entretien.",
+      "sw": "Fanya kazi ya matengenezo."
+     },
+     "ack": true
+    },
+    {
+     "id": "l17",
+     "part": {
+      "en": "Restore",
+      "es": "Restablecer",
+      "fr": "Remise en service",
+      "sw": "Rejesha"
+     },
+     "text": {
+      "en": "Tools clear, guards and covers back on, rotor block removed.",
+      "es": "Herramientas retiradas, guardas y tapas puestas, bloqueo del rotor quitado.",
+      "fr": "Outils retirés, protections et capots remis, blocage du rotor enlevé.",
+      "sw": "Vifaa vimeondolewa, kinga na vifuniko vimerudishwa, kizuizi cha rota kimeondolewa."
+     },
+     "ack": true
+    },
+    {
+     "id": "l18",
+     "text": {
+      "en": "Everyone clear of the collector, the airlock and the shed.",
+      "es": "Todos lejos del colector, la válvula y la caseta.",
+      "fr": "Personne près du dépoussiéreur, de l'écluse et de l'abri.",
+      "sw": "Kila mtu yuko mbali na kikusanya, vali na kibanda."
+     },
+     "ack": true
+    },
+    {
+     "id": "l19",
+     "focus": "outside_switches",
+     "panel": "outside",
+     "text": {
+      "en": "Remove your own locks and tags (switches, and valves if you locked them).",
+      "es": "Quite sus propios candados y etiquetas (interruptores y válvulas si las bloqueó).",
+      "fr": "Retirez vos propres cadenas et étiquettes (interrupteurs, et vannes si cadenassées).",
+      "sw": "Ondoa kufuli na lebo zako (swichi, na vali kama ulizifunga)."
+     },
+     "cond": {
+      "all": [
+       {
+        "unlocked": "eaton_out_fan"
+       },
+       {
+        "unlocked": "eaton_out_blower"
+       },
+       {
+        "unlocked": "eaton_out_airlock"
+       },
+       {
+        "unlocked": "eaton_in_left"
+       },
+       {
+        "unlocked": "eaton_in_right"
+       },
+       {
+        "unlocked": "valve_A"
+       },
+       {
+        "unlocked": "valve_B"
+       },
+       {
+        "unlocked": "air_valve"
+       }
+      ]
+     }
+    },
+    {
+     "id": "l20",
+     "panel": "outside",
+     "text": {
+      "en": "Re-energize: switches ON, Flamex valves open, shop air on.",
+      "es": "Reenergizar: interruptores en ON, válvulas Flamex abiertas, aire del taller abierto.",
+      "fr": "Remettre sous tension : interrupteurs sur ON, vannes Flamex ouvertes, air ouvert.",
+      "sw": "Rudisha nishati: swichi ON, vali za Flamex wazi, hewa ya karakana imewashwa."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "eaton.eaton_out_fan.on",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "eaton.eaton_out_blower.on",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "eaton.eaton_out_airlock.on",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "eaton.eaton_in_left.on",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "eaton.eaton_in_right.on",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "valve.valve_A.open",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "valve.valve_B.open",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "air.on",
+         true
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l21",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "text": {
+      "en": "Start the system: green on starters 3, 2 and 1 (airlock box ON).",
+      "es": "Arranque el sistema: verde en los arrancadores 3, 2 y 1 (caja de la válvula en ON).",
+      "fr": "Démarrez le système : vert aux démarreurs 3, 2 et 1 (boîtier de l'écluse sur ON).",
+      "sw": "Washa mfumo: kijani kwenye vianzishi 3, 2 na 1 (kisanduku cha vali ON)."
+     },
+     "cond": {
+      "all": [
+       {
+        "eq": [
+         "motor.fan.running",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "motor.blower.running",
+         true
+        ]
+       },
+       {
+        "eq": [
+         "motor.airlock.running",
+         true
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "l22",
+     "text": {
+      "en": "Tell the affected people that dust collection is back.",
+      "es": "Avise a las personas afectadas que la extracción volvió.",
+      "fr": "Prévenez les personnes concernées que l'aspiration est revenue.",
+      "sw": "Wajulishe watu wanaohusika kwamba ukusanyaji wa vumbi umerudi."
+     },
+     "ack": true
+    }
+   ]
+  },
+  {
+   "id": "flamex_interior",
+   "kind": "flamex",
+   "start_state": "normal",
+   "title": {
+    "en": "Interior Flamex Panel (FLE 5000)",
+    "es": "Panel Flamex interior (FLE 5000)",
+    "fr": "Panneau Flamex intérieur (FLE 5000)",
+    "sw": "Paneli ya Flamex ya ndani (FLE 5000)"
+   },
+   "source": {
+    "en": "Conklin weekly testing process and the Minimax SOLID manual (buttons, key levels).",
+    "es": "Proceso semanal de Conklin y manual Minimax SOLID (botones, llave).",
+    "fr": "Procédure hebdomadaire Conklin et manuel Minimax SOLID (boutons, clé).",
+    "sw": "Mchakato wa kila wiki wa Conklin na mwongozo wa Minimax SOLID (vitufe, ufunguo)."
+   },
+   "steps": [
+    {
+     "id": "a1",
+     "ack": true,
+     "text": {
+      "en": "This is the Interior Flamex Panel. It watches the main duct over the CNCs. If a spark passes, it sprays water at the window.",
+      "es": "Este es el panel Flamex interior. Vigila el ducto principal sobre los CNC. Si pasa una chispa, rocía agua junto a la ventana.",
+      "fr": "Voici le panneau Flamex intérieur. Il surveille la gaine principale au-dessus des CNC. Si une étincelle passe, il pulvérise de l'eau près de la fenêtre.",
+      "sw": "Hii ni paneli ya Flamex ya ndani. Inalinda bomba kuu juu ya CNC. Cheche ikipita, inanyunyiza maji karibu na dirisha."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a2",
+     "ack": true,
+     "text": {
+      "en": "Green Operation light on = the panel is working and watching.",
+      "es": "Luz verde Operation encendida = el panel funciona y vigila.",
+      "fr": "Voyant vert Operation allumé = le panneau fonctionne et surveille.",
+      "sw": "Taa ya kijani Operation ikiwaka = paneli inafanya kazi na inalinda."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a3",
+     "ack": true,
+     "text": {
+      "en": "Red Fire = a spark was seen. Yellow Fault = a problem. Yellow Supervisory = the key is in bypass.",
+      "es": "Rojo Fire = se vio una chispa. Amarillo Fault = un problema. Amarillo Supervisory = la llave está en bypass.",
+      "fr": "Rouge Fire = étincelle détectée. Jaune Fault = un défaut. Jaune Supervisory = la clé est en bypass.",
+      "sw": "Nyekundu Fire = cheche imeonekana. Njano Fault = tatizo. Njano Supervisory = ufunguo uko kwenye bypass."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a4",
+     "text": {
+      "en": "Press the lamp test button. Every light should come on.",
+      "es": "Pulse la prueba de luces. Todas las luces deben encenderse.",
+      "fr": "Appuyez sur le test des voyants. Tous doivent s’allumer.",
+      "sw": "Bonyeza kitufe cha kupima taa. Taa zote ziwake."
+     },
+     "cond": {
+      "gt": [
+       "flamex.A.lamp",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a5",
+     "text": {
+      "en": "Turn the key to bypass (1).",
+      "es": "Gire la llave a bypass (1).",
+      "fr": "Tournez la clé sur bypass (1).",
+      "sw": "Geuza ufunguo kwenye bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       1
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a6",
+     "text": {
+      "en": "Turn the key back to active (0). This is normal running.",
+      "es": "Regrese la llave a activo (0). Así funciona normalmente.",
+      "fr": "Remettez la clé sur actif (0). C’est la marche normale.",
+      "sw": "Rudisha ufunguo kwenye hai (0). Hii ndiyo hali ya kawaida."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a7",
+     "auto_always": true,
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      },
+      {
+       "shine": "A"
+      },
+      {
+       "ctl": "hatch_cnc"
+      }
+     ],
+     "text": {
+      "en": "Test trip: a light is shone into the detector hatch over the CNC.",
+      "es": "Disparo de prueba: se alumbra la escotilla del detector sobre el CNC.",
+      "fr": "Déclenchement test : on éclaire la trappe du détecteur au-dessus du CNC.",
+      "sw": "Jaribio: mwanga unamulikwa kwenye kifuniko cha kigunduzi juu ya CNC."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.fire",
+       true
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a8",
+     "ack": true,
+     "text": {
+      "en": "Fire light, buzzer, horns and strobes are on. Water sprays at the window.",
+      "es": "Luz Fire, zumbador, bocinas y estrobos encendidos. Sale agua junto a la ventana.",
+      "fr": "Voyant Fire, buzzer, sirènes et flashs actifs. L’eau gicle près de la fenêtre.",
+      "sw": "Taa ya Fire, buzzer, honi na taa za kumweka zinawaka. Maji yanatoka karibu na dirisha."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a9",
+     "text": {
+      "en": "Turn the key to bypass (1).",
+      "es": "Gire la llave a bypass (1).",
+      "fr": "Tournez la clé sur bypass (1).",
+      "sw": "Geuza ufunguo kwenye bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       1
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a10",
+     "text": {
+      "en": "Press ext. The horns stop. The water keeps spraying until the reset.",
+      "es": "Pulse ext. Las bocinas paran. El agua sigue hasta el reset.",
+      "fr": "Appuyez sur ext. Les sirènes s'arrêtent. L'eau continue jusqu'au reset.",
+      "sw": "Bonyeza ext. Honi zinasimama. Maji yanaendelea hadi reset."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_A",
+       "act": "ext",
+       "code": [
+        "ext_off",
+        "ext_on"
+       ]
+      }
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a11",
+     "text": {
+      "en": "Press reset. The water stops.",
+      "es": "Pulse reset. El agua se detiene.",
+      "fr": "Appuyez sur reset. L'eau s'arrête.",
+      "sw": "Bonyeza reset. Maji yanasimama."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.fire",
+       false
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "a12",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.A.key",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_A",
+     "highlight": [
+      "panel_A"
+     ]
+    },
+    {
+     "id": "q1",
+     "quiz": true,
+     "text": {
+      "en": "Water is spraying after a trip. What does ext do?",
+      "es": "Sale agua tras un disparo. ¿Qué hace ext?",
+      "fr": "L’eau gicle après un déclenchement. Que fait ext ?",
+      "sw": "Maji yanatoka baada ya kuwaka. ext inafanya nini?"
+     },
+     "options": [
+      {
+       "en": "Stops the water",
+       "es": "Detiene el agua",
+       "fr": "Arrête l’eau",
+       "sw": "Inasimamisha maji"
+      },
+      {
+       "en": "Silences the horns; the water runs until the reset",
+       "es": "Calla las bocinas; el agua sigue hasta el reset",
+       "fr": "Coupe les sirènes ; l'eau continue jusqu'au reset",
+       "sw": "Inazima honi; maji yanaendelea hadi reset"
+      },
+      {
+       "en": "Resets the panel",
+       "es": "Reinicia el panel",
+       "fr": "Réinitialise le panneau",
+       "sw": "Inaanzisha upya paneli"
+      }
+     ],
+     "answer": 1
+    },
+    {
+     "id": "q2",
+     "quiz": true,
+     "text": {
+      "en": "Where is the key for normal running?",
+      "es": "¿Dónde va la llave en marcha normal?",
+      "fr": "Où est la clé en marche normale ?",
+      "sw": "Ufunguo uwe wapi kwa kazi ya kawaida?"
+     },
+     "options": [
+      {
+       "en": "Active (0)",
+       "es": "Activo (0)",
+       "fr": "Actif (0)",
+       "sw": "Hai (0)"
+      },
+      {
+       "en": "Bypass (1)",
+       "es": "Bypass (1)",
+       "fr": "Bypass (1)",
+       "sw": "Bypass (1)"
+      }
+     ],
+     "answer": 0
+    },
+    {
+     "id": "q3",
+     "quiz": true,
+     "text": {
+      "en": "Which light means the panel is watching?",
+      "es": "¿Qué luz indica que el panel vigila?",
+      "fr": "Quel voyant indique que le panneau surveille ?",
+      "sw": "Taa ipi inaonyesha paneli inalinda?"
+     },
+     "options": [
+      {
+       "en": "Red Fire",
+       "es": "Rojo Fire",
+       "fr": "Rouge Fire",
+       "sw": "Nyekundu Fire"
+      },
+      {
+       "en": "Green Operation",
+       "es": "Verde Operation",
+       "fr": "Vert Operation",
+       "sw": "Kijani Operation"
+      },
+      {
+       "en": "Yellow Fault",
+       "es": "Amarillo Fault",
+       "fr": "Jaune Fault",
+       "sw": "Njano Fault"
+      }
+     ],
+     "answer": 1
+    }
+   ]
+  },
+  {
+   "id": "flamex_exterior",
+   "kind": "flamex",
+   "start_state": "normal",
+   "title": {
+    "en": "Exterior Flamex Panel (Minimax FMZ 5000)",
+    "es": "Panel Flamex exterior (Minimax FMZ 5000)",
+    "fr": "Panneau Flamex extérieur (Minimax FMZ 5000)",
+    "sw": "Paneli ya Flamex ya nje (Minimax FMZ 5000)"
+   },
+   "source": {
+    "en": "Conklin weekly testing process and the Minimax FMZ 5000 manual (groups, screen, buttons).",
+    "es": "Proceso semanal de Conklin y manual Minimax FMZ 5000 (grupos, pantalla, botones).",
+    "fr": "Procédure hebdomadaire Conklin et manuel Minimax FMZ 5000 (groupes, écran, boutons).",
+    "sw": "Mchakato wa kila wiki wa Conklin na mwongozo wa Minimax FMZ 5000 (makundi, skrini, vitufe)."
+   },
+   "steps": [
+    {
+     "id": "b1",
+     "ack": true,
+     "text": {
+      "en": "This is the Exterior Flamex Panel. It watches the conveyor riser in the shed, on the line to the roll-off.",
+      "es": "Este es el panel Flamex exterior. Vigila el tubo vertical del transportador en la caseta, hacia el contenedor.",
+      "fr": "Voici le panneau Flamex extérieur. Il surveille la colonne du convoyeur dans l’abri, vers la benne.",
+      "sw": "Hii ni paneli ya Flamex ya nje. Inalinda bomba la wima la kusafirisha ndani ya kibanda, kuelekea kontena."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b2",
+     "ack": true,
+     "text": {
+      "en": "Lights by group: Group 1 detectors, Group 5 flow monitor, Group 11 water, Group 13 horn. The screen shows what happened and when.",
+      "es": "Luces por grupo: grupo 1 detectores, grupo 5 flujo, grupo 11 agua, grupo 13 bocina. La pantalla muestra qué pasó y cuándo.",
+      "fr": "Voyants par groupe : groupe 1 détecteurs, groupe 5 débit, groupe 11 eau, groupe 13 sirène. L’écran indique quoi et quand.",
+      "sw": "Taa kwa makundi: kundi 1 vigunduzi, kundi 5 mtiririko, kundi 11 maji, kundi 13 honi. Skrini inaonyesha kilichotokea na lini."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b3",
+     "text": {
+      "en": "Press the lamp test button. Every light should come on.",
+      "es": "Pulse la prueba de luces. Todas las luces deben encenderse.",
+      "fr": "Appuyez sur le test des voyants. Tous doivent s’allumer.",
+      "sw": "Bonyeza kitufe cha kupima taa. Taa zote ziwake."
+     },
+     "cond": {
+      "gt": [
+       "flamex.B.lamp",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b4",
+     "text": {
+      "en": "Turn the key to bypass (1). The Disabled light comes on.",
+      "es": "Gire la llave a bypass (1). Se enciende Disabled.",
+      "fr": "Tournez la clé sur bypass (1). Le voyant Disabled s’allume.",
+      "sw": "Geuza ufunguo kwenye bypass (1). Taa ya Disabled inawaka."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       1
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b5",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b6",
+     "auto_always": true,
+     "auto": [
+      {
+       "ctl": "hatch_riser"
+      },
+      {
+       "shine": "B"
+      },
+      {
+       "ctl": "hatch_riser"
+      }
+     ],
+     "text": {
+      "en": "Test trip: a light is shone into the riser hatch in the shed.",
+      "es": "Disparo de prueba: se alumbra la escotilla del tubo vertical en la caseta.",
+      "fr": "Déclenchement test : on éclaire la trappe de la colonne dans l’abri.",
+      "sw": "Jaribio: mwanga unamulikwa kwenye kifuniko cha bomba la wima kibandani."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.fire",
+       true
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b7",
+     "ack": true,
+     "text": {
+      "en": "Fire and Group 1 light up. The screen shows the detector group and the time. Water sprays (Group 11).",
+      "es": "Se encienden Fire y grupo 1. La pantalla muestra el grupo y la hora. Sale agua (grupo 11).",
+      "fr": "Fire et groupe 1 s’allument. L’écran affiche le groupe et l’heure. L’eau gicle (groupe 11).",
+      "sw": "Fire na kundi 1 zinawaka. Skrini inaonyesha kundi na saa. Maji yanatoka (kundi 11)."
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b8",
+     "text": {
+      "en": "Turn the key to bypass (1).",
+      "es": "Gire la llave a bypass (1).",
+      "fr": "Tournez la clé sur bypass (1).",
+      "sw": "Geuza ufunguo kwenye bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       1
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b9",
+     "text": {
+      "en": "Press ext.",
+      "es": "Pulse ext.",
+      "fr": "Appuyez sur ext.",
+      "sw": "Bonyeza ext."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_B",
+       "act": "ext",
+       "code": [
+        "ext_off",
+        "ext_on"
+       ]
+      }
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b10",
+     "text": {
+      "en": "Press reset. The water stops.",
+      "es": "Pulse reset. El agua se detiene.",
+      "fr": "Appuyez sur reset. L'eau s'arrête.",
+      "sw": "Bonyeza reset. Maji yanasimama."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.fire",
+       false
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b11",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       0
+      ]
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "b12",
+     "text": {
+      "en": "Press the grey int button. It silences the panel buzzer.",
+      "es": "Pulse el botón gris int. Calla el zumbador del panel.",
+      "fr": "Appuyez sur le bouton gris int. Il coupe le buzzer du panneau.",
+      "sw": "Bonyeza kitufe kijivu int. Kinazima buzzer ya paneli."
+     },
+     "cond": {
+      "event": {
+       "ctl": "panel_B",
+       "act": "int"
+      }
+     },
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ]
+    },
+    {
+     "id": "q1",
+     "quiz": true,
+     "text": {
+      "en": "After the reset, what is the last button you press?",
+      "es": "Después del reset, ¿cuál es el último botón?",
+      "fr": "Après le reset, quel est le dernier bouton ?",
+      "sw": "Baada ya reset, kitufe cha mwisho ni kipi?"
+     },
+     "options": [
+      {
+       "en": "int",
+       "es": "int",
+       "fr": "int",
+       "sw": "int"
+      },
+      {
+       "en": "ext",
+       "es": "ext",
+       "fr": "ext",
+       "sw": "ext"
+      },
+      {
+       "en": "lamp test",
+       "es": "prueba de luces",
+       "fr": "test des voyants",
+       "sw": "kupima taa"
+      }
+     ],
+     "answer": 0
+    },
+    {
+     "id": "q2",
+     "quiz": true,
+     "text": {
+      "en": "Where are this panel’s spark detectors?",
+      "es": "¿Dónde están los detectores de este panel?",
+      "fr": "Où sont les détecteurs de ce panneau ?",
+      "sw": "Vigunduzi vya paneli hii viko wapi?"
+     },
+     "options": [
+      {
+       "en": "Over the CNCs",
+       "es": "Sobre los CNC",
+       "fr": "Au-dessus des CNC",
+       "sw": "Juu ya CNC"
+      },
+      {
+       "en": "On the conveyor riser in the shed",
+       "es": "En el tubo vertical de la caseta",
+       "fr": "Sur la colonne dans l’abri",
+       "sw": "Kwenye bomba la wima kibandani"
+      }
+     ],
+     "answer": 1
+    },
+    {
+     "id": "q3",
+     "quiz": true,
+     "text": {
+      "en": "Which group is the water?",
+      "es": "¿Qué grupo es el agua?",
+      "fr": "Quel groupe est l’eau ?",
+      "sw": "Kundi gani ni maji?"
+     },
+     "options": [
+      {
+       "en": "Group 1",
+       "es": "Grupo 1",
+       "fr": "Groupe 1",
+       "sw": "Kundi 1"
+      },
+      {
+       "en": "Group 11",
+       "es": "Grupo 11",
+       "fr": "Groupe 11",
+       "sw": "Kundi 11"
+      },
+      {
+       "en": "Group 13",
+       "es": "Grupo 13",
+       "fr": "Groupe 13",
+       "sw": "Kundi 13"
+      }
+     ],
+     "answer": 1
+    }
+   ]
+  }
+ ]
 }
