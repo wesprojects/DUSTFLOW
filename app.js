@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.10';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.10';
+import { createSim } from './sim.js?v=2026-11-15.11';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.11';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2921,7 +2921,8 @@ function showLib(on) {
   el.querySelector('#libpin').onkeydown = e => { if (e.key === 'Enter') pinGo(e.target.value); };
   if (el.querySelector('#libAll')) el.querySelector('#libAll').onclick = () => pinGo('');
   el.querySelector('#libX').onclick = () => showLib(false);
-  el.querySelectorAll('[data-lang1]').forEach(b => b.onclick = () => { const l = b.dataset.lang1; let ls = LANGS.includes(l) ? LANGS.filter(x => x !== l) : (LANGS.length >= 3 ? LANGS : [...LANGS, l]); setLangs(ls.length ? ls : [l]); renderAll(); showLib(true); });
+  el.querySelectorAll('[data-lang1]').forEach(b => b.onclick = () => { const l = b.dataset.lang1; let touched = false; try { touched = !!localStorage.getItem('dce_langs'); } catch (e) { /* storage blocked */ }
+    let ls = !touched && LANGS.length === 1 && LANGS[0] === 'en' && l !== 'en' ? [l] /* first pick replaces the English default */ : LANGS.includes(l) ? LANGS.filter(x => x !== l) : (LANGS.length >= 3 ? LANGS : [...LANGS, l]); setLangs(ls.length ? ls : [l]); renderAll(); showLib(true); });
   el.querySelectorAll('[data-libstart]').forEach(b => b.onclick = () => { const p = (TRJ.packages || []).find(x => x.id === b.dataset.libstart); showLib(false); HERO = false; renderCaption(); if (!p) return; if (p.kind === 'tour') storyStart(0); else startProc(p.proc); });
 }
 function libraryHTML() {
