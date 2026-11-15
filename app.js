@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.6';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.6';
+import { createSim } from './sim.js?v=2026-11-15.7';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.7';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1216,6 +1216,7 @@ function syncControls3D(dt) {
     if (c.type === 'eaton') { const tgt = S.eaton[id].on ? 0.35 : 2.75; C.piv.rotation.x += (tgt - C.piv.rotation.x) * Math.min(1, dt * 12); }
     else if (c.type === 'starter') { C.gb.material.emissive.setHex(S.starter[id] ? 0x1f8f3f : 0x000000); }
     else if (c.type === 'airlock_box') {
+      C.gb.material.emissive.setHex(S.airlockBox ? 0x2fd35a : 0); C.rb.material.emissive.setHex(S.airlockBox ? 0 : 0xc02020); // its lights show the state
       if (C.lcdOn !== S.airlockBox) { C.lcdOn = S.airlockBox; const t = C.tex; t.userData.draw = lcdDraw((S.airlockBox ? c.lcd_on : c.lcd_off).split('|')); t.userData.draw(t.userData.g, 160, 48); t.needsUpdate = true; }
     } else if (c.type === 'gate_panel') {
       for (const [gk, B] of Object.entries(C.btns)) { const o = S.gates[gk]; B.gb.material.emissive.setHex(o ? 0x2fd35a : 0); B.rb.material.emissive.setHex(o ? 0 : 0xc02020); }
@@ -2151,7 +2152,7 @@ function clickControl(u) {
   switch (c.type) {
     case 'eaton': if (act === 'handle') setEaton(id, !S.eaton[id].on); openPanel(c.where === 'outside' ? 'outside' : 'collector'); break;
     case 'starter': if (act === 'start' || act === 'stop') pressStarter(id, act); openPanel('collector'); break;
-    case 'airlock_box': if (act === 'on' || act === 'off') pressAirlockBox(act); openPanel('collector'); break;
+    case 'airlock_box': openPanel('collector'); break; // display only: starter 1 runs the airlock
     case 'gate_panel': if (act === 'open' || act === 'close') setGate(u.gate, act === 'open'); openPanel('gate_panel'); break;
     case 'air_valve': setAir(!S.air.on); openPanel('gate_panel'); break;
     case 'ball_valve': setValve(id, !S.valve[id].open); openPanel('flamex_' + c.zone); break;
