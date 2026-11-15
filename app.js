@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.8';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.8';
+import { createSim } from './sim.js?v=2026-11-15.9';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.9';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2142,8 +2142,17 @@ function pick(e) {
   }
   clearSel();
 }
+// in a training only the step's own controls respond (its glowing button or object, plus its panel)
+function trainingAllows(id) {
+  if (PROC) { const st = PROCDEF().steps[PROC.i]; if (!st || st.quiz) return false;
+    const ok = (st.highlight || []).map(h => String(h).split(':')[0]).concat(st.allow || []); if (st.panel) ok.push('panel_' + st.panel.slice(-1));
+    return ok.includes(id); }
+  if (ST) return !!ST.taskHl && ST.taskHl.split(':')[0] === id;
+  return true;
+}
 function clickControl(u) {
   const id = u.ctl, act = u.act;
+  if (!trainingAllows(id)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); return; }
   if (TOOL === 'flashlight') {
     const c = CTL[id];
     if (c && c.type === 'hatch' && c.detector && !S.hatch[id].open) { toggleHatch(id); renderAll(); return; } // flashlight in hand: the first click opens the hatch
@@ -2431,7 +2440,9 @@ function renderPanel() {
   if (el._sig === html) return;
   el._sig = html; el.innerHTML = html;
   el.querySelector('.x').onclick = closePanel;
-  const on = (sel, f) => el.querySelectorAll(sel).forEach(b => b.onclick = (e) => { f(b, e); renderAll(); });
+  const ctlOf = b => { const d = b.dataset; return d.eaton || d.start || d.stop || (d.albox ? 'airlock_box' : null) || (d.gopen || d.gclose ? 'gate_panel' : null) || (d.air !== undefined ? 'air_valve' : null)
+    || (d.fx ? 'panel_' + PANEL.slice(-1) : null) || d.valve || d.hatch || (d.shine ? (d.shine === 'A' ? 'hatch_cnc' : 'hatch_riser') : null) || d.lock || null; };
+  const on = (sel, f) => el.querySelectorAll(sel).forEach(b => b.onclick = (e) => { const c = ctlOf(b); if (c && !trainingAllows(c)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); return; } f(b, e); renderAll(); });
   on('[data-eaton]', b => setEaton(b.dataset.eaton, !S.eaton[b.dataset.eaton].on));
   on('[data-lock]', b => { const id = b.dataset.lock, L = lockable(id); if (L.locked) removeLock(id); else if (!isOffForLock(id)) { say(MSG.lock_needs_off, 'bad'); result(id, 'lock', 'lock_needs_off'); } else lockDialog(id); });
   on('[data-start]', b => pressStarter(b.dataset.start, 'start'));

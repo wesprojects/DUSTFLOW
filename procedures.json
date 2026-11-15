@@ -1232,7 +1232,11 @@
         ]
        }
       ]
-     }
+     },
+     "allow": [
+      "eaton_in_left",
+      "eaton_in_right"
+     ]
     },
     {
      "id": "l8",
@@ -1341,7 +1345,11 @@
         ]
        }
       ]
-     }
+     },
+     "allow": [
+      "eaton_in_left",
+      "eaton_in_right"
+     ]
     },
     {
      "id": "l9",
@@ -1669,7 +1677,17 @@
         "unlocked": "air_valve"
        }
       ]
-     }
+     },
+     "allow": [
+      "eaton_in_left",
+      "eaton_in_right",
+      "eaton_out_fan",
+      "eaton_out_blower",
+      "eaton_out_airlock",
+      "valve_A",
+      "valve_B",
+      "air_valve"
+     ]
     },
     {
      "id": "l20",
@@ -1731,7 +1749,17 @@
         ]
        }
       ]
-     }
+     },
+     "allow": [
+      "eaton_in_left",
+      "eaton_in_right",
+      "eaton_out_fan",
+      "eaton_out_blower",
+      "eaton_out_airlock",
+      "valve_A",
+      "valve_B",
+      "air_valve"
+     ]
     },
     {
      "id": "l21",
