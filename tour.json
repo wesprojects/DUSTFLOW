@@ -107,6 +107,18 @@
       "es": "Un sistema sirve a todas las máquinas. El ventilador principal jala el aire de las máquinas por los ductos.",
       "fr": "Un seul système dessert toutes les machines. Le ventilateur principal aspire l’air des machines par les conduits.",
       "sw": "Mfumo mmoja unahudumia mashine zote. Feni kuu inavuta hewa kutoka mashine kupitia mabomba."
+     },
+     "cam": {
+      "position": [
+       15.5,
+       12.5,
+       -1.5
+      ],
+      "target": [
+       4.6,
+       1.8,
+       -15.2
+      ]
      }
     },
     {
@@ -118,6 +130,18 @@
       "es": "El ciclón separa las virutas del aire. Las virutas van al contenedor. El aire pasa por los filtros y sale limpio.",
       "fr": "Le cyclone sépare les copeaux de l’air. Les copeaux vont à la benne. L’air passe par les filtres et sort propre.",
       "sw": "Kimbunga kinatenganisha vipande na hewa. Vipande vinaenda kwenye kontena. Hewa inapita kwenye vichujio na kutoka safi."
+     },
+     "cam": {
+      "position": [
+       15.5,
+       12.5,
+       -1.5
+      ],
+      "target": [
+       4.6,
+       1.8,
+       -15.2
+      ]
      }
     },
     {
@@ -129,6 +153,18 @@
       "es": "Flamex vigila las chispas en los ductos y las apaga con agua.",
       "fr": "Flamex surveille les étincelles dans les conduits et les éteint avec de l’eau.",
       "sw": "Flamex inaangalia cheche kwenye mabomba na kuzizima kwa maji."
+     },
+     "cam": {
+      "position": [
+       15.5,
+       12.5,
+       -1.5
+      ],
+      "target": [
+       4.6,
+       1.8,
+       -15.2
+      ]
      }
     }
    ]
@@ -476,10 +512,15 @@
     {
      "vp": "back",
      "cam": {
-      "vp": "back",
-      "keys": [
-       0,
-       1
+      "position": [
+       0.6,
+       9.5,
+       -27.6
+      ],
+      "target": [
+       3.0,
+       2.0,
+       -21.2
       ]
      },
      "dur": 5,
@@ -779,9 +820,8 @@
      }
     },
     {
-     "vp": "flamex",
+     "vp": "blower",
      "demo": "keep",
-     "cam": "none",
      "panel": "flamex_B",
      "until": {
       "path": "flamex.B.fire",
@@ -816,12 +856,23 @@
        }
       }
      ],
-     "xray": true
+     "xray": true,
+     "cam": {
+      "position": [
+       3.0,
+       3.6,
+       -25.0
+      ],
+      "target": [
+       5.5,
+       2.6,
+       -21.9
+      ]
+     }
     },
     {
-     "vp": "flamex",
+     "vp": "blower",
      "demo": "keep",
-     "cam": "none",
      "panel": "flamex_B",
      "rings": [
       "panel_B"
@@ -850,12 +901,23 @@
       "es": "Se silencia igual. El agua sigue hasta el reset.",
       "fr": "On coupe pareil. L'eau continue jusqu'au reset.",
       "sw": "Zima honi vivyo hivyo. Maji yanaendelea hadi reset."
+     },
+     "cam": {
+      "position": [
+       3.0,
+       3.6,
+       -25.0
+      ],
+      "target": [
+       5.5,
+       2.6,
+       -21.9
+      ]
      }
     },
     {
-     "vp": "flamex",
+     "vp": "blower",
      "demo": "keep",
-     "cam": "none",
      "panel": "flamex_B",
      "rings": [
       "panel_B"
@@ -884,6 +946,18 @@
       "es": "Reset: el agua se detiene. Llave a 0. Flamex vigila de nuevo.",
       "fr": "Reset : l'eau s'arrête. Clé sur 0. Flamex surveille à nouveau.",
       "sw": "Reset: maji yanasimama. Ufunguo kwenye 0. Flamex inalinda tena."
+     },
+     "cam": {
+      "position": [
+       3.0,
+       3.6,
+       -25.0
+      ],
+      "target": [
+       5.5,
+       2.6,
+       -21.9
+      ]
      }
     }
    ]
@@ -923,7 +997,19 @@
        "sw": "Flamex inaangalia cheche muda wote."
       }
      ],
-     "xray": true
+     "xray": true,
+     "cam": {
+      "position": [
+       15.5,
+       12.5,
+       -1.5
+      ],
+      "target": [
+       4.6,
+       1.8,
+       -15.2
+      ]
+     }
     }
    ]
   }

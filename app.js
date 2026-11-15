@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.27';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.27';
+import { createSim } from './sim.js?v=2026-11-15.28';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.28';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2877,7 +2877,7 @@ function storyPhase(k) {
   if (ph.ride_keep && RIDE) { /* still following */ }
   else if (ph.ride && MODE !== 'walk' && startRide(ph.ride, ph)) { /* the ride flies the camera */ }
   else if (ph.demo === 'start') { /* the demo flies the camera */ }
-  else if (ph.cam === 'none' || ph.demo) { /* the demo flies the camera */ }
+  else if (ph.cam === 'none' || (ph.demo && !(ph.cam && ph.cam.position))) { /* the demo flies the camera */ }
   else if (vw) flyTo({ position: vw.position, target: vw.target });
   else if (ph.cam && ph.cam.position) flyTo(ph.cam);
   else { const v = VPS.find(x => x.id === (ph.cam && ph.cam.vp ? ph.cam.vp : ph.vp)); if (v) playKeys((ph.cam && ph.cam.keys ? ph.cam.keys : v.camera.map((_, j) => j)).map(j => v.camera[j])); } // the video's shot, checked clear
