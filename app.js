@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.31';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.31';
+import { createSim } from './sim.js?v=2026-11-15.34';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.34';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1145,6 +1145,39 @@ function kitBox(matRe) {
     const m = new THREE.Mesh(new THREE.TubeGeometry(path, 24, 0.006, 6), cm); m.castShadow = true; world.add(m);
   }
   if (loose.length) console.log('[dce] tidied riser detector cables (' + loose.join(', ') + ')');
+}
+{ // roll-off end: couplings at 1/3 and 2/3 across the container end (Wes 11-15), the conveyor hoses run into them, no stray rod
+  const ro = scene.getObjectByName('RollOff_Simple'); scene.updateMatrixWorld(true);
+  if (ro) {
+    const body = new THREE.Box3(); const spools = []; let rod = null;
+    ro.traverse(m => { if (!m.isMesh) return; const b = new THREE.Box3().setFromObject(m), sz = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+      if (sz.x > 3) body.union(b);
+      else if (sz.y > 1.2 && sz.x < 0.1 && sz.z < 0.1 && c.x > 1.6) rod = m;
+      else if (Math.abs(sz.y - 0.3) < 0.05 && Math.abs(sz.z - 0.3) < 0.05 && sz.x < 0.2) spools.push({ m, c }); });
+    if (rod) rod.visible = false, rod.material = NO_DRAW;
+    if (!body.isEmpty() && spools.length === 2) {
+      spools.sort((p, q) => q.c.z - p.c.z); // the one nearer the shop first
+      const z1 = body.max.z - (body.max.z - body.min.z) / 3, z2 = body.max.z - 2 * (body.max.z - body.min.z) / 3;
+      const S = [];
+      spools.forEach((p, k) => { const dz = (k ? z2 : z1) - p.c.z; const w = p.m.getWorldPosition(new THREE.Vector3()); w.z += dz; p.m.position.copy(p.m.parent.worldToLocal(w)); p.m.updateMatrixWorld(true); S.push([p.c.y, k ? z2 : z1, p.c.x + 0.07]); });
+      // the two 8 in conveyor hoses, redrawn from the shed-wall flanges straight into the couplings (the source hoses missed them)
+      spools.forEach(p => { p.m.scale.multiplyScalar(0.2032 / 0.3); p.m.updateMatrixWorld(true); }); // couplings are 8 in, the hose size
+      const X0 = S[0][2] - 0.035, HR = 0.1016;
+      let hm = null; scene.traverse(m => { if (m.isMesh && /^DC_ConveyHoses_/.test(m.name)) { if (!hm && /Gold/.test([].concat(m.material)[0].name)) hm = [].concat(m.material)[0]; m.userData.noDraw = true; m.material = NO_DRAW; } });
+      const mat = hm ? hm.clone() : new THREE.MeshLambertMaterial({ color: 0xd8b25a, transparent: true, opacity: 0.6 }); mat.side = THREE.DoubleSide; mat.transparent = true; mat.opacity = 0.55; mat.depthWrite = false; // see-through like the rest of the conveying hoses: the chips show inside
+      const ribs = new THREE.MeshLambertMaterial({ color: 0xb08a3a });
+      const runs = [[[2.40, 3.75, -19.47], [2.12, 3.72, -19.62], [2.18, 3.25, -20.25], [2.16, 2.72, S[0][1]], [X0, S[0][0], S[0][1]]],
+                    [[2.40, 1.25, -19.46], [2.14, 1.32, -19.72], [2.22, 1.95, -20.85], [2.16, 2.68, S[1][1]], [X0, S[1][0], S[1][1]]]];
+      for (const pts of runs) {
+        const cu = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal');
+        world.add(new THREE.Mesh(new THREE.TubeGeometry(cu, 90, HR, 20, false), mat));
+        const L = cu.getLength(), n = Math.floor(L / 0.05); // helix wire ribs every 5 cm
+        for (let k = 1; k < n; k++) { const t = k / n, p = cu.getPointAt(t), tg = cu.getTangentAt(t); const r = new THREE.Mesh(new THREE.TorusGeometry(HR + 0.003, 0.004, 4, 20), ribs); r.position.copy(p); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg); world.add(r); }
+      }
+      if (CTL.hose) CTL.hose.pos = [X0, S[0][0], S[0][1]]; // the coupling that is unhooked for the exterior test
+      if (CTL3.hose) { CTL3.hose.g.position.set(X0 + 0.02, S[0][0], S[0][1]); CTL3.hose.ring.rotation.y = Math.PI / 2; }
+    }
+  }
 }
 const FXFACE = {};
 for (const z of ['A', 'B']) {
