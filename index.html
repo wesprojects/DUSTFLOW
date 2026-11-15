@@ -183,6 +183,9 @@ body.proc-on #caption{display:none !important}
 #quizm .qd-ic circle{stroke-dasharray:145;stroke-dashoffset:145;animation:fbDraw .5s ease-out forwards}#quizm .qd-ic path{stroke-dasharray:60;stroke-dashoffset:60;animation:fbDraw .4s .35s ease-out forwards}
 #quizm .qd-t{font:800 40px 'Segoe UI',system-ui,sans-serif;letter-spacing:.02em;margin:14px 0 6px;color:#14181f}#quizm .qd-n{font:500 19px 'Segoe UI',system-ui,sans-serif;color:#5f6773}
 #quizm .qd-acts{display:flex;gap:14px;justify-content:center;margin-top:26px}#quizm .qd-acts .q-opt{min-width:170px;text-align:center}#quizm .qd-acts .q-opt.go{background:#2563eb;border-color:#2563eb;color:#fff}
+
+#pipf{position:absolute;right:24px;bottom:24px;width:min(34vw,620px);aspect-ratio:16/9;border:3px solid #fff;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.45);z-index:20;pointer-events:none;overflow:hidden}
+#pipf span{position:absolute;left:0;top:0;padding:6px 12px;background:rgba(15,18,24,.78);color:#fff;font:600 15px 'Segoe UI',system-ui,sans-serif;border-bottom-right-radius:10px}
 #lib{position:absolute;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:6vh 24px;background:rgba(236,239,243,.86);backdrop-filter:blur(6px);overflow:auto}
 #lib .libin{width:min(1240px,100%);color:#14181f}
 #lib .libtop{display:flex;align-items:center;gap:10px;margin-bottom:18px}#lib h2{font:700 40px 'Segoe UI',system-ui,sans-serif;margin:0 auto 0 0}
@@ -364,7 +367,7 @@ body{font-size:15px}
     <svg width="107" height="9" viewBox="0 0 107 9" style="display:block;margin-top:1px"><text x="0" y="8" textLength="107" lengthAdjust="spacingAndGlyphs" font-family="'DM Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace" font-size="7.5" font-weight="700" fill="#f5a524">RESEARCH AND DEVELOPMENT</text></svg>
   </div>
 </header>
-<script>const BUILD = "2026-11-15.15"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
+<script>const BUILD = "2026-11-15.16"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
 <div id="app">
   <aside id="side" aria-label="Controls"></aside>
   <main id="stage">
@@ -386,6 +389,6 @@ body{font-size:15px}
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 }}
 </script>
-<script type="module" src="app.js?v=2026-11-15.15"></script>
+<script type="module" src="app.js?v=2026-11-15.16"></script>
 </body>
 </html>

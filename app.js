@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.15';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.15';
+import { createSim } from './sim.js?v=2026-11-15.16';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.16';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2532,7 +2532,7 @@ function enterStep() {
     const dir = from.clone().sub(c).setY(0).normalize(), cp = c.clone().addScaledVector(dir, st.lookDist || 2.6); cp.y = c.y + (st.lookUp ?? 0.8); // straight in from our side
     flyTo({ position: [cp.x, cp.y, cp.z], target: [c.x, c.y, c.z] }, 1.6);
   }
-  else if (hp) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
+  else if (hp && !PROCDEF().fixed_view) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
     const d = Math.abs(hn.y) > 0.7 ? 2.2 : 1.9, cp = hp.clone().addScaledVector(hn, d); cp.y += Math.abs(hn.y) > 0.7 ? 0 : 0.35;
     if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(1.2, 0, 1.2));
     flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z] }, 2.4);
@@ -2541,6 +2541,7 @@ function enterStep() {
   else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
   if (st.scene) { applyScene(st.scene); PROC.sceneOn = true; } // e.g. the blower or fan opened up so its wheel can be seen turning
   else if (PROC.sceneOn) { applyScene(null); PROC.sceneOn = false; } // walls back
+  setPip(st.pip || null, st.pipTitle);
   if (st.cut && CUT[st.cut]) { if (PROC.cutOn && PROC.cutOn !== st.cut) setCutOpen(PROC.cutOn, false); setCutOpen(st.cut, true); PROC.cutOn = st.cut; } // open the housing: the wheel is seen turning
   else if (PROC.cutOn) { setCutOpen(PROC.cutOn, false); PROC.cutOn = null; }
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
@@ -2644,7 +2645,7 @@ function feedback(ok, where) {
 function renderProc() {
   let el = $('#proc');
   document.body.classList.toggle('proc-on', !!PROC);
-  if (!PROC) { if (el) el.remove(); if ($('#quizm')) $('#quizm').remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
+  if (!PROC) { setPip(null); if (el) el.remove(); if ($('#quizm')) $('#quizm').remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
   if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card pcard'; elRight.prepend(el); }
   const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = PRIM;
   const big = o => esc(tx(o, L1)), small = o => LANGS.length > 1 ? LANGS.slice(1).filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
@@ -3132,6 +3133,30 @@ const POST = (() => {
   const qs = new THREE.Scene(); qs.add(quad); const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   return { rt, mat, qs, qc };
 })();
+// picture in picture: the video's own view of a machine (cutaway open) in the corner, the main camera stays put
+let PIP = null; const pipCam = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 400);
+function setPip(vpId, title) {
+  const el = $('#pipf'); if (el) el.remove();
+  if (!vpId) { PIP = null; return; }
+  const v = VPS.find(x => x.id === vpId); if (!v) { PIP = null; return; }
+  const k = v.camera[v.camera.length - 1];
+  const OPENS = /^(Ctx_Wall|Enc__|Frame__|DC_Enclosure_Door|Room_Wall|Room_Roof|Room_Overhead)/;
+  PIP = { k, hide: v.hide.filter(n => OPENS.test(n) && NODE[n]).map(n => NODE[n]).concat(Object.keys(NODE).filter(n => /^Room_WallN/.test(n)).map(n => NODE[n])) };
+  pipCam.position.copy(V3(k.position)); pipCam.lookAt(V3(k.target)); pipCam.fov = fovFor(k);
+  const f = document.createElement('div'); f.id = 'pipf'; f.innerHTML = `<span>${esc(tx(title || v.title, PRIM))}</span>`; elStage.appendChild(f);
+}
+function renderPip() {
+  if (!PIP) return;
+  const el = $('#pipf'); if (!el) return;
+  const r = el.getBoundingClientRect(), c = renderer.domElement.getBoundingClientRect(), pr = renderer.getPixelRatio();
+  const x = (r.left - c.left), y = c.height - (r.bottom - c.top), w = r.width, h = r.height; if (w < 10) return;
+  pipCam.aspect = w / h; pipCam.updateProjectionMatrix();
+  const was = PIP.hide.map(o => o.visible); PIP.hide.forEach(o => { o.visible = false; });
+  renderer.setScissorTest(true); renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h);
+  renderer.render(scene, pipCam);
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, c.width, c.height);
+  PIP.hide.forEach((o, i) => { o.visible = was[i]; });
+}
 function renderFinal() {
   if (!POST || QUAL.level <= 1) { renderer.setRenderTarget(null); renderer.render(scene, camera); return; }
   const w = renderer.domElement.width, h = renderer.domElement.height;
@@ -3213,6 +3238,7 @@ function frameInner() {
   if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
   if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
   renderFinal();
+  renderPip();
   stepQuality(rawDt);
   placeLabels(dt);
   uiAcc += dt;

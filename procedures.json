@@ -2584,7 +2584,6 @@
    "steps": [
     {
      "id": "s1",
-     "focus": "collector_wall",
      "highlight": [
       "starter1:start"
      ],
@@ -2599,12 +2598,13 @@
        "starter.starter1",
        true
       ]
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "s2",
      "ack": true,
-     "focus": "collector_wall",
      "highlight": [
       "airlock_box"
      ],
@@ -2619,11 +2619,12 @@
       "es": "Luz verde encendida. La pantalla dice SYSTEM ON.",
       "fr": "Voyant vert allumé. L'écran indique SYSTEM ON.",
       "sw": "Taa ya kijani inawaka. Skrini inasoma SYSTEM ON."
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "s3",
-     "focus": "collector_wall",
      "highlight": [
       "starter2:start"
      ],
@@ -2638,13 +2639,14 @@
        "starter.starter2",
        true
       ]
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "s4",
      "ack": true,
      "listen": true,
-     "scene": "blower",
      "text": {
       "en": "Listen for the transfer blower.",
       "es": "Escuche el soplador de transferencia.",
@@ -2657,13 +2659,16 @@
       "fr": "La roue de la soufflante tourne. On l'entend.",
       "sw": "Gurudumu la kipuliza linazunguka. Unasikia likifanya kazi."
      },
-     "look": "Rig_BlowerImpeller",
      "cut": "transfer_blower",
-     "lookFrom": "blower"
+     "pip": "blower",
+     "highlight": [
+      "starter2"
+     ],
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "s5",
-     "focus": "collector_wall",
      "highlight": [
       "starter3:start"
      ],
@@ -2678,13 +2683,14 @@
        "starter.starter3",
        true
       ]
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "s6",
      "ack": true,
      "listen": true,
-     "scene": "fan",
      "text": {
       "en": "Listen for the dust collector.",
       "es": "Escuche el colector de polvo.",
@@ -2697,12 +2703,16 @@
       "fr": "La roue du ventilateur tourne. On l'entend.",
       "sw": "Gurudumu la feni linazunguka. Unasikia likifanya kazi."
      },
-     "look": "Rig_FanImpeller",
-     "cut": "fan"
+     "cut": "fan",
+     "pip": "fan",
+     "highlight": [
+      "starter3"
+     ],
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "d1",
-     "focus": "collector_wall",
      "highlight": [
       "starter3:stop"
      ],
@@ -2723,11 +2733,12 @@
       "es": "El colector se frena y se detiene.",
       "fr": "Le dépoussiéreur ralentit et s'arrête.",
       "sw": "Kikusanya vumbi kinapunguza kasi na kusimama."
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "d2",
-     "focus": "collector_wall",
      "highlight": [
       "starter2:stop"
      ],
@@ -2748,11 +2759,12 @@
       "es": "El soplador de transferencia se detiene.",
       "fr": "La soufflante de transfert s'arrête.",
       "sw": "Kipuliza cha kuhamisha kinasimama."
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "d3",
-     "focus": "collector_wall",
      "highlight": [
       "starter1:stop"
      ],
@@ -2767,12 +2779,13 @@
        "starter.starter1",
        false
       ]
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "d4",
      "ack": true,
-     "focus": "collector_wall",
      "highlight": [
       "airlock_box"
      ],
@@ -2787,7 +2800,9 @@
       "es": "Luz roja encendida. La pantalla dice SYSTEM OFF.",
       "fr": "Voyant rouge allumé. L'écran indique SYSTEM OFF.",
       "sw": "Taa nyekundu inawaka. Skrini inasoma SYSTEM OFF."
-     }
+     },
+     "focus": "collector_wall",
+     "panel": "collector"
     },
     {
      "id": "q1",
@@ -2864,7 +2879,8 @@
      ],
      "answer": 0
     }
-   ]
+   ],
+   "fixed_view": true
   }
  ]
 }
