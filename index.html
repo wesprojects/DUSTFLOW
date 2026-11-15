@@ -368,7 +368,7 @@ body{font-size:15px}
     <svg width="107" height="9" viewBox="0 0 107 9" style="display:block;margin-top:1px"><text x="0" y="8" textLength="107" lengthAdjust="spacingAndGlyphs" font-family="'DM Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace" font-size="7.5" font-weight="700" fill="#f5a524">RESEARCH AND DEVELOPMENT</text></svg>
   </div>
 </header>
-<script>const BUILD = "2026-11-15.35"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
+<script>const BUILD = "2026-11-15.37"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
 <script>// always run the newest build: if the server has a newer one than this cached page, reload once onto it
 fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(v => {
   if (v && v.build && v.build !== BUILD && !location.search.includes('b=' + v.build)) { const u = new URL(location.href); u.searchParams.set('b', v.build); location.replace(u.toString()); }
@@ -394,6 +394,6 @@ fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json())
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 }}
 </script>
-<script type="module" src="app.js?v=2026-11-15.35"></script>
+<script type="module" src="app.js?v=2026-11-15.37"></script>
 </body>
 </html>

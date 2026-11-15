@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.35';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.35';
+import { createSim } from './sim.js?v=2026-11-15.37';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.37';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1146,6 +1146,20 @@ function kitBox(matRe) {
   }
   if (loose.length) console.log('[dce] tidied riser detector cables (' + loose.join(', ') + ')');
 }
+// the unhooked hose: its coupling end drops to the ground beside the ladder, and rises back on when reconnected
+const HOSES = [];
+function hoseDropPts(rt) { const p = rt.pts.map(q => q.slice()), n = p.length, e = p[n - 1]; const g = rt.drop_to || [e[0] + 0.15, 0.97, e[2] + 0.35];
+  p[n - 1] = g; p[n - 2] = [(p[n - 3][0] + g[0]) / 2 + 0.05, (p[n - 3][1] + g[1]) / 2, (p[n - 3][2] + g[2]) / 2]; return p; }
+function stepHoses(dt) {
+  for (const H of HOSES) { if (H.rt.coupling !== 'near') continue;
+    const want = S.hose && S.hose.connected === false ? 1 : 0; if (Math.abs(want - H.t) < 0.002 && H.done === want) continue;
+    H.t += (want - H.t) * Math.min(1, dt * 3.5); if (Math.abs(want - H.t) < 0.002) { H.t = want; H.done = want; }
+    const A = H.rt.pts, B = hoseDropPts(H.rt), k = H.t * H.t * (3 - 2 * H.t);
+    const cu = new THREE.CatmullRomCurve3(A.map((a, i) => new THREE.Vector3(a[0] + (B[i][0] - a[0]) * k, a[1] + (B[i][1] - a[1]) * k, a[2] + (B[i][2] - a[2]) * k)), false, 'centripetal');
+    H.tube.geometry.dispose(); H.tube.geometry = new THREE.TubeGeometry(cu, 90, H.HRr, 20, false);
+    H.ribs.forEach((r, j) => { const t = (j + 1) / (H.ribs.length + 1); r.position.copy(cu.getPointAt(t)); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cu.getTangentAt(t)); });
+  }
+}
 function routeCurve(rt) { return new THREE.CatmullRomCurve3(rt.pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal'); }
 // flow segments that have a route in controls.json follow it (same curve as the 3D hose); neighbouring segments are re-joined to its ends
 (function applyRoutes() {
@@ -1183,15 +1197,34 @@ function routeCurve(rt) { return new THREE.CatmullRomCurve3(rt.pts.map(p => new 
       const ribs = new THREE.MeshLambertMaterial({ color: 0xb08a3a });
       for (const rt of Object.values(RT)) { if (!rt || rt.mesh !== 'flex') continue;
         const cu = routeCurve(rt), HRr = rt.radius || HR;
-        world.add(new THREE.Mesh(new THREE.TubeGeometry(cu, 90, HRr, 20, false), mat));
+        const tube = new THREE.Mesh(new THREE.TubeGeometry(cu, 90, HRr, 20, false), mat); world.add(tube);
+        const H = { rt, tube, ribs: [], HRr, t: 0, done: 0 }; HOSES.push(H);
         const L = cu.getLength(), n = Math.floor(L / 0.05); // helix wire ribs every 5 cm
-        for (let k = 1; k < n; k++) { const t = k / n, p = cu.getPointAt(t), tg = cu.getTangentAt(t); const r = new THREE.Mesh(new THREE.TorusGeometry(HRr + 0.003, 0.004, 4, 20), ribs); r.position.copy(p); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg); world.add(r); }
+        for (let k = 1; k < n; k++) { const t = k / n, p = cu.getPointAt(t), tg = cu.getTangentAt(t); const r = new THREE.Mesh(new THREE.TorusGeometry(HRr + 0.003, 0.004, 4, 20), ribs); r.position.copy(p); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg); world.add(r); H.ribs.push(r); }
       }
       if (CTL.hose) CTL.hose.pos = [X0, S[0][0], S[0][1]]; // the coupling that is unhooked for the exterior test
       if (CTL3.hose) { CTL3.hose.g.position.set(X0 + 0.02, S[0][0], S[0][1]); CTL3.hose.ring.rotation.y = Math.PI / 2; }
     }
   }
 }
+// props from controls.json: 6 ft A-frame ladders where the procedures need them (roll-off inlet, window hatch)
+function buildLadder(p) {
+  const g = new THREE.Group(), H = p.height || 1.83, Wd = p.width || 0.5, sp = 0.36 * H; // open A-frame: base spread about 0.66 m on a 6 ft ladder
+  const rail = new THREE.MeshLambertMaterial({ color: 0xf2c230 }), alu = new THREE.MeshLambertMaterial({ color: 0xb8bcc2 }), cap = new THREE.MeshLambertMaterial({ color: 0x2b2f36 });
+  const bar = (a, b, r, m) => { const d = b.clone().sub(a), L = d.length(); const o = new THREE.Mesh(new THREE.BoxGeometry(r, L, r * 0.45), m); o.position.copy(a).addScaledVector(d, 0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); g.add(o); return o; };
+  const top = (sx) => new THREE.Vector3(sx * Wd / 2 * 0.86, H - 0.04, 0);
+  for (const side of [-1, 1]) { // front (steps) and back legs
+    for (const sx of [-1, 1]) bar(new THREE.Vector3(sx * Wd / 2, 0, side * sp / 2), top(sx), 0.05, rail);
+  }
+  const steps = Math.round(H / 0.3) - 1;
+  for (let k = 1; k <= steps; k++) { const t = k / (steps + 1), z = -sp / 2 * (1 - t), y = t * (H - 0.04);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(Wd * (1 - 0.14 * t), 0.03, 0.09), alu); st.position.set(0, y, z); g.add(st); }
+  for (const t of [0.35]) { const y = t * H; bar(new THREE.Vector3(-Wd / 2 * (1 - 0.14 * t), y, sp / 2 * (1 - t)), new THREE.Vector3(Wd / 2 * (1 - 0.14 * t), y, sp / 2 * (1 - t)), 0.025, alu); } // back brace
+  const tc = new THREE.Mesh(new THREE.BoxGeometry(Wd * 0.95, 0.07, 0.24), cap); tc.position.set(0, H - 0.01, 0); g.add(tc);
+  g.position.copy(V3(p.pos)); if (p.spread === 'x') g.rotation.y = Math.PI / 2; g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  world.add(g); return g;
+}
+for (const p of (CT.props || [])) if (p && p.type === 'ladder') buildLadder(p);
 const FXFACE = {};
 for (const z of ['A', 'B']) {
   const n = NODE[CT.flamex.panels[z].node]; if (!n) continue;
@@ -3408,7 +3441,7 @@ function frameInner() {
   controls.enabled = !PROC; // step trainings hold the camera; the dust collection tour can be looked around (it pauses)
   stepRide(dt);
   stepBursts(dt);
-  stepCover(dt); stepFxGlow(performance.now() / 1000);
+  stepCover(dt); stepFxGlow(performance.now() / 1000); stepHoses(dt);
   { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
     const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);
     if (Math.abs(dn - camera.near) > 0.004) { camera.near = dn; camera.updateProjectionMatrix(); }

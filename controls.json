@@ -1254,5 +1254,34 @@
     ]
    ]
   }
- }
+ },
+ "props": [
+  {
+   "_note": "Static props. Ladders: 6 ft fiberglass A-frame; pos = floor point under the top cap; spread = axis the legs open along; width across the steps."
+  },
+  {
+   "type": "ladder",
+   "name": "6 ft A-frame ladder (roll-off inlet)",
+   "pos": [
+    2.08,
+    0.9,
+    -20.72
+   ],
+   "height": 1.83,
+   "spread": "z",
+   "width": 0.3
+  },
+  {
+   "type": "ladder",
+   "name": "6 ft A-frame ladder (window hatch)",
+   "pos": [
+    4.12,
+    1.464,
+    -18.45
+   ],
+   "height": 1.83,
+   "spread": "z",
+   "width": 0.5
+  }
+ ]
 }
