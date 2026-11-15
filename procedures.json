@@ -2657,7 +2657,9 @@
       "fr": "La roue de la soufflante tourne. On l'entend.",
       "sw": "Gurudumu la kipuliza linazunguka. Unasikia likifanya kazi."
      },
-     "look": "Rig_BlowerImpeller"
+     "look": "Rig_BlowerImpeller",
+     "cut": "transfer_blower",
+     "lookFrom": "blower"
     },
     {
      "id": "s5",
@@ -2695,7 +2697,8 @@
       "fr": "La roue du ventilateur tourne. On l'entend.",
       "sw": "Gurudumu la feni linazunguka. Unasikia likifanya kazi."
      },
-     "look": "Rig_FanImpeller"
+     "look": "Rig_FanImpeller",
+     "cut": "fan"
     },
     {
      "id": "d1",

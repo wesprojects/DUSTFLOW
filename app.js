@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.13';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.13';
+import { createSim } from './sim.js?v=2026-11-15.14';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.14';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2514,8 +2514,9 @@ function enterStep() {
   else if (hid && CTL[hid]) { hp = V3(CTL[hid].pos); const f = CTL[hid].face || CTL[hid].normal; if (f) hn = V3(f).normalize(); }
   if (st.focus && CT.views[st.focus]) applyViewVis(CT.views[st.focus]);
   if (st.look && NODE[st.look]) { // turn to look at it from about where we stand, through the opened wall: no long flight
-    const c = new THREE.Box3().setFromObject(NODE[st.look]).getCenter(new THREE.Vector3()), cp = camera.position.clone();
-    const back = cp.clone().sub(c).setY(0).normalize(); cp.addScaledVector(back, 0.6); cp.y += 0.5;
+    const c = new THREE.Box3().setFromObject(NODE[st.look]).getCenter(new THREE.Vector3());
+    const vk = st.lookFrom && VPS.find(v => v.id === st.lookFrom), from = vk ? V3(vk.camera[vk.camera.length - 1].position) : camera.position;
+    const dir = from.clone().sub(c).setY(0).normalize(), cp = c.clone().addScaledVector(dir, st.lookDist || 2.6); cp.y = c.y + (st.lookUp ?? 0.8); // straight in from our side
     flyTo({ position: [cp.x, cp.y, cp.z], target: [c.x, c.y, c.z] }, 1.6);
   }
   else if (hp) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
@@ -2527,6 +2528,8 @@ function enterStep() {
   else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
   if (st.scene) { applyScene(st.scene); PROC.sceneOn = true; } // e.g. the blower or fan opened up so its wheel can be seen turning
   else if (PROC.sceneOn) { applyScene(null); PROC.sceneOn = false; } // walls back
+  if (st.cut && CUT[st.cut]) { if (PROC.cutOn && PROC.cutOn !== st.cut) setCutOpen(PROC.cutOn, false); setCutOpen(st.cut, true); PROC.cutOn = st.cut; } // open the housing: the wheel is seen turning
+  else if (PROC.cutOn) { setCutOpen(PROC.cutOn, false); PROC.cutOn = null; }
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
   if (st.panel) openPanel(st.panel);
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
