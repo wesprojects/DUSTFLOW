@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.16';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.16';
+import { createSim } from './sim.js?v=2026-11-15.17';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.17';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2542,6 +2542,7 @@ function enterStep() {
   if (st.scene) { applyScene(st.scene); PROC.sceneOn = true; } // e.g. the blower or fan opened up so its wheel can be seen turning
   else if (PROC.sceneOn) { applyScene(null); PROC.sceneOn = false; } // walls back
   setPip(st.pip || null, st.pipTitle);
+  if (st.pip && PANEL) closePanel(); // the inset needs the corner the 2D panel would cover
   if (st.cut && CUT[st.cut]) { if (PROC.cutOn && PROC.cutOn !== st.cut) setCutOpen(PROC.cutOn, false); setCutOpen(st.cut, true); PROC.cutOn = st.cut; } // open the housing: the wheel is seen turning
   else if (PROC.cutOn) { setCutOpen(PROC.cutOn, false); PROC.cutOn = null; }
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }

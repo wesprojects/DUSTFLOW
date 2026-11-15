@@ -2664,8 +2664,7 @@
      "highlight": [
       "starter2"
      ],
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "s5",
@@ -2708,8 +2707,7 @@
      "highlight": [
       "starter3"
      ],
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "d1",
