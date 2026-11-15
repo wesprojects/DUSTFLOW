@@ -961,7 +961,7 @@
      "focus": "collector_wall",
      "panel": "collector",
      "highlight": [
-      "starter3"
+      "starter3:stop"
      ],
      "text": {
       "en": "Stop the dust collector fan: red button on starter 3.",
@@ -1006,7 +1006,7 @@
      "id": "l6",
      "panel": "collector",
      "highlight": [
-      "starter2"
+      "starter2:stop"
      ],
      "text": {
       "en": "Stop the transfer blower: red button on starter 2.",
@@ -1025,7 +1025,7 @@
      "id": "l5",
      "panel": "collector",
      "highlight": [
-      "starter1",
+      "starter1:stop",
       "airlock_box"
      ],
      "text": {
@@ -1356,9 +1356,9 @@
      "focus": "collector_wall",
      "panel": "collector",
      "highlight": [
-      "starter3",
-      "starter2",
-      "starter1"
+      "starter3:start",
+      "starter2:start",
+      "starter1:start"
      ],
      "text": {
       "en": "Try to start: press green on starters 3, 2 and 1. Nothing may start.",
@@ -1405,9 +1405,9 @@
      "id": "l14",
      "panel": "collector",
      "highlight": [
-      "starter3",
-      "starter2",
-      "starter1"
+      "starter3:stop",
+      "starter2:stop",
+      "starter1:stop"
      ],
      "text": {
       "en": "Return the controls to off: press red on starters 3, 2 and 1, so nothing restarts when power comes back.",

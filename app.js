@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.4';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.4';
+import { createSim } from './sim.js?v=2026-11-15.5';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.5';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2489,7 +2489,7 @@ function enterStep() {
   const P = PROCDEF(), st = P.steps[PROC.i];
   PROC.events = []; PROC.msg = null;
   if (!st) { renderProc(); return; }
-  const hid = (st.highlight || []).find(i => CTL[i] || /^panel_/.test(i));
+  const hid = (st.highlight || []).map(h => String(h).split(':')[0]).find(i => CTL[i] || /^panel_/.test(i));
   let hp = null, hn = new THREE.Vector3(0, 0, 1);
   if (hid && /^panel_/.test(hid) && FXFACE[hid.slice(6)] && FXFACE[hid.slice(6)].mesh) { hp = new THREE.Box3().setFromObject(FXFACE[hid.slice(6)].mesh).getCenter(new THREE.Vector3()); }
   else if (hid && CTL[hid]) { hp = V3(CTL[hid].pos); const f = CTL[hid].face || CTL[hid].normal; if (f) hn = V3(f).normalize(); }
@@ -2519,23 +2519,25 @@ function enterStep() {
       renderAll(); setTimeout(nx, 800); };
     setTimeout(nx, 1100);
   }
-  LSRC.proc = (st.highlight || []).filter(id => CTL[id] || /^panel_/.test(id)).slice(0, 3).map(id => ({ key: 'p_' + id, text: CTL[id] ? CTL[id].name : CT.flamex.panels[id.slice(6)].name, a: { ctl: id }, accent: '#2563eb' }));
+  LSRC.proc = (st.highlight || []).map(h => String(h).split(':')[0]).filter((id, k, a) => a.indexOf(id) === k && (CTL[id] || /^panel_/.test(id))).slice(0, 3).map(id => ({ key: 'p_' + id, text: CTL[id] ? CTL[id].name : CT.flamex.panels[id.slice(6)].name, a: { ctl: id }, accent: '#2563eb' }));
   refreshLabels();
   renderProc();
 }
 const hlGroup = new THREE.Group(); scene.add(hlGroup);
 function highlightControls(ids) {
   hlGroup.clear();
-  for (const id of ids) {
+  for (const id0 of ids) {
+    const [cid, part] = String(id0).split(':'), id = part ? cid : id0;
     let p = null;
     if (/^panel_/.test(id)) { const n = NODE[CT.flamex.panels[id.slice(6)].node]; if (n) p = new THREE.Box3().setFromObject(n).getCenter(new THREE.Vector3()); }
     else if (CTL[id]) { p = V3(CTL[id].pos); if (CTL[id].type === 'bucket' && S.bucket.placed) p = V3(CTL[id].placed_pos); }
     if (!p) continue;
     let bb = null; // the object itself: its 3D face (panel), its built group (controls), or a small box at its spot
     if (/^panel_/.test(id) && FXFACE[id.slice(6)] && FXFACE[id.slice(6)].mesh) bb = new THREE.Box3().setFromObject(FXFACE[id.slice(6)].mesh);
+    else if (part && CTL3[cid]) { const C = CTL3[cid], m = /^(start|on|open)$/.test(part) ? C.gb : /^(stop|off|close)$/.test(part) ? C.rb : C.btns && C.btns[part] ? C.btns[part].gb : /^handle$/.test(part) ? C.piv : null; if (m) { m.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(m); } }
     else if (CTL3[id] && CTL3[id].g) { CTL3[id].g.updateMatrixWorld(true); bb = new THREE.Box3(); CTL3[id].g.traverse(o => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); bb.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } }); if (bb.isEmpty()) bb = null; }
     if (!bb) bb = new THREE.Box3().setFromCenterAndSize(p, new THREE.Vector3(0.22, 0.22, 0.22));
-    bb.expandByScalar(0.025);
+    bb.expandByScalar(part ? 0.025 : 0.03);
     const box = new THREE.Box3Helper(bb, 0xffc21f); box.material.transparent = true; box.material.depthTest = false; box.material.linewidth = 2;
     box.renderOrder = 30; box.userData.pulse = true; box.userData.box = true; hlGroup.add(box);
     const sz = bb.getSize(new THREE.Vector3()), shell = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), new THREE.MeshBasicMaterial({ color: 0xffc21f, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false }));
@@ -2570,44 +2572,35 @@ function checkStep(fromAck = false, fromAuto = false) {
 function renderProc() {
   let el = $('#proc');
   if (!PROC) { if (el) el.remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
-  if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card'; elRight.prepend(el); }
-  const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length;
-  let partLabel = null; for (let k = 0; k <= Math.min(PROC.i, n - 1); k++) if (P.steps[k].part) partLabel = P.steps[k].part;
-  let html = `<div class="stripe" style="background:${P.kind === 'loto' ? '#c62828' : '#78e6ff'}"></div><div class="in"><div class="top"><h3>${t4(P.title)}</h3><button class="x" aria-label="${esc(U.exit.en)}">×</button></div>`;
-  if (P.template) html += `<div class="banner">${t4(P.template)}</div>`;
-  if (P.source) html += `<div class="note">${t4(P.source)}</div>`;
-  html += `<div class="prog"><div style="width:${100 * PROC.i / n}%"></div></div>`;
+  if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card pcard'; elRight.prepend(el); }
+  const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = LANG === 'all' ? 'en' : LANG;
+  const big = o => esc(tx(o, L1)), small = o => LANG === 'all' ? ['es', 'fr', 'sw'].filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
+  let html = `<div class="p-top"><span>${big(P.title)}</span><span>${Math.min(PROC.i + 1, n)} / ${n}</span><button class="x" aria-label="Close">×</button></div>`;
   if (!st) {
     try { const D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); D[PROC.id] = new Date().toISOString().slice(0, 10); localStorage.setItem('dflow_done', JSON.stringify(D)); } catch (e) { /* storage blocked */ }
-    html += `<div class="good">${t4(U.finished)} ${t4(U.mistakes)}: <b>${PROC.mistakes}</b></div><div class="acts"><button class="b" id="prRe">${b4(U.restart)}</button><button class="b" id="prX">${b4(U.exit)}</button></div>`;
+    html += `<div class="p-ins">${big(U.finished)}</div><div class="p-acts"><button class="b" id="prRe">${esc(tx(U.restart, L1))}</button><button class="b go" id="prX">${esc(tx(U.exit, L1))}</button></div>`;
   } else {
-    if (partLabel) html += `<div class="note"><b>${t4(partLabel)}</b></div>`;
-    html += `<div style="margin:4px 0 2px">${st.actor ? `<span class="actor">${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${esc(st.actor)}</span> ` : ''}<span class="note">${esc(tx(U.step, LANG === 'all' ? 'en' : LANG))} ${PROC.i + 1} / ${n}</span></div>`;
-    html += `<div style="font-size:15px">${t4(st.text)}</div>`;
-    if (PROC.auto) html += `<div class="note">⏳ ${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${esc(st.actor || '')} …</div>`;
-    if (st.quiz) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${b4(o)}</button>`).join('')}</div>`;
-    if (st.show === 'energy' && P.energy_sources) {
-      html += `<div class="note" style="margin-top:6px"><b>${t4(U.energy)}</b></div><ul class="energy">${P.energy_sources.map(e => `<li><b>${esc(e.type)}</b>: ${t4(e.what)}${e.isolation.length ? ` → ${e.isolation.map(i => esc(tx(CTL[i]?.name, 'en'))).join(', ')}` : ''}${e.upstream ? ` <span class="note">(upstream: ${e.upstream.map(i => esc(tx(CTL[i]?.name, 'en'))).join(', ')})</span>` : ''}${e.note ? `<div class="note">${t4(e.note)}</div>` : ''}</li>`).join('')}</ul>`;
-    }
-    if (st.tool === 'flashlight') html += `<div class="note">🔦 ${t4(MSG.pick_flashlight)}</div>`;
-    if (PROC.msg) html += `<div class="${PROC.msg.kind === 'bad' ? 'mist' : 'good'}">${t4(PROC.msg.o)}</div>`;
-    html += `<div class="acts">${st.ack && !PROC.auto ? `<button class="b go" id="prAck">${b4(U.done)}</button>` : ''}${st.optional ? `<button class="b" id="prSkip">${b4(U.skip)}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦 ${b4(U.flash_tool)}</button>` : ''}<button class="b" id="prX">${b4(U.exit)}</button></div>`;
-    html += `<div class="note">${t4(U.mistakes)}: ${PROC.mistakes}</div>`;
+    if (st.actor) html += `<div class="p-who">${esc(tx(U.employee, L1))} ${esc(st.actor)}</div>`;
+    html += `<div class="p-ins">${big(st.text)}</div>${small(st.text)}`;
+    if (st.quiz) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${big(o)}</button>`).join('')}</div><div class="p-l">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div>`;
+    if (st.tool === 'flashlight') html += `<div class="p-l">🔦 ${big(MSG.pick_flashlight)}</div>`;
+    if (PROC.msg) html += `<div class="${PROC.msg.kind === 'bad' ? 'mist' : 'good'}">${big(PROC.msg.o)}</div>`;
+    if (st.see) html += `<div class="p-see"><b>${esc(tx(L4('You should see', 'Debe ver', 'Vous devez voir', 'Unapaswa kuona'), L1))}</b><div>${big(st.see)}</div></div>`;
+    html += `<div class="p-acts">${st.ack ? `<button class="b go" id="prAck">${esc(tx(U.done, L1))}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦</button>` : ''}<button class="b" id="prBack">${esc(tx(L4('Back', 'Atrás', 'Retour', 'Nyuma'), L1))}</button><button class="b" id="prRep">${esc(tx(L4('Repeat', 'Repetir', 'Répéter', 'Rudia'), L1))}</button></div>`;
   }
-  html += `<ol class="steps">${P.steps.map((s, k) => `<li class="${k < PROC.i ? 'done' : ''}">${esc(tx(s.text, LANG === 'all' ? 'en' : LANG)).slice(0, 70)}</li>`).join('')}</ol></div>`;
   el.innerHTML = html;
-  const q = (s) => el.querySelector(s);
+  const q = (x) => el.querySelector(x);
   q('.x').onclick = () => { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); renderSide(); };
   if (q('#prX')) q('#prX').onclick = q('.x').onclick;
   if (q('#prRe')) q('#prRe').onclick = () => startProc(PROC.id);
   if (q('#prAck')) q('#prAck').onclick = () => checkStep(true);
+  if (q('#prBack')) q('#prBack').onclick = () => { if (PROC.i > 0) { PROC.i--; PROC.done.pop(); } enterStep(); };
+  if (q('#prRep')) q('#prRep').onclick = () => enterStep();
+  if (q('#prTool')) q('#prTool').onclick = () => { TOOL = TOOL ? null : 'flashlight'; document.body.classList.toggle('tool-on', !!TOOL); };
   el.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
     if (+b.dataset.opt === st.answer) { PROC.msg = null; checkStep(true); }
-    else { PROC.mistakes++; PROC.msg = { kind: 'bad', o: { en: 'Not quite. Try again.', es: 'No exactamente. Inténtelo de nuevo.', fr: 'Pas tout à fait. Réessayez.', sw: 'Si sahihi. Jaribu tena.' } }; renderProc(); }
+    else { PROC.mistakes++; PROC.msg = { kind: 'bad', o: L4('Not right. Try again.', 'No es correcto. Inténtelo de nuevo.', 'Pas juste. Réessayez.', 'Si sahihi. Jaribu tena.') }; renderProc(); }
   });
-  if (q('#prSkip')) q('#prSkip').onclick = () => { PROC.skipped.push(st.id); PROC.i++; enterStep(); };
-  if (q('#prTool')) q('#prTool').onclick = () => { TOOL = 'flashlight'; document.body.classList.add('tool-on'); toast(MSG.pick_flashlight); };
-  const li = el.querySelector('.steps li:not(.done)'); if (li) li.scrollIntoView({ block: 'nearest' });
 }
 
 // ---------------------------------------------------------------- guided story: 6 steps, each a few short parts that play on their own
@@ -2697,8 +2690,9 @@ function stepStory(dt) {
       ST.task++; ST.taskKey0 = undefined;
     }
     const cur = tasks[ST.task];
-    const want = cur ? (cur.do === 'starter' ? cur.id : cur.do === 'airlock_box' ? 'airlock_box' : cur.do === 'gate' ? 'gate_panel' : 'panel_' + cur.zone) : null;
-    if (want !== ST.taskHl) { ST.taskHl = want; highlightControls(want ? [want] : []); }
+    const want = cur ? (cur.do === 'starter' ? cur.id + ':' + cur.act : cur.do === 'airlock_box' ? 'airlock_box:' + cur.act : cur.do === 'gate' ? (cur.id === '*' ? 'gate_panel' : 'gate_panel:' + cur.id) : 'panel_' + cur.zone) : null;
+    if (want !== ST.taskHl) { ST.taskHl = want; highlightControls(want ? [want] : []); const cid = want && want.split(':')[0];
+      LSRC.story = cid && (CTL[cid] || /^panel_/.test(cid)) ? [{ key: 'tk_' + cid, text: CTL[cid] ? CTL[cid].name : CT.flamex.panels[cid.slice(6)].name, a: { ctl: cid }, accent: '#f5a524' }] : LSRC.story; refreshLabels(); }
     if (cur) return; // waiting for the user's press
   }
   if (ST.paused) return;
@@ -2735,13 +2729,13 @@ function renderCaption() {
     const n = ST.i >= STORY.length ? '' : `<span class="sb-n">${ST.i + 1} / ${STORY.length}</span>`;
     const atEnd = ph.end && ST.k === step.phases.length - 1;
     html = `<div class="sb-top"><button class="sb-nav" data-sb="prev" aria-label="${esc(tx(U.back, L1))}">‹</button>
-      <div class="sb-title">${n}<span>${b4(step.title)}</span></div>
+      <div class="sb-title">${n}<span>${esc(tx(step.title, L1))}</span></div>
       <button class="sb-nav" data-sb="next" aria-label="${esc(tx(U.next, L1))}">›</button><button class="sb-x" data-sb="x" aria-label="${esc(tx(U.exit, L1))}">×</button></div>
       ${caps}
       <div class="sb-dots">${step.phases.length > 1 ? step.phases.map((p, j) => `<button class="${j === ST.k ? 'on' : j < ST.k ? 'done' : ''}" data-sbp="${j}" aria-label="${j + 1}"></button>`).join('') : ''}
         ${ST.paused && !atEnd ? `<button class="sb-re" data-sb="re">↻ ${esc(tx(TU.replay, L1))}</button>` : ''}</div>
       ${atEnd ? `<div class="sb-end"><button class="b sb-big" data-sb="replay">↻ ${b4(TU.replay)}</button>${ST.i < STORY.length ? `<button class="b sb-big sb-act" data-sb="shut">■ ${b4(TU.shutdown)}</button>` : ''}</div>` : ''}
-      <div class="sb-keys">${esc(tx(TU.keys, L1))}</div>`;
+`; // no keyboard hint line: one instruction is enough
     elCap.className = 'story';
   } else if (CAPO) { html = t4(CAPO); elCap.className = ''; }
   else { html = `<button class="sb-start" data-sb="start">▶ ${b4(HERO ? U.start_training : U.tour)} <span class="sb-n">${STORY.length}</span></button>`; elCap.className = HERO ? 'idle hero' : 'idle'; }
@@ -2749,7 +2743,8 @@ function renderCaption() {
   elCap._h = html; elCap.innerHTML = html; elCap.style.display = MODE === 'walk' && !ST ? 'none' : 'block'; fitRight();
   elCap.querySelectorAll('[data-sb]').forEach(b => b.onclick = () => {
     const a = b.dataset.sb;
-    if (a === 'start' || a === 'replay') storyStart(0);
+    if (a === 'start') { showLib(true); return; }
+    if (a === 'replay') storyStart(0);
     else if (a === 'x') storyStop();
     else if (a === 'next') storyNext();
     else if (a === 'prev') storyPrev();
@@ -2872,6 +2867,24 @@ let LIBPIN = ''; try { LIBPIN = localStorage.getItem('dflow_pin') || ''; } catch
 const LT = { lib: L4('Training library', 'Biblioteca de formación', 'Bibliothèque de formation', 'Maktaba ya mafunzo'), pin: L4('Training pin', 'PIN de formación', 'Code de formation', 'PIN ya mafunzo'),
   all: L4('Show all', 'Ver todo', 'Tout afficher', 'Onyesha yote'), role: L4('Your role', 'Su rol', 'Votre rôle', 'Jukumu lako'), start: L4('Start', 'Iniciar', 'Commencer', 'Anza'),
   min: L4('min', 'min', 'min', 'dak'), done: L4('Done', 'Hecho', 'Fait', 'Imekamilika'), bad: L4('Pin not found', 'PIN no encontrado', 'Code introuvable', 'PIN haipatikani') };
+function showLib(on) {
+  let el = $('#lib'); if (!on) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'lib'; elStage.appendChild(el); }
+  let D = {}; try { D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); } catch (e) { /* storage blocked */ }
+  const L1 = LANG === 'all' ? 'en' : LANG, pin = TRJ.pins && TRJ.pins[LIBPIN];
+  const list = (TRJ.packages || []).filter(p => !pin || pin.packages.includes(p.id));
+  const areas = [...new Set(list.map(p => p.area || ''))];
+  el.innerHTML = `<div class="libin"><div class="libtop"><h2>${esc(tx(L4('Training', 'Formación', 'Formation', 'Mafunzo'), L1))}</h2>
+    <input id="libpin" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${esc(tx(LT.pin, L1))}" value="${esc(LIBPIN)}"><button class="b" id="libpinGo">OK</button>${LIBPIN ? `<button class="b" id="libAll">${esc(tx(LT.all, L1))}</button>` : ''}<button class="x" id="libX" aria-label="Close">×</button></div>
+    ${LIBPIN && !pin ? `<div class="mist">${esc(tx(LT.bad, L1))}</div>` : ''}
+    ${areas.map(a => `<div class="libarea">${esc(tx((TRJ.areas || {})[a] || { en: a }, L1))}</div><div class="libcards">${list.filter(p => (p.area || '') === a).map(p => `<button class="libcard" data-libstart="${p.id}"><b>${esc(tx(p.title, L1))}</b><span>${p.minutes} min${D[p.id] ? ` <i>${esc(tx(LT.done, L1))}</i>` : ''}</span></button>`).join('')}</div>`).join('')}</div>`;
+  const pinGo = v => { LIBPIN = String(v || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 12); try { localStorage.setItem('dflow_pin', LIBPIN); } catch (e) { /* storage blocked */ } showLib(true); };
+  el.querySelector('#libpinGo').onclick = () => pinGo(el.querySelector('#libpin').value);
+  el.querySelector('#libpin').onkeydown = e => { if (e.key === 'Enter') pinGo(e.target.value); };
+  if (el.querySelector('#libAll')) el.querySelector('#libAll').onclick = () => pinGo('');
+  el.querySelector('#libX').onclick = () => showLib(false);
+  el.querySelectorAll('[data-libstart]').forEach(b => b.onclick = () => { const p = (TRJ.packages || []).find(x => x.id === b.dataset.libstart); showLib(false); HERO = false; renderCaption(); if (!p) return; if (p.kind === 'tour') storyStart(0); else startProc(p.proc); });
+}
 function libraryHTML() {
   let D = {}; try { D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); } catch (e) { /* storage blocked */ }
   const pin = TRJ.pins && TRJ.pins[LIBPIN];
@@ -2920,7 +2933,7 @@ function renderSide() {
   $('#flowCard').style.display = RAIL === 'flow' ? 'block' : 'none';
   $('#drawerIn').innerHTML = RAIL ? drawerHTML(RAIL) : '';
   const on = (sel, f) => elSide.querySelectorAll(sel).forEach(b => b.onclick = (e) => f(b, e));
-  on('[data-rail]', b => { RAIL = RAIL === b.dataset.rail ? null : b.dataset.rail; HERO = false; renderSide(); renderCaption(); });
+  on('[data-rail]', b => { if (b.dataset.rail === 'training') { RAIL = null; showLib(!$('#lib')); renderSide(); return; } RAIL = RAIL === b.dataset.rail ? null : b.dataset.rail; HERO = false; renderSide(); renderCaption(); });
   on('#dclose', () => { RAIL = null; renderSide(); });
   on('[data-lang]', b => {
     LANG = b.dataset.lang; try { localStorage.setItem('dce_lang', LANG); } catch (e) { /* ignore */ }
@@ -3056,7 +3069,7 @@ function tick(dt) {
   syncControls3D(dt);
   const blink = Math.floor(SIM.t * 2) % 2 === 0;
   drawFxFace('A', blink); drawFxFace('B', blink);
-  for (const r of hlGroup.children) { if (!r.userData.box) { r.lookAt(camera.position); const s = RM ? 1 : 1 + 0.12 * Math.sin(SIM.t * 2.6); r.scale.setScalar(s); } r.material.opacity = r.userData.shell ? (RM ? 0.25 : 0.14 + 0.12 * Math.sin(SIM.t * 3.0)) : RM ? 0.9 : 0.55 + 0.4 * Math.sin(SIM.t * 3.0); }
+  for (const r of hlGroup.children) { if (!r.userData.box) { r.lookAt(camera.position); const s = RM ? 1 : 1 + 0.12 * Math.sin(SIM.t * 2.6); r.scale.setScalar(s); } r.material.opacity = r.userData.shell ? (RM ? 0.35 : 0.24 + 0.16 * Math.sin(SIM.t * 3.0)) : RM ? 0.9 : 0.55 + 0.4 * Math.sin(SIM.t * 3.0); }
   stepOverlays(dt);
   if (PROC) checkStep();
   soundTick(dt);
@@ -3183,7 +3196,7 @@ applyVisibility();
 resize();
 applyStop(0, false);
 setXray(USER_XRAY); // ducts and pipes see-through from the start
-if (HERO) { LSRC.view = []; refreshLabels(); } // first load: no labels, just the Start training button
+if (HERO) { LSRC.view = []; refreshLabels(); if (!Q.has('proc') && !Q.has('hint0')) showLib(true); } // first load: the training library
 // scripted states for tests: ?shot=<viewpoint>&system=on|off&xray=1&cut=cyclone&panel=collector&proc=...&flamex=demo&ft=4&warm=3&walk=1
 if (Q.get('system') === 'off') { systemOff(); for (const m of Object.keys(LV)) LV[m] = 0; for (const g of Object.keys(gateLv)) gateLv[g] = 0; initFlow(false); }
 if (Q.has('gates')) { for (const g of Object.keys(S.gates)) S.gates[g] = false; for (const g of Q.get('gates').split(',')) if (g in S.gates) { S.gates[g] = true; gateLv[g] = 1; } initFlow(true); }

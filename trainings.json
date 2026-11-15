@@ -19,7 +19,8 @@
     "es": "Arranque, compuertas, el camino del polvo y detección de chispas.",
     "fr": "Démarrage, vannes, le chemin de la poussière et la détection d’étincelles.",
     "sw": "Kuwasha, vali, njia ya vumbi na kugundua cheche."
-   }
+   },
+   "area": "dust"
   },
   {
    "id": "flamex_weekly",
@@ -36,7 +37,8 @@
     "es": "La prueba semanal de 3 personas: preparación, interior, exterior. Cada paso indica quién lo hace.",
     "fr": "Le test à 3 personnes : préparation, intérieur, extérieur. Chaque étape indique qui la fait.",
     "sw": "Jaribio la watu 3: maandalizi, ndani, nje. Kila hatua inaonyesha nani anaifanya."
-   }
+   },
+   "area": "fire"
   },
   {
    "id": "flamex_interior",
@@ -53,7 +55,8 @@
     "es": "Leer las luces, usar la llave y botones, reiniciar tras un disparo.",
     "fr": "Lire les voyants, utiliser la clé et les boutons, réinitialiser.",
     "sw": "Soma taa, tumia ufunguo na vitufe, anzisha upya baada ya kuwaka."
-   }
+   },
+   "area": "fire"
   },
   {
    "id": "flamex_exterior",
@@ -70,7 +73,8 @@
     "es": "Grupos, pantalla, llave, ext, reset e int.",
     "fr": "Groupes, écran, clé, ext, reset et int.",
     "sw": "Makundi, skrini, ufunguo, ext, reset na int."
-   }
+   },
+   "area": "fire"
   },
   {
    "id": "loto_fan_airlock",
@@ -87,7 +91,8 @@
     "es": "Bloqueo y etiquetado del ventilador y la válvula.",
     "fr": "Consignation du ventilateur et de l’écluse.",
     "sw": "Kufunga na kuweka lebo kwenye feni na vali."
-   }
+   },
+   "area": "safety"
   }
  ],
  "pins": {
@@ -98,6 +103,26 @@
     "flamex_interior",
     "flamex_exterior"
    ]
+  }
+ },
+ "areas": {
+  "dust": {
+   "en": "Dust collection",
+   "es": "Recolección de polvo",
+   "fr": "Dépoussiérage",
+   "sw": "Ukusanyaji wa vumbi"
+  },
+  "fire": {
+   "en": "Fire protection (Flamex)",
+   "es": "Protección contra incendios (Flamex)",
+   "fr": "Protection incendie (Flamex)",
+   "sw": "Kinga ya moto (Flamex)"
+  },
+  "safety": {
+   "en": "Safety",
+   "es": "Seguridad",
+   "fr": "Sécurité",
+   "sw": "Usalama"
   }
  }
 }
