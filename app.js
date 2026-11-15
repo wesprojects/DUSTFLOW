@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.11';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.11';
+import { createSim } from './sim.js?v=2026-11-15.12';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.12';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2152,7 +2152,7 @@ function trainingAllows(id) {
 }
 function clickControl(u) {
   const id = u.ctl, act = u.act;
-  if (!trainingAllows(id)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); return; }
+  if (!trainingAllows(id)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); feedback(false); return; }
   if (TOOL === 'flashlight') {
     const c = CTL[id];
     if (c && c.type === 'hatch' && c.detector && !S.hatch[id].open) { toggleHatch(id); renderAll(); return; } // flashlight in hand: the first click opens the hatch
@@ -2442,7 +2442,7 @@ function renderPanel() {
   el.querySelector('.x').onclick = closePanel;
   const ctlOf = b => { const d = b.dataset; return d.eaton || d.start || d.stop || (d.albox ? 'airlock_box' : null) || (d.gopen || d.gclose ? 'gate_panel' : null) || (d.air !== undefined ? 'air_valve' : null)
     || (d.fx ? 'panel_' + PANEL.slice(-1) : null) || d.valve || d.hatch || (d.shine ? (d.shine === 'A' ? 'hatch_cnc' : 'hatch_riser') : null) || d.lock || null; };
-  const on = (sel, f) => el.querySelectorAll(sel).forEach(b => b.onclick = (e) => { const c = ctlOf(b); if (c && !trainingAllows(c)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); return; } f(b, e); renderAll(); });
+  const on = (sel, f) => el.querySelectorAll(sel).forEach(b => b.onclick = (e) => { const c = ctlOf(b); if (c && !trainingAllows(c)) { toast(tx(L4('Not this one. Use the glowing control.', 'Este no. Use el control iluminado.', 'Pas celui-ci. Utilisez la commande éclairée.', 'Si hiki. Tumia kidhibiti kinachong’aa.'), PRIM), 'bad'); feedback(false); return; } f(b, e); renderAll(); });
   on('[data-eaton]', b => setEaton(b.dataset.eaton, !S.eaton[b.dataset.eaton].on));
   on('[data-lock]', b => { const id = b.dataset.lock, L = lockable(id); if (L.locked) removeLock(id); else if (!isOffForLock(id)) { say(MSG.lock_needs_off, 'bad'); result(id, 'lock', 'lock_needs_off'); } else lockDialog(id); });
   on('[data-start]', b => pressStarter(b.dataset.start, 'start'));
@@ -2570,8 +2570,8 @@ function procOnEvent(ev) {
   const P = PROCDEF(), st = P.steps[PROC.i]; if (!st) return;
   PROC.events.push(ev);
   const mk = (st.mistakes || []).find(m => m.event.ctl === ev.ctl && m.event.act === ev.act && (m.event.value === undefined || m.event.value === ev.value));
-  if (mk) { PROC.mistakes++; PROC.msg = { kind: 'bad', o: mk.text }; renderProc(); return; }
-  if (!ev.ok && ev.code !== 'locked_out' && ev.code !== 'no_power') { PROC.msg = { kind: 'bad', o: MSG[ev.code] || U.check_failed }; renderProc(); }
+  if (mk) { PROC.mistakes++; PROC.msg = { kind: 'bad', o: mk.text }; renderProc(); feedback(false); return; }
+  if (!ev.ok && ev.code !== 'locked_out' && ev.code !== 'no_power') { PROC.msg = { kind: 'bad', o: MSG[ev.code] || U.check_failed }; renderProc(); feedback(false); }
   else if (!ev.ok && st.cond && JSON.stringify(st.cond).includes('"start"')) { /* expected during the verify step */ }
   checkStep();
 }
@@ -2588,7 +2588,36 @@ function checkStep(fromAck = false, fromAuto = false) {
   if (!st.ack && !st.quiz && !st.cond && !fromAck) return;
   PROC.done.push(st.id); PROC.i++;
   if (TOOL && st.tool) { TOOL = null; document.body.classList.remove('tool-on'); }
-  setTimeout(() => { if (PROC) { enterStep(); toast(U.good, 'ok'); } }, 250);
+  feedback(true);
+  setTimeout(() => { if (PROC) enterStep(); }, 650);
+}
+// ---- reward: a ring bursts from the control in 3D, a check draws itself on the card; a miss shakes the card with an X
+const fbGroup = new THREE.Group(); scene.add(fbGroup);
+function burstAt(p, ok) {
+  for (let k = 0; k < 2; k++) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.085, 48), new THREE.MeshBasicMaterial({ color: ok ? 0x3ddc84 : 0xff4d4d, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthTest: false }));
+    m.position.copy(p); m.renderOrder = 41; m.userData.t = -k * 0.12; fbGroup.add(m);
+  }
+}
+function stepBursts(dt) {
+  for (const m of [...fbGroup.children]) {
+    m.userData.t += dt; const t = m.userData.t; if (t < 0) { m.visible = false; continue; } m.visible = true;
+    m.lookAt(camera.position); const s = 1 + t * 7; m.scale.setScalar(s); m.material.opacity = Math.max(0, 0.95 * (1 - t / 0.7));
+    if (t > 0.7) { fbGroup.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  }
+}
+function feedback(ok, where) {
+  const host = where || $('#quizm .qbox') || $('#proc');
+  if (host) {
+    const f = document.createElement('div'); f.className = 'fb ' + (ok ? 'ok' : 'no');
+    let tgt = host; if (host.id === 'proc' && host.parentNode) { tgt = host.parentNode; f.style.top = (host.offsetTop + host.offsetHeight / 2) + 'px'; } // survives the card redrawing
+    f.innerHTML = ok ? '<svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="23"/><path d="M15 27 l7 7 l15 -16"/></svg>'
+      : '<svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="23"/><path d="M18 18 L34 34 M34 18 L18 34"/></svg>';
+    tgt.appendChild(f); setTimeout(() => f.remove(), 1100);
+    host.classList.remove('fb-ok', 'fb-no'); void host.offsetWidth; host.classList.add(ok ? 'fb-ok' : 'fb-no'); setTimeout(() => host.classList.remove('fb-ok', 'fb-no'), 700);
+  }
+  if (!RM) for (const b of hlGroup.children) if (b.userData.shell) { const c = new THREE.Box3().setFromObject(b).getCenter(new THREE.Vector3()); burstAt(c, ok); break; }
+  if (!ok && !RM) for (const b of hlGroup.children) if (b.material) b.material.opacity = 1;
 }
 function renderProc() {
   let el = $('#proc');
@@ -2622,8 +2651,8 @@ function renderProc() {
       ${PROC.msg ? `<div class="q-bad">${big(PROC.msg.o)}</div>` : ''}
       <div class="q-note">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div></div>`;
     qm.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-      if (+b.dataset.opt === st.answer) { PROC.msg = null; checkStep(true); }
-      else { PROC.mistakes++; PROC.msg = { kind: 'bad', o: L4('Not right. Try again.', 'No es correcto. Inténtelo de nuevo.', 'Pas juste. Réessayez.', 'Si sahihi. Jaribu tena.') }; renderProc(); }
+      if (+b.dataset.opt === st.answer) { PROC.msg = null; b.classList.add('right'); checkStep(true); }
+      else { PROC.mistakes++; b.classList.add('wrong'); PROC.msg = { kind: 'bad', o: L4('Not right. Try again.', 'No es correcto. Inténtelo de nuevo.', 'Pas juste. Réessayez.', 'Si sahihi. Jaribu tena.') }; feedback(false, qm.querySelector('.qbox')); setTimeout(renderProc, 650); }
     });
   } else if (qm) qm.remove();
   const q = (x) => el.querySelector(x);
@@ -2724,7 +2753,7 @@ function stepStory(dt) {
         : a.do === 'gate' ? (a.id === '*' ? Object.values(S.gates).every(g => !g) : !!S.gates[a.id] === !!a.open)
         : a.btn === 'key' ? z.key !== ST.taskKey0 : a.btn === 'ext' ? !!z.extOff || !z.horns : a.btn === 'reset' ? !z.fire : true;
       if (!ok) break;
-      ST.task++; ST.taskKey0 = undefined;
+      ST.task++; ST.taskKey0 = undefined; feedback(true, $('#caption'));
     }
     const cur = tasks[ST.task];
     const want = cur ? (cur.do === 'starter' ? cur.id + ':' + cur.act : cur.do === 'airlock_box' ? 'airlock_box:' + cur.act : cur.do === 'gate' ? (cur.id === '*' ? 'gate_panel' : 'gate_panel:' + cur.id) : 'panel_' + cur.zone) : null;
@@ -3140,6 +3169,7 @@ function frameInner() {
   stepCam(dt);
   controls.enabled = !ST && !PROC; // trainings drive the camera
   stepRide(dt);
+  stepBursts(dt);
   { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
     const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);
     if (Math.abs(dn - camera.near) > 0.004) { camera.near = dn; camera.updateProjectionMatrix(); }
