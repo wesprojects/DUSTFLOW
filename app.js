@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.2';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.2';
+import { createSim } from './sim.js?v=2026-11-15.3';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.3';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1141,7 +1141,7 @@ for (const z of ['A', 'B']) {
   m.position.set(ctr.x, ctr.y, b.max.z + (kb && z === 'A' ? -0.012 : 0.004)); world.add(m);
   tagClick(m, 'panel_' + z, 'panel');
   n.traverse(o => { if (o.isMesh) { o.userData.ctl = 'panel_' + z; o.userData.act = 'panel'; } });
-  FXFACE[z] = { tex, W, H, last: '' };
+  FXFACE[z] = { tex, W, H, last: '', mesh: m };
 }
 function drawFxFace(z, blink) {
   const F = FXFACE[z]; if (!F) return;
@@ -1795,8 +1795,8 @@ function stepRide(dt) {
   rideDot.position.copy(q); rideDot.visible = false; // no marker: the flow itself shows the dust
   if (RIDE.dot || (ST && ST.paused)) return; // dot only, or the user is looking around
   const x = g * RIDE.n, j = Math.floor(x), c = RIDE.cams[Math.min(j, RIDE.n)].clone().lerp(RIDE.cams[Math.min(j + 1, RIDE.n)], x - j);
-  const k = 1 - Math.exp(-dt * 2.2); // soft follow: no jerks on bends
-  camera.position.lerp(c, k); controls.target.lerp(q.clone().lerp(qa, 0.5), k);
+  const k = 1 - Math.exp(-dt * (RIDE.follow ? 4.5 : 2.2)); // soft follow: no jerks on bends
+  camera.position.lerp(c, k); controls.target.lerp(RIDE.follow ? q : q.clone().lerp(qa, 0.5), k);
   camera.lookAt(controls.target);
 }
 function flyTo(key, dur = 0, after = null) {
@@ -2489,13 +2489,23 @@ function enterStep() {
   const P = PROCDEF(), st = P.steps[PROC.i];
   PROC.events = []; PROC.msg = null;
   if (!st) { renderProc(); return; }
-  if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 1.2); applyViewVis(v); }
-  else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 1.2); }
+  const hid = (st.highlight || []).find(i => CTL[i] || /^panel_/.test(i));
+  let hp = null, hn = new THREE.Vector3(0, 0, 1);
+  if (hid && /^panel_/.test(hid) && FXFACE[hid.slice(6)] && FXFACE[hid.slice(6)].mesh) { hp = new THREE.Box3().setFromObject(FXFACE[hid.slice(6)].mesh).getCenter(new THREE.Vector3()); }
+  else if (hid && CTL[hid]) { hp = V3(CTL[hid].pos); const f = CTL[hid].face || CTL[hid].normal; if (f) hn = V3(f).normalize(); }
+  if (st.focus && CT.views[st.focus]) applyViewVis(CT.views[st.focus]);
+  if (hp) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
+    const d = Math.abs(hn.y) > 0.7 ? 2.2 : 1.9, cp = hp.clone().addScaledVector(hn, d); cp.y += Math.abs(hn.y) > 0.7 ? 0 : 0.35;
+    if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(1.2, 0, 1.2));
+    flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z] }, 2.4);
+  }
+  else if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 2.4); }
+  else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
   if (st.panel) openPanel(st.panel);
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
   highlightControls(st.highlight || []);
   // someone else's step (the trainee picked a role), or a step the app always does (a test trip): the app performs it
-  const others = st.auto && (st.auto_always || (PROC.role && st.actor && !String(st.actor).split(/\s*\+\s*/).includes(PROC.role)));
+  const others = false; // the trainee does every step (Wes 11-15): nothing is pressed for them
   PROC.auto = !!others;
   if (others) {
     if (st.tool) { TOOL = null; document.body.classList.remove('tool-on'); }
@@ -2521,8 +2531,15 @@ function highlightControls(ids) {
     if (/^panel_/.test(id)) { const n = NODE[CT.flamex.panels[id.slice(6)].node]; if (n) p = new THREE.Box3().setFromObject(n).getCenter(new THREE.Vector3()); }
     else if (CTL[id]) { p = V3(CTL[id].pos); if (CTL[id].type === 'bucket' && S.bucket.placed) p = V3(CTL[id].placed_pos); }
     if (!p) continue;
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.2, 32), new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false }));
-    ring.position.copy(p); ring.renderOrder = 30; ring.userData.pulse = true; hlGroup.add(ring);
+    let bb = null; // the object itself: its 3D face (panel), its built group (controls), or a small box at its spot
+    if (/^panel_/.test(id) && FXFACE[id.slice(6)] && FXFACE[id.slice(6)].mesh) bb = new THREE.Box3().setFromObject(FXFACE[id.slice(6)].mesh);
+    else if (CTL3[id] && CTL3[id].g) { CTL3[id].g.updateMatrixWorld(true); bb = new THREE.Box3(); CTL3[id].g.traverse(o => { if (o.isMesh && o.geometry) { o.geometry.computeBoundingBox(); bb.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } }); if (bb.isEmpty()) bb = null; }
+    if (!bb) bb = new THREE.Box3().setFromCenterAndSize(p, new THREE.Vector3(0.22, 0.22, 0.22));
+    bb.expandByScalar(0.025);
+    const box = new THREE.Box3Helper(bb, 0xffc21f); box.material.transparent = true; box.material.depthTest = false; box.material.linewidth = 2;
+    box.renderOrder = 30; box.userData.pulse = true; box.userData.box = true; hlGroup.add(box);
+    const sz = bb.getSize(new THREE.Vector3()), shell = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), new THREE.MeshBasicMaterial({ color: 0xffc21f, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false }));
+    shell.position.copy(bb.getCenter(new THREE.Vector3())); shell.renderOrder = 29; shell.userData.box = true; shell.userData.shell = true; hlGroup.add(shell);
   }
 }
 function procOnEvent(ev) {
@@ -2629,7 +2646,7 @@ function storyStart(i, k = 0) {
 function storyPhase(k) {
   const step = curStep(), ph = step.phases[clamp(k, 0, step.phases.length - 1)];
   const seq = ST.k === step.phases.indexOf(ph) - 1; // reached by playing on (a jump sets the exact state instead)
-  ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set(); ST.endT = null;
+  ST.k = step.phases.indexOf(ph); ST.t = 0; ST.paused = false; ST.fired = new Set(); ST.endT = null; ST.task = 0; ST.taskKey0 = undefined; ST.taskHl = null;
   if (DEMO && !ph.demo) endDemo();
   let stName = ph.state, soft = ph.state_soft && seq;
   if (!stName && !seq) { for (let j = ST.k; j >= 0; j--) if (step.phases[j].state) { stName = step.phases[j].state; break; } soft = false; } // a jump: that phase's state
@@ -2665,7 +2682,25 @@ function stepStory(dt) {
   const step = curStep(), ph = step.phases[ST.k];
   if (CAMANIM && CAMANIM.d && !ph.demo) return; // nothing happens until the camera is there
   ST.t += dt;
-  (ph.at || []).forEach(([t, a], j) => { if (ST.t >= t && !ST.fired.has(j)) { ST.fired.add(j); tourAct(a); } });
+  const USERDO = a => a && ['starter', 'airlock_box', 'gate', 'fx'].includes(a.do);
+  (ph.at || []).forEach(([t, a], j) => { if (!USERDO(a) && ST.t >= t && !ST.fired.has(j)) { ST.fired.add(j); tourAct(a); } });
+  const tasks = (ph.at || []).map(x => x[1]).filter(USERDO);
+  if (tasks.length) { // the user's presses, one after the other
+    ST.task = ST.task || 0;
+    while (ST.task < tasks.length) {
+      const a = tasks[ST.task], z = a.zone && S.flamex[a.zone];
+      if (ST.taskKey0 === undefined && z) ST.taskKey0 = z.key;
+      const ok = a.do === 'starter' ? !!S.starter[a.id] === (a.act === 'start') : a.do === 'airlock_box' ? !!S.airlockBox === (a.act === 'on')
+        : a.do === 'gate' ? (a.id === '*' ? Object.values(S.gates).every(g => !g) : !!S.gates[a.id] === !!a.open)
+        : a.btn === 'key' ? z.key !== ST.taskKey0 : a.btn === 'ext' ? !!z.extOff || !z.horns : a.btn === 'reset' ? !z.fire : true;
+      if (!ok) break;
+      ST.task++; ST.taskKey0 = undefined;
+    }
+    const cur = tasks[ST.task];
+    const want = cur ? (cur.do === 'starter' ? cur.id : cur.do === 'airlock_box' ? 'airlock_box' : cur.do === 'gate' ? 'gate_panel' : 'panel_' + cur.zone) : null;
+    if (want !== ST.taskHl) { ST.taskHl = want; highlightControls(want ? [want] : []); }
+    if (cur) return; // waiting for the user's press
+  }
   if (ST.paused) return;
   const done = ST.t >= (ph._rideDur || ph.dur || 5) + (ph.ride ? 1.2 : 0) && (untilOk(ph.until) || ST.t > 60);
   if (!done) return;
@@ -3021,7 +3056,7 @@ function tick(dt) {
   syncControls3D(dt);
   const blink = Math.floor(SIM.t * 2) % 2 === 0;
   drawFxFace('A', blink); drawFxFace('B', blink);
-  for (const r of hlGroup.children) { r.lookAt(camera.position); const s = RM ? 1 : 1 + 0.12 * Math.sin(SIM.t * 2.6); r.scale.setScalar(s); r.material.opacity = RM ? 0.8 : 0.6 + 0.25 * Math.sin(SIM.t * 2.6); }
+  for (const r of hlGroup.children) { if (!r.userData.box) { r.lookAt(camera.position); const s = RM ? 1 : 1 + 0.12 * Math.sin(SIM.t * 2.6); r.scale.setScalar(s); } r.material.opacity = r.userData.shell ? (RM ? 0.25 : 0.14 + 0.12 * Math.sin(SIM.t * 3.0)) : RM ? 0.9 : 0.55 + 0.4 * Math.sin(SIM.t * 3.0); }
   stepOverlays(dt);
   if (PROC) checkStep();
   soundTick(dt);

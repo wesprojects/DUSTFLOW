@@ -25,11 +25,6 @@
    "id": "flamex_weekly",
    "proc": "flamex_weekly",
    "minutes": 15,
-   "roles": [
-    "1",
-    "2",
-    "3"
-   ],
    "title": {
     "en": "Flamex weekly test",
     "es": "Prueba semanal de Flamex",
@@ -37,10 +32,10 @@
     "sw": "Jaribio la kila wiki la Flamex"
    },
    "summary": {
-    "en": "The 3-person weekly test: prep, interior test, exterior test. Pick your role.",
-    "es": "La prueba semanal de 3 personas: preparación, interior, exterior. Elija su rol.",
-    "fr": "Le test à 3 personnes : préparation, intérieur, extérieur. Choisissez votre rôle.",
-    "sw": "Jaribio la watu 3: maandalizi, ndani, nje. Chagua jukumu lako."
+    "en": "The 3-person weekly test: prep, interior test, exterior test. Each step shows who does it.",
+    "es": "La prueba semanal de 3 personas: preparación, interior, exterior. Cada paso indica quién lo hace.",
+    "fr": "Le test à 3 personnes : préparation, intérieur, extérieur. Chaque étape indique qui la fait.",
+    "sw": "Jaribio la watu 3: maandalizi, ndani, nje. Kila hatua inaonyesha nani anaifanya."
    }
   },
   {

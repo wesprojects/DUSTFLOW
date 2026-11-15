@@ -1783,23 +1783,11 @@
     },
     {
      "id": "a7",
-     "auto_always": true,
-     "auto": [
-      {
-       "ctl": "hatch_cnc"
-      },
-      {
-       "shine": "A"
-      },
-      {
-       "ctl": "hatch_cnc"
-      }
-     ],
      "text": {
-      "en": "Test trip: a light is shone into the detector hatch over the CNC.",
-      "es": "Disparo de prueba: se alumbra la escotilla del detector sobre el CNC.",
-      "fr": "Déclenchement test : on éclaire la trappe du détecteur au-dessus du CNC.",
-      "sw": "Jaribio: mwanga unamulikwa kwenye kifuniko cha kigunduzi juu ya CNC."
+      "en": "Test trip: open the hatch under the spark detectors and shine the flashlight in.",
+      "es": "Disparo de prueba: abra la escotilla bajo los detectores y alumbre con la linterna.",
+      "fr": "Déclenchement test : ouvrez la trappe sous les détecteurs et éclairez avec la lampe.",
+      "sw": "Jaribio: fungua kifuniko chini ya vigunduzi na mulika kwa tochi."
      },
      "cond": {
       "eq": [
@@ -1807,11 +1795,10 @@
        true
       ]
      },
-     "focus": "flamex_panels",
-     "panel": "flamex_A",
      "highlight": [
-      "panel_A"
-     ]
+      "hatch_cnc"
+     ],
+     "tool": "flashlight"
     },
     {
      "id": "a8",
@@ -2110,23 +2097,11 @@
     },
     {
      "id": "b6",
-     "auto_always": true,
-     "auto": [
-      {
-       "ctl": "hatch_riser"
-      },
-      {
-       "shine": "B"
-      },
-      {
-       "ctl": "hatch_riser"
-      }
-     ],
      "text": {
-      "en": "Test trip: a light is shone into the riser hatch in the shed.",
-      "es": "Disparo de prueba: se alumbra la escotilla del tubo vertical en la caseta.",
-      "fr": "Déclenchement test : on éclaire la trappe de la colonne dans l’abri.",
-      "sw": "Jaribio: mwanga unamulikwa kwenye kifuniko cha bomba la wima kibandani."
+      "en": "Test trip: open the riser hatch in the shed and shine the flashlight in.",
+      "es": "Disparo de prueba: abra la escotilla del tubo vertical y alumbre con la linterna.",
+      "fr": "Déclenchement test : ouvrez la trappe de la colonne et éclairez avec la lampe.",
+      "sw": "Jaribio: fungua kifuniko cha bomba la wima na mulika kwa tochi."
      },
      "cond": {
       "eq": [
@@ -2134,11 +2109,10 @@
        true
       ]
      },
-     "focus": "flamex_panels",
-     "panel": "flamex_B",
      "highlight": [
-      "panel_B"
-     ]
+      "hatch_riser"
+     ],
+     "tool": "flashlight"
     },
     {
      "id": "b7",
