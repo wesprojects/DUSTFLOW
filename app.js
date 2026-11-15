@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.28';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.28';
+import { createSim } from './sim.js?v=2026-11-15.30';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.30';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -490,6 +490,18 @@ if (gT) { // Paper City's textured machines are what you see; the flat copies st
   }
   gT.scene.updateMatrixWorld(true);
   gM.scene.traverse(o => { if (o.isMesh) { o.userData.noDraw = true; o.material = NO_DRAW; } });
+}
+{ // the edgebanders were mirrored: photo 36 has the orange-chain feed rail on the south side and the screen + lift on the north side.
+  // Mirror each machine (body, its parts and its lift table) across its own long axis, in world space.
+  world.updateMatrixWorld(true);
+  for (const k of ['1', '2']) {
+    const re = new RegExp('^(Tex_)?EB_' + k + '_(EB_|Lift_)');
+    const roots = []; scene.traverse(o => { if (re.test(o.name) && !(o.parent && re.test(o.parent.name))) roots.push(o); });
+    const body = roots.find(o => /EB_Body$/.test(o.name) && /^Tex_/.test(o.name)) || roots.find(o => /EB_Body$/.test(o.name)); if (!body) continue;
+    const zc = new THREE.Box3().setFromObject(body).getCenter(new THREE.Vector3()).z;
+    const M = new THREE.Matrix4().makeTranslation(0, 0, zc).multiply(new THREE.Matrix4().makeScale(1, 1, -1)).multiply(new THREE.Matrix4().makeTranslation(0, 0, -zc));
+    for (const o of roots) { const w = M.clone().multiply(o.matrixWorld); const pInv = new THREE.Matrix4().copy(o.parent.matrixWorld).invert(); w.premultiply(pInv); w.decompose(o.position, o.quaternion, o.scale); o.updateMatrixWorld(true); }
+  }
 }
 { // the panel saw faces into the shop with its A-frame against the south wall (photo 68): turn it 180 deg about its own centre
   const parts = [...Object.keys(NODE).filter(n => /^PanelSaw_/.test(n) && NODE[n].parent && !/^PanelSaw_/.test(NODE[n].parent.name)).map(n => NODE[n]),
@@ -1718,7 +1730,7 @@ function hitUnder(clientX, clientY) {
   return h || null;
 }
 renderer.domElement.addEventListener('wheel', e => { // runs before OrbitControls' own wheel handler
-  if (ST || PROC) return;
+  if (PROC) return;
   if (MODE !== 'orbit') return;
   CAMANIM = null;
   const now = performance.now(); if (now - navT < 120) return; navT = now;
@@ -1729,14 +1741,14 @@ renderer.domElement.addEventListener('wheel', e => { // runs before OrbitControl
   if (Math.abs(nd - dT) > 1e-3) controls.target.copy(camera.position).addScaledVector(dir, nd);
 }, { capture: true, passive: true });
 renderer.domElement.addEventListener('dblclick', e => {
-  if (ST || PROC) return;
+  if (PROC) return;
   const h = hitUnder(e.clientX, e.clientY); if (!h) return;
   const g = glideGoal(camera.position.toArray(), h.point.toArray(), camera.position.distanceTo(h.point));
   if (ST) { ST.paused = true; renderCaption(); }
   flyTo(g, 0.9);
 });
 function stepFly(dt) {
-  if (MODE !== 'orbit' || ST || PROC) return;
+  if (MODE !== 'orbit' || PROC) return;
   const d = new THREE.Vector3(); camera.getWorldDirection(d);
   const mv = flyStep(WALK.keys, Math.atan2(-d.x, -d.z), dt); if (!mv) return;
   if (CAMANIM) { CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } }
@@ -3347,7 +3359,7 @@ function frameInner() {
   if (Q.has('dbg') && FRAMES % 20 === 1) console.log('[dce] frame ' + FRAMES + ' t ' + performance.now().toFixed(0) + ' cap ' + elCap.style.display + ' load ' + $('#loading').style.display);
   const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
   stepCam(dt);
-  controls.enabled = !ST && !PROC; // trainings drive the camera
+  controls.enabled = !PROC; // step trainings hold the camera; the dust collection tour can be looked around (it pauses)
   stepRide(dt);
   stepBursts(dt);
   stepCover(dt); stepFxGlow(performance.now() / 1000);
@@ -3364,6 +3376,8 @@ function frameInner() {
   applySkins();
   if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
   if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
+  if (ST && !ST.paused && !CAMANIM && !RIDE && MODE === 'orbit' && !RM) { const ph = curStep().phases[ST.k]; if (ph && !ph.demo) { // a held shot drifts slowly round its subject, so the tour never sits still
+    const o = camera.position.clone().sub(controls.target); o.applyAxisAngle(new THREE.Vector3(0, 1, 0), dt * 0.035); camera.position.copy(controls.target).add(o); camera.lookAt(controls.target); } }
   applyViewOffset();
   renderFinal();
   renderPip();
