@@ -15,10 +15,10 @@
     "sw": "Jaribio la kila wiki la Flamex"
    },
    "source": {
-    "en": "Conklin's Flamex Weekly Testing Process (3 pages), in order.",
-    "es": "Proceso semanal de prueba Flamex de Conklin (3 páginas), en orden.",
-    "fr": "Procédure hebdomadaire de test Flamex de Conklin (3 pages), dans l'ordre.",
-    "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki (kurasa 3), kwa mpangilio."
+    "en": "Conklin's Flamex Weekly Testing Process. Each system is prepped and tested on its own.",
+    "es": "Proceso semanal de prueba Flamex de Conklin. Cada sistema se prepara y prueba por separado.",
+    "fr": "Procédure hebdomadaire Flamex de Conklin. Chaque système est préparé et testé séparément.",
+    "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki. Kila mfumo huandaliwa na kupimwa peke yake."
    },
    "people": {
     "en": "3 people (Employee 1, 2 and 3)",
@@ -31,10 +31,10 @@
     {
      "id": "p1",
      "part": {
-      "en": "Step 1 of 3: prep",
-      "es": "Paso 1 de 3: preparación",
-      "fr": "Étape 1 sur 3 : préparation",
-      "sw": "Hatua 1 kati ya 3: maandalizi"
+      "en": "Interior system: prep",
+      "es": "Sistema interior: preparación",
+      "fr": "Système intérieur : préparation",
+      "sw": "Mfumo wa ndani: maandalizi"
      },
      "actor": "1",
      "focus": "flamex_panels",
@@ -70,19 +70,17 @@
      }
     },
     {
-     "id": "p2",
-     "actor": "2 + 3",
+     "id": "p2a",
+     "actor": "3",
      "focus": "cnc_hatch",
      "highlight": [
-      "hatch_cnc",
-      "hatch_window",
-      "hatch_riser"
+      "hatch_cnc"
      ],
      "text": {
-      "en": "Open each hatch, clean out the debris, then close it. Click each hatch twice: open, then clean and close.",
-      "es": "Abra cada escotilla, limpie los residuos y ciérrela. Haga clic dos veces en cada una: abrir, luego limpiar y cerrar.",
-      "fr": "Ouvrez chaque trappe, retirez les débris, puis refermez-la. Cliquez deux fois sur chaque trappe : ouvrir, puis nettoyer et fermer.",
-      "sw": "Fungua kila kifuniko, safisha uchafu, kisha kifunge. Bofya kila kifuniko mara mbili: fungua, kisha safisha na funga."
+      "en": "Open the hatch over the CNC machine and clean out the debris. Click it twice: open, then clean and close.",
+      "es": "Abra la escotilla sobre la máquina CNC y limpie los residuos. Haga clic dos veces: abrir, luego limpiar y cerrar.",
+      "fr": "Ouvrez la trappe au-dessus de la CNC et retirez les débris. Cliquez deux fois : ouvrir, puis nettoyer et fermer.",
+      "sw": "Fungua kifuniko juu ya mashine ya CNC na usafishe uchafu. Bofya mara mbili: fungua, kisha safisha na funga."
      },
      "cond": {
       "all": [
@@ -97,7 +95,39 @@
          "hatch.hatch_cnc.open",
          false
         ]
-       },
+       }
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      },
+      {
+       "ctl": "hatch_cnc"
+      }
+     ],
+     "see": {
+      "en": "Hatch clean and closed.",
+      "es": "Escotilla limpia y cerrada.",
+      "fr": "Trappe propre et fermée.",
+      "sw": "Kifuniko safi na kimefungwa."
+     }
+    },
+    {
+     "id": "p2b",
+     "actor": "2",
+     "focus": "window_hatch",
+     "highlight": [
+      "hatch_window"
+     ],
+     "text": {
+      "en": "Open the hatch near the window and clean out the debris. Click it twice: open, then clean and close.",
+      "es": "Abra la escotilla junto a la ventana y limpie los residuos. Haga clic dos veces: abrir, luego limpiar y cerrar.",
+      "fr": "Ouvrez la trappe près de la fenêtre et retirez les débris. Cliquez deux fois : ouvrir, puis nettoyer et fermer.",
+      "sw": "Fungua kifuniko karibu na dirisha na usafishe uchafu. Bofya mara mbili: fungua, kisha safisha na funga."
+     },
+     "cond": {
+      "all": [
        {
         "eq": [
          "hatch.hatch_window.cleaned",
@@ -109,61 +139,22 @@
          "hatch.hatch_window.open",
          false
         ]
-       },
-       {
-        "eq": [
-         "hatch.hatch_riser.cleaned",
-         true
-        ]
-       },
-       {
-        "eq": [
-         "hatch.hatch_riser.open",
-         false
-        ]
        }
       ]
      },
-     "mistakes": [
-      {
-       "event": {
-        "ctl": "panel_A",
-        "act": "key",
-        "value": 0
-       },
-       "text": {
-        "en": "Keep the key at bypass until all hatches are cleaned and closed, as the test process says.",
-        "es": "Deje la llave en bypass hasta limpiar y cerrar todas las escotillas, como dice el proceso.",
-        "fr": "Laissez la clé sur bypass jusqu'à ce que toutes les trappes soient nettoyées et fermées, comme le dit la procédure.",
-        "sw": "Acha ufunguo kwenye bypass hadi vifuniko vyote visafishwe na kufungwa, kama mchakato unavyosema."
-       }
-      }
-     ],
      "auto": [
       {
-       "ctl": "hatch_cnc"
-      },
-      {
-       "ctl": "hatch_cnc"
-      },
-      {
        "ctl": "hatch_window"
       },
       {
        "ctl": "hatch_window"
-      },
-      {
-       "ctl": "hatch_riser"
-      },
-      {
-       "ctl": "hatch_riser"
       }
      ],
      "see": {
-      "en": "All three hatches clean and closed.",
-      "es": "Las tres escotillas limpias y cerradas.",
-      "fr": "Les trois trappes propres et fermées.",
-      "sw": "Vifuniko vitatu safi na vimefungwa."
+      "en": "Hatch clean and closed.",
+      "es": "Escotilla limpia y cerrada.",
+      "fr": "Trappe propre et fermée.",
+      "sw": "Kifuniko safi na kimefungwa."
      }
     },
     {
@@ -204,10 +195,10 @@
     {
      "id": "i1",
      "part": {
-      "en": "Step 2 of 3: interior test",
-      "es": "Paso 2 de 3: prueba interior",
-      "fr": "Étape 2 sur 3 : test intérieur",
-      "sw": "Hatua 2 kati ya 3: jaribio la ndani"
+      "en": "Interior system: test",
+      "es": "Sistema interior: prueba",
+      "fr": "Système intérieur : test",
+      "sw": "Mfumo wa ndani: jaribio"
      },
      "actor": "1",
      "focus": "flamex_panels",
@@ -231,42 +222,62 @@
       "es": "Llave en 0. Luz verde Operation encendida.",
       "fr": "Clé sur 0. Voyant vert Operation allumé.",
       "sw": "Ufunguo kwenye 0. Taa ya kijani Operation inawaka."
-     }
+     },
+     "highlight": [
+      "panel_A"
+     ]
     },
     {
      "id": "i2",
      "actor": "2",
      "focus": "window_hatch",
      "highlight": [
-      "hatch_window",
-      "bucket"
+      "hatch_window"
      ],
      "text": {
-      "en": "Open the hatch near the window and put the bucket under it.",
-      "es": "Abra la escotilla junto a la ventana y ponga la cubeta debajo.",
-      "fr": "Ouvrez la trappe près de la fenêtre et placez le seau dessous.",
-      "sw": "Fungua kifuniko karibu na dirisha na weka ndoo chini yake."
+      "en": "Open the hatch near the window.",
+      "es": "Abra la escotilla junto a la ventana.",
+      "fr": "Ouvrez la trappe près de la fenêtre.",
+      "sw": "Fungua kifuniko karibu na dirisha."
      },
      "cond": {
-      "all": [
-       {
-        "eq": [
-         "hatch.hatch_window.open",
-         true
-        ]
-       },
-       {
-        "eq": [
-         "bucket.placed",
-         true
-        ]
-       }
+      "eq": [
+       "hatch.hatch_window.open",
+       true
       ]
      },
      "auto": [
       {
        "ctl": "hatch_window"
-      },
+      }
+     ],
+     "see": {
+      "en": "Window hatch open.",
+      "es": "Escotilla de la ventana abierta.",
+      "fr": "Trappe de la fenêtre ouverte.",
+      "sw": "Kifuniko cha dirisha kiko wazi."
+     }
+    },
+    {
+     "id": "i2b",
+     "actor": "2",
+     "focus": "window_hatch",
+     "highlight": [
+      "bucket"
+     ],
+     "text": {
+      "en": "Place the bucket under the open hatch.",
+      "es": "Coloque la cubeta bajo la escotilla abierta.",
+      "fr": "Placez le seau sous la trappe ouverte.",
+      "sw": "Weka ndoo chini ya kifuniko kilicho wazi."
+     },
+     "cond": {
+      "eq": [
+       "bucket.placed",
+       true
+      ]
+     },
+     "auto": [
       {
        "ctl": "bucket"
       }
@@ -425,7 +436,11 @@
       "es": "Bocinas y estrobos se detienen. El agua sigue.",
       "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
       "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
-     }
+     },
+     "highlight": [
+      "panel_A"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "i8",
@@ -456,7 +471,11 @@
       "es": "Luz Fire apagada. El agua se detiene.",
       "fr": "Voyant Fire éteint. L'eau s'arrête.",
       "sw": "Taa ya Fire imezimika. Maji yanasimama."
-     }
+     },
+     "highlight": [
+      "panel_A"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "i9",
@@ -487,33 +506,139 @@
       "es": "Luz Supervisory apagada.",
       "fr": "Voyant Supervisory éteint.",
       "sw": "Taa ya Supervisory imezimika."
-     }
+     },
+     "highlight": [
+      "panel_A"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "i10",
      "actor": "2",
      "focus": "window_hatch",
      "highlight": [
-      "hatch_window",
+      "hatch_window"
+     ],
+     "text": {
+      "en": "Once it has drained and been wiped with a cloth, shut the hatch.",
+      "es": "Cuando haya drenado y se haya limpiado con un trapo, cierre la escotilla.",
+      "fr": "Une fois vidée et essuyée avec un chiffon, fermez la trappe.",
+      "sw": "Ikishamwagika na kufutwa kwa kitambaa, funga kifuniko."
+     },
+     "cond": {
+      "eq": [
+       "hatch.hatch_window.open",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_window"
+      }
+     ],
+     "see": {
+      "en": "Window hatch closed.",
+      "es": "Escotilla de la ventana cerrada.",
+      "fr": "Trappe de la fenêtre fermée.",
+      "sw": "Kifuniko cha dirisha kimefungwa."
+     }
+    },
+    {
+     "id": "i11",
+     "actor": "2",
+     "focus": "window_hatch",
+     "highlight": [
       "bucket"
      ],
      "text": {
-      "en": "Once it has drained, wipe it dry, take the bucket away and shut the window hatch.",
-      "es": "Cuando haya escurrido, séquela con un trapo, retire la cubeta y cierre la escotilla de la ventana.",
-      "fr": "Une fois égouttée, essuyez-la, retirez le seau et fermez la trappe de la fenêtre.",
-      "sw": "Ikishamwaga maji, ifute kwa kitambaa, ondoa ndoo na funga kifuniko cha dirisha."
+      "en": "Take the bucket away.",
+      "es": "Retire la cubeta.",
+      "fr": "Retirez le seau.",
+      "sw": "Ondoa ndoo."
+     },
+     "cond": {
+      "eq": [
+       "bucket.placed",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "bucket"
+      }
+     ],
+     "see": {
+      "en": "Bucket put away.",
+      "es": "Cubeta guardada.",
+      "fr": "Seau rangé.",
+      "sw": "Ndoo imeondolewa."
+     }
+    },
+    {
+     "id": "x1",
+     "actor": "2",
+     "focus": "flamex_panels",
+     "panel": "flamex_B",
+     "highlight": [
+      "panel_B"
+     ],
+     "text": {
+      "en": "At the Exterior Flamex Panel: turn the key to bypass (1).",
+      "es": "En el panel Flamex exterior: gire la llave a bypass (1).",
+      "fr": "Au panneau Flamex extérieur : tournez la clé sur bypass (1).",
+      "sw": "Kwenye paneli ya nje ya Flamex: geuza ufunguo kwenda bypass (1)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       1
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "key"
+       ]
+      }
+     ],
+     "see": {
+      "en": "Disabled light on.",
+      "es": "Luz Disabled encendida.",
+      "fr": "Voyant Disabled allumé.",
+      "sw": "Taa ya Disabled inawaka."
+     },
+     "part": {
+      "en": "Exterior system: prep",
+      "es": "Sistema exterior: preparación",
+      "fr": "Système extérieur : préparation",
+      "sw": "Mfumo wa nje: maandalizi"
+     }
+    },
+    {
+     "id": "x2",
+     "actor": "1",
+     "focus": "riser_hatch",
+     "highlight": [
+      "hatch_riser"
+     ],
+     "text": {
+      "en": "Open the hatch on the riser by the shed and clean out the debris. Click it twice: open, then clean and close.",
+      "es": "Abra la escotilla del tubo vertical junto a la caseta y limpie los residuos. Haga clic dos veces: abrir, luego limpiar y cerrar.",
+      "fr": "Ouvrez la trappe de la colonne près de l’abri et retirez les débris. Cliquez deux fois : ouvrir, puis nettoyer et fermer.",
+      "sw": "Fungua kifuniko cha bomba la kupanda karibu na kibanda na usafishe uchafu. Bofya mara mbili: fungua, kisha safisha na funga."
      },
      "cond": {
       "all": [
        {
         "eq": [
-         "hatch.hatch_window.open",
-         false
+         "hatch.hatch_riser.cleaned",
+         true
         ]
        },
        {
         "eq": [
-         "bucket.placed",
+         "hatch.hatch_riser.open",
          false
         ]
        }
@@ -521,26 +646,61 @@
      },
      "auto": [
       {
-       "ctl": "hatch_window"
+       "ctl": "hatch_riser"
       },
       {
-       "ctl": "bucket"
+       "ctl": "hatch_riser"
       }
      ],
      "see": {
-      "en": "Window hatch closed. Bucket put away.",
-      "es": "Escotilla de la ventana cerrada. Cubeta guardada.",
-      "fr": "Trappe de la fenêtre fermée. Seau rangé.",
-      "sw": "Kifuniko cha dirisha kimefungwa. Ndoo imeondolewa."
+      "en": "Hatch clean and closed.",
+      "es": "Escotilla limpia y cerrada.",
+      "fr": "Trappe propre et fermée.",
+      "sw": "Kifuniko safi na kimefungwa."
      }
+    },
+    {
+     "id": "x3",
+     "actor": "2",
+     "panel": "flamex_B",
+     "text": {
+      "en": "Turn the key back to active (0).",
+      "es": "Regrese la llave a activo (0).",
+      "fr": "Remettez la clé sur actif (0).",
+      "sw": "Rudisha ufunguo kwenye hai (0)."
+     },
+     "cond": {
+      "eq": [
+       "flamex.B.key",
+       0
+      ]
+     },
+     "auto": [
+      {
+       "fx": [
+        "B",
+        "key"
+       ]
+      }
+     ],
+     "see": {
+      "en": "Disabled light off.",
+      "es": "Luz Disabled apagada.",
+      "fr": "Voyant Disabled éteint.",
+      "sw": "Taa ya Disabled imezimika."
+     },
+     "highlight": [
+      "panel_B"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "e1",
      "part": {
-      "en": "Step 3 of 3: exterior test",
-      "es": "Paso 3 de 3: prueba exterior",
-      "fr": "Étape 3 sur 3 : test extérieur",
-      "sw": "Hatua 3 kati ya 3: jaribio la nje"
+      "en": "Exterior system: test",
+      "es": "Sistema exterior: prueba",
+      "fr": "Système extérieur : test",
+      "sw": "Mfumo wa nje: jaribio"
      },
      "actor": "1",
      "focus": "rolloff_hose",
@@ -700,7 +860,11 @@
       "es": "Bocinas y estrobos se detienen. El agua sigue.",
       "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
       "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
-     }
+     },
+     "highlight": [
+      "panel_B"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "e6",
@@ -731,7 +895,11 @@
       "es": "Luz Fire apagada. El agua se detiene.",
       "fr": "Voyant Fire éteint. L'eau s'arrête.",
       "sw": "Taa ya Fire imezimika. Maji yanasimama."
-     }
+     },
+     "highlight": [
+      "panel_B"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "e7",
@@ -762,7 +930,11 @@
       "es": "Luz Disabled apagada.",
       "fr": "Voyant Disabled éteint.",
       "sw": "Taa ya Disabled imezimika."
-     }
+     },
+     "highlight": [
+      "panel_B"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "e8",
@@ -793,7 +965,11 @@
       "es": "El zumbador del panel se calla.",
       "fr": "Le buzzer du panneau se tait.",
       "sw": "Buzzer ya paneli imenyamaza."
-     }
+     },
+     "highlight": [
+      "panel_B"
+     ],
+     "focus": "flamex_panels"
     },
     {
      "id": "e9",
@@ -1972,6 +2148,36 @@
      }
     },
     {
+     "id": "a7b",
+     "actor": "3",
+     "highlight": [
+      "hatch_cnc"
+     ],
+     "text": {
+      "en": "Once it has tripped, shut the CNC hatch.",
+      "es": "Cuando se haya disparado, cierre la escotilla del CNC.",
+      "fr": "Une fois déclenché, fermez la trappe du CNC.",
+      "sw": "Ukishawaka, funga kifuniko cha CNC."
+     },
+     "cond": {
+      "eq": [
+       "hatch.hatch_cnc.open",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_cnc"
+      }
+     ],
+     "see": {
+      "en": "CNC hatch closed. Water still spraying.",
+      "es": "Escotilla del CNC cerrada. El agua sigue.",
+      "fr": "Trappe du CNC fermée. L'eau continue.",
+      "sw": "Kifuniko cha CNC kimefungwa. Maji bado yanatoka."
+     }
+    },
+    {
      "id": "a8",
      "ack": true,
      "text": {
@@ -2331,6 +2537,36 @@
       "es": "Fire y grupo 1 encendidos. La pantalla muestra la hora. Sale agua.",
       "fr": "Fire et groupe 1 allumés. L'écran affiche l'heure. L'eau gicle.",
       "sw": "Fire na kundi 1 zinawaka. Skrini inaonyesha saa. Maji yanatoka."
+     }
+    },
+    {
+     "id": "b6b",
+     "actor": "3",
+     "highlight": [
+      "hatch_riser"
+     ],
+     "text": {
+      "en": "Close the riser hatch.",
+      "es": "Cierre la escotilla del tubo vertical.",
+      "fr": "Fermez la trappe de la colonne.",
+      "sw": "Funga kifuniko cha bomba la kupanda."
+     },
+     "cond": {
+      "eq": [
+       "hatch.hatch_riser.open",
+       false
+      ]
+     },
+     "auto": [
+      {
+       "ctl": "hatch_riser"
+      }
+     ],
+     "see": {
+      "en": "Riser hatch closed. Water still spraying.",
+      "es": "Escotilla del tubo cerrada. El agua sigue.",
+      "fr": "Trappe de la colonne fermée. L’eau continue.",
+      "sw": "Kifuniko kimefungwa. Maji bado yanatoka."
      }
     },
     {

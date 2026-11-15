@@ -1,6 +1,6 @@
 {
  "meta": {
-  "title": "Guided tour: from a closed shop to the whole system running",
+  "title": "How dust collection works: the system, blast gates, the dust path and spark detection (no start-up; that is its own training)",
   "made": "2026-11-13",
   "edit_rule": "Edit the words, times and actions here; app.js plays them. Each step has phases that play on their own. A phase can set a 'state' (from 'states'), run timed actions 'at' [[seconds, action]], wait 'until' a simulator value, fly the camera ('view' = a controls.json view, 'cam' = {vp, keys} from a scene.json viewpoint, or {position, target}, or 'none' = leave the camera), show 'labels', ring 'rings' controls and open a 'panel'. 'vp' picks what a scene.json viewpoint hides and cuts open.",
   "start_order": "Owner, 2026-11-13: the inside starters are turned on right to left: starter 1 (rotary airlock, with the airlock box), starter 2 (transfer blower), starter 3 (dust collector main fan). Shut down is the reverse.",
@@ -81,151 +81,65 @@
  },
  "steps": [
   {
-   "id": "start",
+   "id": "system",
    "title": {
-    "en": "Start the dust collector, one system at a time",
-    "es": "Arranque el colector, un sistema a la vez",
-    "fr": "Démarrez le dépoussiéreur, un système à la fois",
-    "sw": "Washa kikusanya vumbi, mfumo mmoja baada ya mwingine"
+    "en": "The dust collection system",
+    "es": "El sistema de recolección de polvo",
+    "fr": "Le système de dépoussiérage",
+    "sw": "Mfumo wa kukusanya vumbi"
    },
    "map": [
-    "airlock",
-    "blower",
-    "fan"
+    "machines",
+    "duct",
+    "cyclone",
+    "rolloff",
+    "fan",
+    "filters"
    ],
    "phases": [
     {
-     "state": "closed",
-     "vp": "machines",
-     "view": "collector_wall",
-     "panel": "collector",
-     "rings": [
-      "airlock_box",
-      "starter1"
-     ],
-     "dur": 5,
-     "at": [
-      [
-       2.2,
-       {
-        "do": "starter",
-        "id": "starter1",
-        "act": "start"
-       }
-      ]
-     ],
-     "cap": {
-      "en": "Start the dust collector at the wall, right to left. 1. Starter 1: the rotary airlock. The airlock box shows SYSTEM ON.",
-      "es": "Encienda el colector en la pared, de derecha a izquierda. 1. Arrancador 1: la válvula rotativa. La caja muestra SYSTEM ON.",
-      "fr": "Démarrez le dépoussiéreur au mur, de droite à gauche. 1. Démarreur 1 : l'écluse rotative. Le boîtier affiche SYSTEM ON.",
-      "sw": "Washa kikusanya vumbi ukutani, kulia kwenda kushoto. 1. Kianzishi 1: vali ya kuzunguka. Kisanduku kinaonyesha SYSTEM ON."
-     },
-     "labels": [
-      {
-       "a": {
-        "ctl": "starter1"
-       },
-       "accent": "#2563eb",
-       "text": {
-        "en": "Starter 1",
-        "es": "Arrancador 1",
-        "fr": "Démarreur 1",
-        "sw": "Kianzishi 1"
-       }
-      }
-     ]
-    },
-    {
-     "state": "airlock",
-     "state_soft": true,
-     "vp": "machines",
-     "view": "collector_wall",
-     "panel": "collector",
-     "rings": [
-      "starter2"
-     ],
-     "dur": 4.5,
-     "at": [
-      [
-       1.5,
-       {
-        "do": "starter",
-        "id": "starter2",
-        "act": "start"
-       }
-      ]
-     ],
-     "cap": {
-      "en": "2. Starter 2: the transfer blower.",
-      "es": "2. Arrancador 2: el soplador de transferencia.",
-      "fr": "2. Démarreur 2 : la soufflante de transfert.",
-      "sw": "2. Kianzishi 2: kipuliza cha kusafirisha."
-     },
-     "labels": [
-      {
-       "a": {
-        "ctl": "starter2"
-       },
-       "accent": "#2563eb",
-       "text": {
-        "en": "Starter 2",
-        "es": "Arrancador 2",
-        "fr": "Démarreur 2",
-        "sw": "Kianzishi 2"
-       }
-      }
-     ]
-    },
-    {
      "state": "running",
-     "state_soft": true,
-     "vp": "machines",
-     "view": "collector_wall",
-     "panel": "collector",
-     "rings": [
-      "starter3"
-     ],
+     "vp": "overview",
      "dur": 6,
-     "at": [
-      [
-       1.5,
-       {
-        "do": "starter",
-        "id": "starter3",
-        "act": "start"
-       }
-      ]
-     ],
+     "xray": true,
      "cap": {
-      "en": "3. Starter 3 (left): the main fan. Suction starts. No dust yet: every gate is closed.",
-      "es": "3. Arrancador 3 (izquierda): el ventilador principal. Empieza la succión. Aún no hay polvo: todas las compuertas están cerradas.",
-      "fr": "3. Démarreur 3 (gauche) : le ventilateur principal. L'aspiration démarre. Pas encore de poussière : toutes les vannes sont fermées.",
-      "sw": "3. Kianzishi 3 (kushoto): feni kuu. Kuvuta kunaanza. Bado hakuna vumbi: vali zote zimefungwa."
-     },
-     "labels": [
-      {
-       "a": {
-        "ctl": "starter3"
-       },
-       "accent": "#2563eb",
-       "text": {
-        "en": "Starter 3",
-        "es": "Arrancador 3",
-        "fr": "Démarreur 3",
-        "sw": "Kianzishi 3"
-       }
-      }
-     ]
+      "en": "One system serves every machine. The main fan pulls air from the machines through the ducts.",
+      "es": "Un sistema sirve a todas las máquinas. El ventilador principal jala el aire de las máquinas por los ductos.",
+      "fr": "Un seul système dessert toutes les machines. Le ventilateur principal aspire l’air des machines par les conduits.",
+      "sw": "Mfumo mmoja unahudumia mashine zote. Feni kuu inavuta hewa kutoka mashine kupitia mabomba."
+     }
+    },
+    {
+     "vp": "overview",
+     "dur": 6,
+     "xray": true,
+     "cap": {
+      "en": "The cyclone separates chips from the air. Chips go to the roll-off. The air goes through the filters and leaves clean.",
+      "es": "El ciclón separa las virutas del aire. Las virutas van al contenedor. El aire pasa por los filtros y sale limpio.",
+      "fr": "Le cyclone sépare les copeaux de l’air. Les copeaux vont à la benne. L’air passe par les filtres et sort propre.",
+      "sw": "Kimbunga kinatenganisha vipande na hewa. Vipande vinaenda kwenye kontena. Hewa inapita kwenye vichujio na kutoka safi."
+     }
+    },
+    {
+     "vp": "overview",
+     "dur": 5,
+     "xray": true,
+     "cap": {
+      "en": "Flamex watches the ducts for sparks and puts them out with water.",
+      "es": "Flamex vigila las chispas en los ductos y las apaga con agua.",
+      "fr": "Flamex surveille les étincelles dans les conduits et les éteint avec de l’eau.",
+      "sw": "Flamex inaangalia cheche kwenye mabomba na kuzizima kwa maji."
+     }
     }
    ]
   },
   {
    "id": "gate",
    "title": {
-    "en": "Open the machine's gate",
-    "es": "Abra la compuerta de la máquina",
-    "fr": "Ouvrez la vanne de la machine",
-    "sw": "Fungua vali ya mashine"
+    "en": "Blast gates",
+    "es": "Compuertas",
+    "fr": "Vannes",
+    "sw": "Vali za mashine"
    },
    "map": [
     "gates"
@@ -235,26 +149,15 @@
      "state": "running",
      "vp": "machines",
      "view": "gate_panel",
-     "panel": "gate_panel",
      "rings": [
       "gate_panel"
      ],
      "dur": 5,
-     "at": [
-      [
-       1.8,
-       {
-        "do": "gate",
-        "id": "CNC1",
-        "open": true
-       }
-      ]
-     ],
      "cap": {
-      "en": "At the blast gate panel, press green for CNC 1.",
-      "es": "En el panel de compuertas, pulse el verde de CNC 1.",
-      "fr": "Au panneau des vannes, appuyez sur le vert de CNC 1.",
-      "sw": "Kwenye paneli ya vali, bonyeza kijani cha CNC 1."
+      "en": "Every machine has a blast gate. Only open gates pull air, so the suction goes to the machines that run.",
+      "es": "Cada máquina tiene una compuerta. Solo las abiertas jalan aire, así la succión va a las máquinas que trabajan.",
+      "fr": "Chaque machine a une vanne. Seules les vannes ouvertes aspirent : l’aspiration va aux machines qui tournent.",
+      "sw": "Kila mashine ina vali. Vali zilizo wazi tu ndizo zinavuta hewa, hivyo uvutaji unaenda kwa mashine zinazofanya kazi."
      },
      "labels": [
       {
@@ -288,10 +191,10 @@
       "Gate_CNC1_Slide"
      ],
      "cap": {
-      "en": "Its gate slides open. Now the hose pulls.",
-      "es": "Su compuerta se abre. Ahora la manguera jala.",
-      "fr": "Sa vanne s'ouvre. Le tuyau aspire.",
-      "sw": "Vali yake inafunguka. Sasa bomba linavuta."
+      "en": "When CNC 1 runs, its gate opens and its hose pulls the dust.",
+      "es": "Cuando la CNC 1 trabaja, su compuerta se abre y su manguera jala el polvo.",
+      "fr": "Quand la CNC 1 tourne, sa vanne s’ouvre et son tuyau aspire la poussière.",
+      "sw": "CNC 1 inapofanya kazi, vali yake inafunguka na bomba lake linavuta vumbi."
      },
      "labels": [
       {

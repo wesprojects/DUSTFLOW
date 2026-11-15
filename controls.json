@@ -551,9 +551,9 @@
     "sw": "Kifuniko cha kigunduzi juu ya CNC"
    },
    "pos": [
-    5.13,
-    4.8,
-    -11.584
+    5.196,
+    4.81,
+    -11.635
    ],
    "normal": [
     0,
@@ -576,19 +576,20 @@
     "sw": "Kifuniko karibu na dirisha (pua)"
    },
    "pos": [
-    4.655,
-    4.1,
-    -18.45
+    4.493,
+    3.95,
+    -18.5
    ],
    "normal": [
-    1,
     0,
+    -1,
     0
    ],
    "size": [
-    0.2,
-    0.15
-   ]
+    0.21,
+    0.29
+   ],
+   "_src": "real cleanout (Cast_Al oval on the duct underside, Duct_Trunk_North), 11-15"
   },
   {
    "id": "hatch_riser",
@@ -614,6 +615,11 @@
    "size": [
     0.12,
     0.16
+   ],
+   "view_from": [
+    5.1,
+    2.5,
+    -20.8
    ]
   },
   {
@@ -631,9 +637,9 @@
     -18.35
    ],
    "placed_pos": [
-    4.7,
-    3.62,
-    -18.45
+    4.493,
+    3.63,
+    -18.5
    ]
   },
   {

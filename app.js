@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.19';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.19';
+import { createSim } from './sim.js?v=2026-11-15.26';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.26';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1151,6 +1151,7 @@ for (const z of ['A', 'B']) {
     ? new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.1, kb.min.y + s0.y * 0.04, kb.min.z), new THREE.Vector3(kb.max.x - s0.x * 0.06, kb.max.y - s0.y * 0.04, kb.max.z))
     : (inset ? new THREE.Box3(new THREE.Vector3(inset.min.x, inset.min.y, kb.min.z), new THREE.Vector3(inset.max.x, inset.max.y, Math.max(kb.max.z, inset.max.z)))
       : new THREE.Box3(new THREE.Vector3(kb.min.x + s0.x * 0.22, kb.max.y - s0.y * 0.64, kb.min.z), new THREE.Vector3(kb.min.x + s0.x * 0.77, kb.max.y - s0.y * 0.31, kb.max.z))); }
+  if (kb && z === 'B' && b.max.y - b.min.y < 0.05) { const s0 = kb.getSize(new THREE.Vector3()); b.min.y = kb.max.y - 0.56 * s0.y; b.max.y = kb.max.y - 0.20 * s0.y; } // the decal scan found only a strip: the inset spans 20-56 % down the door (photo 61)
   const sz = b.getSize(new THREE.Vector3()), ctr = b.getCenter(new THREE.Vector3());
   const W = 512, H = Math.round(512 * sz.y / sz.x);
   const tex = canvasTex(W, H, () => {});
@@ -1165,10 +1166,44 @@ function drawFxFace(z, blink) {
   const st = fxState(z, blink); st.lcd = fxLcd(z);
   const key = [st.fire, st.key, st.lamp, st.water, st.horns, st.extOff, (st.lcd || []).join('|')].join();
   if (key === F.last) return; F.last = key;
-  drawPanelFace(z, F.tex.userData.g, F.W, F.H, st);
+  F.hot = drawPanelFace(z, F.tex.userData.g, F.W, F.H, st) || F.hot;
   F.tex.needsUpdate = true;
 }
 
+// trainings use the real 3D panels: the FLE 5000's clear cover swings open on its hinge, buttons are pressed on the face
+const COVER = { A: { open: false, piv: null } };
+{ const d = scene.getObjectByName('FlamexWall_FLEDoor');
+  if (d) { scene.updateMatrixWorld(true); const hb = new THREE.Box3().setFromObject(d); const piv = new THREE.Group();
+    piv.position.set(hb.min.x + 0.014, (hb.min.y + hb.max.y) / 2, hb.max.z - 0.017); scene.add(piv); piv.updateMatrixWorld(true); piv.attach(d); COVER.A.piv = piv; } }
+function stepCover(dt) { const C = COVER.A; if (!C.piv) return; const t = C.open ? -1.95 : 0; C.piv.rotation.y += (t - C.piv.rotation.y) * Math.min(1, dt * 5); }
+function setCover(z, open) { if (COVER[z]) COVER[z].open = open; }
+function stepFxBtn(st) { // the one panel button this step expects
+  if (!st) return null; if (st.fx_btn) return st.fx_btn;
+  const c = JSON.stringify(st.cond || {});
+  if (/"act":"ext"/.test(c)) return 'ext'; if (/"act":"int"/.test(c)) return 'int'; if (/\.key"/.test(c)) return 'key';
+  if (/\.fire",false/.test(c)) return 'reset'; if (/\.lamp"/.test(c)) return 'lamp'; return null;
+}
+const fxGlow = new THREE.Group(); scene.add(fxGlow);
+function setFxGlow(z, act) {
+  fxGlow.clear(); const F = FXFACE[z]; if (!F || !act || !F.hot) return;
+  const h = F.hot.find(x => x.act === act); if (!h) return;
+  const g = F.mesh.geometry.parameters, w = g.width, hh = g.height;
+  const pw = h.w * w, ph = h.h * hh, cx = (h.x + h.w / 2 - 0.5) * w, cy = (0.5 - h.y - h.h / 2) * hh;
+  const ring = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(pw * 1.25, ph * 1.25)), new THREE.LineBasicMaterial({ color: 0xffd23f, depthTest: false, transparent: true }));
+  const fill = new THREE.Mesh(new THREE.PlaneGeometry(pw * 1.25, ph * 1.25), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.25, depthTest: false }));
+  for (const m of [ring, fill]) { m.position.set(cx, cy, 0.004); m.renderOrder = 45; }
+  const holder = new THREE.Group(); holder.add(ring, fill); F.mesh.updateMatrixWorld(true); holder.applyMatrix4(F.mesh.matrixWorld); fxGlow.add(holder); fxGlow.userData = { fill, ring };
+}
+function stepFxGlow(t) { const u = fxGlow.userData; if (!u || !u.fill || !fxGlow.children.length) return; const k = 0.5 + 0.5 * Math.sin(t * 6); u.fill.material.opacity = 0.12 + 0.3 * k; u.ring.material.opacity = 0.6 + 0.4 * k; }
+function panelFaceClick(z, uv) {
+  if (z === 'A' && !COVER.A.open) { setCover('A', true); feedback(true); renderProc(); return; } // first click: open the cover
+  const F = FXFACE[z]; if (!uv || !F || !F.hot) return;
+  const u = uv.x, v = 1 - uv.y, h = F.hot.find(x => u >= x.x && u <= x.x + x.w && v >= x.y && v <= x.y + x.h);
+  if (!h) return;
+  const want = PROC ? stepFxBtn(PROCDEF().steps[PROC.i]) : null;
+  if (PROC && want && h.act !== want) { toast(tx(L4('Not this one. Use the glowing button.', 'Este no. Use el botón iluminado.', 'Pas celui-ci. Utilisez le bouton éclairé.', 'Si hiki. Tumia kitufe kinachong’aa.'), PRIM), 'bad'); feedback(false); return; }
+  fxButton(z, h.act); renderAll();
+}
 // lock + tag visuals
 function buildLockVisual(id) {
   const C = CTL3[id]; if (!C || !C.lockG) return;
@@ -2203,6 +2238,8 @@ function pick(e) {
   ray.setFromCamera(m, camera);
   const list = pickables.filter(visibleDeep).concat(clickables.filter(visibleDeep));
   const hits = ray.intersectObjects(list, false);
+  if (PROC) { const fh = hits.find(h => (FXFACE.A && h.object === FXFACE.A.mesh) || (FXFACE.B && h.object === FXFACE.B.mesh));
+    if (fh) { const z = fh.object === FXFACE.A.mesh ? 'A' : 'B'; if (trainingAllows('panel_' + z)) { panelFaceClick(z, fh.uv); return; } } }
   if (PROC || ST) { // in a training the step's control wins even with a duct or wall in front of it
     const a = hits.find(h => h.object.userData.ctl && trainingAllows(h.object.userData.ctl));
     if (a) { clickControl(a.object.userData); return; }
@@ -2237,7 +2274,7 @@ function clickControl(u) {
     if (c && c.type === 'hatch' && c.detector && !S.hatch[id].open) { toggleHatch(id); renderAll(); return; } // flashlight in hand: the first click opens the hatch
     if (c && c.type === 'hatch' && c.detector) { shine(c.zone); TOOL = null; document.body.classList.remove('tool-on'); renderAll(); return; }
   }
-  if (/^panel_/.test(id)) { openPanel('flamex_' + id.slice(6)); return; }
+  if (/^panel_/.test(id)) { if (PROC) { panelFaceClick(id.slice(6), null); return; } openPanel('flamex_' + id.slice(6)); return; }
   const c = CTL[id];
   switch (c.type) {
     case 'eaton': if (act === 'handle') setEaton(id, !S.eaton[id].on); openPanel(c.where === 'outside' ? 'outside' : 'collector'); break;
@@ -2598,7 +2635,7 @@ function stateForProcPaths() { // expose a few derived values to the condition p
 function startProc(id, role = null) {
   storyStop();
   resetScene(true);
-  PROC = { id, role, i: 0, events: [], mistakes: 0, msg: null, done: [], skipped: [] };
+  PROC = { id, role, i: 0, events: [], mistakes: 0, msg: null, done: [], skipped: [] }; setCover('A', false);
   { const P0 = PR.procedures.find(p => p.id === id); if (P0 && P0.start_tour_state) tourState(P0.start_tour_state, false); }
   enterStep();
 }
@@ -2618,8 +2655,9 @@ function enterStep() {
     flyTo({ position: [cp.x, cp.y, cp.z], target: [c.x, c.y, c.z] }, 1.6);
   }
   else if (hp && !PROCDEF().fixed_view) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
-    const d = Math.abs(hn.y) > 0.7 ? 2.2 : 1.9, cp = hp.clone().addScaledVector(hn, d); cp.y += Math.abs(hn.y) > 0.7 ? 0 : 0.35;
-    if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(1.2, 0, 1.2));
+    const pnl = /^panel_/.test(hid), d = pnl ? clamp(renderer.domElement.clientHeight * 0.00084, 0.5, 0.9) : Math.abs(hn.y) > 0.7 ? 1.3 : 1.5, cp = hp.clone().addScaledVector(hn, d); cp.y += pnl ? 0.04 : Math.abs(hn.y) > 0.7 ? 0 : 0.3;
+    if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(0.7, 0, 0.7)); // a hatch that opens downward: from close below, a little to the side
+    if (CTL[hid] && CTL[hid].view_from) cp.copy(V3(CTL[hid].view_from)); // a hand-picked spot where nothing stands in front of it
     flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z] }, 2.4);
   }
   else if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 2.4); }
@@ -2631,7 +2669,8 @@ function enterStep() {
   if (st.cut && CUT[st.cut]) { if (PROC.cutOn && PROC.cutOn !== st.cut) setCutOpen(PROC.cutOn, false); setCutOpen(st.cut, true); PROC.cutOn = st.cut; } // open the housing: the wheel is seen turning
   else if (PROC.cutOn) { setCutOpen(PROC.cutOn, false); PROC.cutOn = null; }
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
-  if (st.panel) openPanel(st.panel);
+  if (st.panel && !/^flamex_/.test(st.panel)) openPanel(st.panel); else if (st.panel && PANEL) closePanel();
+  setFxGlow(st.panel ? st.panel.slice(-1) : null, stepFxBtn(st));
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
   highlightControls(st.highlight || []);
   // someone else's step (the trainee picked a role), or a step the app always does (a test trip): the app performs it
@@ -2671,7 +2710,7 @@ function highlightControls(ids) {
     const box = new THREE.Box3Helper(bb, 0xffc21f); box.material.transparent = true; box.material.depthTest = false; box.material.linewidth = 2;
     box.renderOrder = 30; box.userData.pulse = true; box.userData.box = true; hlGroup.add(box);
     const sz = bb.getSize(new THREE.Vector3()), shell = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), new THREE.MeshBasicMaterial({ color: 0xffc21f, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false }));
-    shell.position.copy(bb.getCenter(new THREE.Vector3())); shell.renderOrder = 29; shell.userData.box = true; shell.userData.shell = true; hlGroup.add(shell);
+    shell.position.copy(bb.getCenter(new THREE.Vector3())); shell.renderOrder = 29; shell.userData.box = true; shell.userData.shell = true; hlGroup.add(shell); if (/^panel_/.test(id) && PROC) shell.visible = false; // a panel face stays readable: its outline glows, the button to press glows on it
   }
 }
 function procOnEvent(ev) {
@@ -2731,7 +2770,7 @@ function feedback(ok, where) {
 function renderProc() {
   let el = $('#proc');
   document.body.classList.toggle('proc-on', !!PROC);
-  if (!PROC) { setPip(null); if (el) el.remove(); if ($('#quizm')) $('#quizm').remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
+  if (!PROC) { setPip(null); setCover('A', false); fxGlow.clear(); if (el) el.remove(); if ($('#quizm')) $('#quizm').remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
   if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card pcard'; elRight.prepend(el); }
   const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = PRIM;
   const big = o => esc(tx(o, L1)), small = o => LANGS.length > 1 ? LANGS.slice(1).filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
@@ -2741,7 +2780,8 @@ function renderProc() {
     html += `<div class="p-ins">${big(U.finished)}</div><div class="p-acts"><button class="b" id="prRe">${esc(tx(U.restart, L1))}</button><button class="b go" id="prX">${esc(tx(U.exit, L1))}</button></div>`;
   } else {
     if (st.actor) html += `<div class="p-who">${esc(tx(U.employee, L1))} ${esc(st.actor)}</div>`;
-    html += `<div class="p-ins">${big(st.text)}</div>${small(st.text)}`;
+    const coverFirst = st.panel === 'flamex_A' && !COVER.A.open && stepFxBtn(st) ? L4('Click the glowing panel to open its cover.', 'Haga clic en el panel iluminado para abrir la tapa.', 'Cliquez sur le panneau éclairé pour ouvrir le couvercle.', 'Bofya paneli inayong’aa kufungua kifuniko chake.') : null;
+    html += coverFirst ? `<div class="p-ins">${big(coverFirst)}</div><div class="p-l">${esc(tx(L4('Then: ', 'Luego: ', 'Puis : ', 'Kisha: '), PRIM))}${esc(tx(st.text, PRIM))}</div>` : `<div class="p-ins">${big(st.text)}</div>${small(st.text)}`;
     if (st.quiz && false) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${big(o)}</button>`).join('')}</div><div class="p-l">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div>`;
     if (st.tool === 'flashlight') html += `<div class="p-l">🔦 ${big(MSG.pick_flashlight)}</div>`;
     if (PROC.msg) html += `<div class="${PROC.msg.kind === 'bad' ? 'mist' : 'good'}">${big(PROC.msg.o)}</div>`;
@@ -3310,6 +3350,7 @@ function frameInner() {
   controls.enabled = !ST && !PROC; // trainings drive the camera
   stepRide(dt);
   stepBursts(dt);
+  stepCover(dt); stepFxGlow(performance.now() / 1000);
   { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
     const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);
     if (Math.abs(dn - camera.near) > 0.004) { camera.near = dn; camera.updateProjectionMatrix(); }
@@ -3462,7 +3503,7 @@ function pickProbe(x, y) {
   if (!a && (PROC || ST)) { const m = trainingBoxHit(); if (m) a = { object: m }; }
   return { first: hits[0] ? (hits[0].object.userData.ctl || topNode(hits[0].object).name) : null, acts: a ? a.object.userData.ctl + ':' + (a.object.userData.act || '') : (hits[0] && hits[0].object.userData.ctl ? hits[0].object.userData.ctl : null) };
 }
-window.__dce = { pickProbe, enterStep, renderProc, PROCDEF: () => PROCDEF(), clickables, startProc, fxButton, shine, clickControl, checkStep, S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
+window.__dce = { pick, FXFACE, COVER, stepFxBtn, pickProbe, enterStep, renderProc, CTL, flyTo, PROCDEF: () => PROCDEF(), clickables, startProc, fxButton, shine, clickControl, checkStep, S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
 console.log('[dce] ready ' + JSON.stringify({ particles: NTOT, flowParticles: NP, nodes: Object.keys(NODE).length }));
 if (Q.has('bench')) { const t0 = Date.now(); for (let n = 0; n < 120; n++) tick(1 / 60); console.log('[dce] bench tick ms ' + ((Date.now() - t0) / 120).toFixed(2)); }
 requestAnimationFrame(frame);
