@@ -1003,6 +1003,25 @@
      ]
     },
     {
+     "id": "l6",
+     "panel": "collector",
+     "highlight": [
+      "starter2"
+     ],
+     "text": {
+      "en": "Stop the transfer blower: red button on starter 2.",
+      "es": "Detenga el soplador de transferencia: botón rojo del arrancador 2.",
+      "fr": "Arrêtez le ventilateur de transfert : bouton rouge du démarreur 2.",
+      "sw": "Simamisha kipuliza cha kusafirisha: kitufe chekundu cha kianzishi 2."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter2",
+       false
+      ]
+     }
+    },
+    {
      "id": "l5",
      "panel": "collector",
      "highlight": [
@@ -1018,25 +1037,6 @@
      "cond": {
       "eq": [
        "starter.starter1",
-       false
-      ]
-     }
-    },
-    {
-     "id": "l6",
-     "panel": "collector",
-     "highlight": [
-      "starter2"
-     ],
-     "text": {
-      "en": "Stop the transfer blower: red button on starter 2.",
-      "es": "Detenga el soplador de transferencia: botón rojo del arrancador 2.",
-      "fr": "Arrêtez le ventilateur de transfert : bouton rouge du démarreur 2.",
-      "sw": "Simamisha kipuliza cha kusafirisha: kitufe chekundu cha kianzishi 2."
-     },
-     "cond": {
-      "eq": [
-       "starter.starter2",
        false
       ]
      }
