@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.34';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.34';
+import { createSim } from './sim.js?v=2026-11-15.35';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.35';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1146,6 +1146,21 @@ function kitBox(matRe) {
   }
   if (loose.length) console.log('[dce] tidied riser detector cables (' + loose.join(', ') + ')');
 }
+function routeCurve(rt) { return new THREE.CatmullRomCurve3(rt.pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal'); }
+// flow segments that have a route in controls.json follow it (same curve as the 3D hose); neighbouring segments are re-joined to its ends
+(function applyRoutes() {
+  const RT = CT.routes || {};
+  for (const st of SC.streams) {
+    st.segments.forEach((sg, k) => { const rt = RT[sg.name]; if (!rt || !rt.pts) return;
+      const pts = routeCurve(rt).getSpacedPoints(48).map(v => [v.x, v.y, v.z]);
+      const o0 = sg.pts[0], o1 = sg.pts[sg.pts.length - 1], d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      if (d(o0, pts[0]) + d(o1, pts[pts.length - 1]) > d(o0, pts[pts.length - 1]) + d(o1, pts[0])) pts.reverse(); // keep the flow direction
+      const prev = st.segments[k - 1], next = st.segments[k + 1];
+      if (prev && d(prev.pts[prev.pts.length - 1], o0) < 0.05) prev.pts[prev.pts.length - 1] = pts[0];
+      if (next && d(next.pts[0], o1) < 0.05) next.pts[0] = pts[pts.length - 1];
+      sg.pts = pts; });
+  }
+})();
 { // roll-off end: couplings at 1/3 and 2/3 across the container end (Wes 11-15), the conveyor hoses run into them, no stray rod
   const ro = scene.getObjectByName('RollOff_Simple'); scene.updateMatrixWorld(true);
   if (ro) {
@@ -1157,22 +1172,20 @@ function kitBox(matRe) {
     if (rod) rod.visible = false, rod.material = NO_DRAW;
     if (!body.isEmpty() && spools.length === 2) {
       spools.sort((p, q) => q.c.z - p.c.z); // the one nearer the shop first
-      const z1 = body.max.z - (body.max.z - body.min.z) / 3, z2 = body.max.z - 2 * (body.max.z - body.min.z) / 3;
+      const RT = CT.routes || {}, ends = ['near', 'far'].map(k => Object.values(RT).find(r => r && r.coupling === k));
       const S = [];
-      spools.forEach((p, k) => { const dz = (k ? z2 : z1) - p.c.z; const w = p.m.getWorldPosition(new THREE.Vector3()); w.z += dz; p.m.position.copy(p.m.parent.worldToLocal(w)); p.m.updateMatrixWorld(true); S.push([p.c.y, k ? z2 : z1, p.c.x + 0.07]); });
+      spools.forEach((p, k) => { const e = ends[k] && ends[k].pts[ends[k].pts.length - 1]; if (!e) return; const w = p.m.getWorldPosition(new THREE.Vector3()); w.y += e[1] - p.c.y; w.z += e[2] - p.c.z; p.m.position.copy(p.m.parent.worldToLocal(w)); p.m.updateMatrixWorld(true); S.push([e[1], e[2], e[0] + 0.035]); });
       // the two 8 in conveyor hoses, redrawn from the shed-wall flanges straight into the couplings (the source hoses missed them)
       spools.forEach(p => { p.m.scale.multiplyScalar(0.2032 / 0.3); p.m.updateMatrixWorld(true); }); // couplings are 8 in, the hose size
       const X0 = S[0][2] - 0.035, HR = 0.1016;
       let hm = null; scene.traverse(m => { if (m.isMesh && /^DC_ConveyHoses_/.test(m.name)) { if (!hm && /Gold/.test([].concat(m.material)[0].name)) hm = [].concat(m.material)[0]; m.userData.noDraw = true; m.material = NO_DRAW; } });
       const mat = hm ? hm.clone() : new THREE.MeshLambertMaterial({ color: 0xd8b25a, transparent: true, opacity: 0.6 }); mat.side = THREE.DoubleSide; mat.transparent = true; mat.opacity = 0.55; mat.depthWrite = false; // see-through like the rest of the conveying hoses: the chips show inside
       const ribs = new THREE.MeshLambertMaterial({ color: 0xb08a3a });
-      const runs = [[[2.40, 3.75, -19.47], [2.12, 3.72, -19.62], [2.18, 3.25, -20.25], [2.16, 2.72, S[0][1]], [X0, S[0][0], S[0][1]]],
-                    [[2.40, 1.25, -19.46], [2.14, 1.32, -19.72], [2.22, 1.95, -20.85], [2.16, 2.68, S[1][1]], [X0, S[1][0], S[1][1]]]];
-      for (const pts of runs) {
-        const cu = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal');
-        world.add(new THREE.Mesh(new THREE.TubeGeometry(cu, 90, HR, 20, false), mat));
+      for (const rt of Object.values(RT)) { if (!rt || rt.mesh !== 'flex') continue;
+        const cu = routeCurve(rt), HRr = rt.radius || HR;
+        world.add(new THREE.Mesh(new THREE.TubeGeometry(cu, 90, HRr, 20, false), mat));
         const L = cu.getLength(), n = Math.floor(L / 0.05); // helix wire ribs every 5 cm
-        for (let k = 1; k < n; k++) { const t = k / n, p = cu.getPointAt(t), tg = cu.getTangentAt(t); const r = new THREE.Mesh(new THREE.TorusGeometry(HR + 0.003, 0.004, 4, 20), ribs); r.position.copy(p); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg); world.add(r); }
+        for (let k = 1; k < n; k++) { const t = k / n, p = cu.getPointAt(t), tg = cu.getTangentAt(t); const r = new THREE.Mesh(new THREE.TorusGeometry(HRr + 0.003, 0.004, 4, 20), ribs); r.position.copy(p); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tg); world.add(r); }
       }
       if (CTL.hose) CTL.hose.pos = [X0, S[0][0], S[0][1]]; // the coupling that is unhooked for the exterior test
       if (CTL3.hose) { CTL3.hose.g.position.set(X0 + 0.02, S[0][0], S[0][1]); CTL3.hose.ring.rotation.y = Math.PI / 2; }

@@ -1187,5 +1187,72 @@
     0.866
    ]
   }
+ },
+ "routes": {
+  "_note": "Hose and duct routes, shared by the 3D model and the dust flow. Each key is a flow segment name in scene.json. Edit the points (meters, app frame: x east, y up, z south) and both the hose and the moving dust follow. Ends: first point at the shed-wall flange, last point at the roll-off coupling.",
+  "upper gold hose": {
+   "radius": 0.1016,
+   "mesh": "flex",
+   "coupling": "near",
+   "pts": [
+    [
+     2.4,
+     3.75,
+     -19.47
+    ],
+    [
+     2.12,
+     3.72,
+     -19.62
+    ],
+    [
+     2.18,
+     3.25,
+     -20.25
+    ],
+    [
+     2.16,
+     2.72,
+     -20.708
+    ],
+    [
+     1.895,
+     2.7,
+     -20.708
+    ]
+   ]
+  },
+  "lower gold hose": {
+   "radius": 0.1016,
+   "mesh": "flex",
+   "coupling": "far",
+   "pts": [
+    [
+     2.4,
+     1.25,
+     -19.46
+    ],
+    [
+     2.14,
+     1.32,
+     -19.72
+    ],
+    [
+     2.22,
+     1.95,
+     -20.85
+    ],
+    [
+     2.16,
+     2.68,
+     -21.592
+    ],
+    [
+     1.895,
+     2.7,
+     -21.592
+    ]
+   ]
+  }
  }
 }
