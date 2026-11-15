@@ -461,6 +461,15 @@ function texLambert(m) {
   texLamCache.set(m, l); return l;
 }
 for (const g of [gT, gW]) if (g) g.scene.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(texLambert) : texLambert(o.material); });
+// conduit and boxes on the navy band are painted the wall's navy (photo 62): use the wall texture's own average colour
+if (gW && gR) {
+  let wallMat = null; gR.scene.traverse(o => { if (!wallMat && o.isMesh && /WallNavy/.test(o.material.name)) wallMat = o.material; });
+  const navy = new THREE.Color(0x1f2a5c);
+  try { const im = wallMat && wallMat.map && wallMat.map.image; if (im) { const cv = document.createElement('canvas'); cv.width = cv.height = 16; const x = cv.getContext('2d'); x.drawImage(im, 0, 0, 16, 16);
+    const d = x.getImageData(0, 0, 16, 16).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } const n = d.length / 4;
+    navy.setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace); if (wallMat.color) navy.multiply(wallMat.color); } } catch (e) { /* keep the default navy */ }
+  gW.scene.traverse(o => { if (o.isMesh && /ConduitNavy/.test(o.material.name)) { o.material.map = null; o.material.color.copy(navy); o.material.needsUpdate = true; } });
+}
 if (gT) { // Paper City's textured machines are what you see; the flat copies stay for clicks, labels and highlights
   gT.scene.traverse(o => { if (o.name) o.name = 'Tex_' + o.name; if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   world.add(gT.scene);
