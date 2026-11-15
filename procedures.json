@@ -61,7 +61,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light on.",
+      "es": "Luz Supervisory encendida.",
+      "fr": "Voyant Supervisory allumé.",
+      "sw": "Taa ya Supervisory inawaka."
+     }
     },
     {
      "id": "p2",
@@ -152,7 +158,13 @@
       {
        "ctl": "hatch_riser"
       }
-     ]
+     ],
+     "see": {
+      "en": "All three hatches clean and closed.",
+      "es": "Las tres escotillas limpias y cerradas.",
+      "fr": "Les trois trappes propres et fermées.",
+      "sw": "Vifuniko vitatu safi na vimefungwa."
+     }
     },
     {
      "id": "p3",
@@ -181,7 +193,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light off.",
+      "es": "Luz Supervisory apagada.",
+      "fr": "Voyant Supervisory éteint.",
+      "sw": "Taa ya Supervisory imezimika."
+     }
     },
     {
      "id": "i1",
@@ -207,7 +225,13 @@
        0
       ]
      },
-     "auto": []
+     "auto": [],
+     "see": {
+      "en": "Key at 0. Green Operation light on.",
+      "es": "Llave en 0. Luz verde Operation encendida.",
+      "fr": "Clé sur 0. Voyant vert Operation allumé.",
+      "sw": "Ufunguo kwenye 0. Taa ya kijani Operation inawaka."
+     }
     },
     {
      "id": "i2",
@@ -246,7 +270,13 @@
       {
        "ctl": "bucket"
       }
-     ]
+     ],
+     "see": {
+      "en": "The bucket is under the open hatch.",
+      "es": "La cubeta está bajo la escotilla abierta.",
+      "fr": "Le seau est sous la trappe ouverte.",
+      "sw": "Ndoo iko chini ya kifuniko kilicho wazi."
+     }
     },
     {
      "id": "i3",
@@ -275,7 +305,13 @@
       {
        "shine": "A"
       }
-     ]
+     ],
+     "see": {
+      "en": "Fire light on. Horns and strobes on. Water sprays.",
+      "es": "Luz Fire encendida. Bocinas y estrobos. Sale agua.",
+      "fr": "Voyant Fire allumé. Sirènes et flashs. L’eau gicle.",
+      "sw": "Taa ya Fire inawaka. Honi na taa za kumweka. Maji yanatoka."
+     }
     },
     {
      "id": "i4",
@@ -313,7 +349,13 @@
       {
        "ctl": "hatch_cnc"
       }
-     ]
+     ],
+     "see": {
+      "en": "CNC hatch closed. Water still spraying.",
+      "es": "Escotilla del CNC cerrada. El agua sigue.",
+      "fr": "Trappe du CNC fermée. L'eau continue.",
+      "sw": "Kifuniko cha CNC kimefungwa. Maji bado yanatoka."
+     }
     },
     {
      "id": "i6",
@@ -342,7 +384,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light on.",
+      "es": "Luz Supervisory encendida.",
+      "fr": "Voyant Supervisory allumé.",
+      "sw": "Taa ya Supervisory inawaka."
+     }
     },
     {
      "id": "i7",
@@ -371,7 +419,13 @@
         "ext"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Horns and strobes stop. Water keeps spraying.",
+      "es": "Bocinas y estrobos se detienen. El agua sigue.",
+      "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
+      "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
+     }
     },
     {
      "id": "i8",
@@ -396,7 +450,13 @@
         "reset"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Fire light off. Water stops.",
+      "es": "Luz Fire apagada. El agua se detiene.",
+      "fr": "Voyant Fire éteint. L'eau s'arrête.",
+      "sw": "Taa ya Fire imezimika. Maji yanasimama."
+     }
     },
     {
      "id": "i9",
@@ -421,7 +481,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light off.",
+      "es": "Luz Supervisory apagada.",
+      "fr": "Voyant Supervisory éteint.",
+      "sw": "Taa ya Supervisory imezimika."
+     }
     },
     {
      "id": "i10",
@@ -460,7 +526,13 @@
       {
        "ctl": "bucket"
       }
-     ]
+     ],
+     "see": {
+      "en": "Window hatch closed. Bucket put away.",
+      "es": "Escotilla de la ventana cerrada. Cubeta guardada.",
+      "fr": "Trappe de la fenêtre fermée. Seau rangé.",
+      "sw": "Kifuniko cha dirisha kimefungwa. Ndoo imeondolewa."
+     }
     },
     {
      "id": "e1",
@@ -491,7 +563,13 @@
       {
        "ctl": "hose"
       }
-     ]
+     ],
+     "see": {
+      "en": "Hose unhooked from the dumpster.",
+      "es": "Manguera desconectada del contenedor.",
+      "fr": "Tuyau détaché de la benne.",
+      "sw": "Bomba limetolewa kwenye kontena."
+     }
     },
     {
      "id": "e2",
@@ -546,7 +624,13 @@
       {
        "ctl": "hatch_riser"
       }
-     ]
+     ],
+     "see": {
+      "en": "Fire and Group 1 on. The screen shows the time. Water sprays.",
+      "es": "Fire y grupo 1 encendidos. La pantalla muestra la hora. Sale agua.",
+      "fr": "Fire et groupe 1 allumés. L'écran affiche l'heure. L'eau gicle.",
+      "sw": "Fire na kundi 1 zinawaka. Skrini inaonyesha saa. Maji yanatoka."
+     }
     },
     {
      "id": "e4",
@@ -575,7 +659,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Disabled light on.",
+      "es": "Luz Disabled encendida.",
+      "fr": "Voyant Disabled allumé.",
+      "sw": "Taa ya Disabled inawaka."
+     }
     },
     {
      "id": "e5",
@@ -604,7 +694,13 @@
         "ext"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Horns and strobes stop. Water keeps spraying.",
+      "es": "Bocinas y estrobos se detienen. El agua sigue.",
+      "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
+      "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
+     }
     },
     {
      "id": "e6",
@@ -629,7 +725,13 @@
         "reset"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Fire light off. Water stops.",
+      "es": "Luz Fire apagada. El agua se detiene.",
+      "fr": "Voyant Fire éteint. L'eau s'arrête.",
+      "sw": "Taa ya Fire imezimika. Maji yanasimama."
+     }
     },
     {
      "id": "e7",
@@ -654,7 +756,13 @@
         "key"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "Disabled light off.",
+      "es": "Luz Disabled apagada.",
+      "fr": "Voyant Disabled éteint.",
+      "sw": "Taa ya Disabled imezimika."
+     }
     },
     {
      "id": "e8",
@@ -679,7 +787,13 @@
         "int"
        ]
       }
-     ]
+     ],
+     "see": {
+      "en": "The panel buzzer is silent.",
+      "es": "El zumbador del panel se calla.",
+      "fr": "Le buzzer du panneau se tait.",
+      "sw": "Buzzer ya paneli imenyamaza."
+     }
     },
     {
      "id": "e9",
@@ -704,7 +818,13 @@
       {
        "ctl": "hose"
       }
-     ]
+     ],
+     "see": {
+      "en": "Hose connected to the dumpster.",
+      "es": "Manguera conectada al contenedor.",
+      "fr": "Tuyau raccordé à la benne.",
+      "sw": "Bomba limeunganishwa kwenye kontena."
+     }
     }
    ],
    "roles": [
@@ -1025,8 +1145,7 @@
      "id": "l5",
      "panel": "collector",
      "highlight": [
-      "starter1:stop",
-      "airlock_box"
+      "starter1:stop"
      ],
      "text": {
       "en": "Stop the rotary airlock: red button on starter 1.",
@@ -1739,7 +1858,13 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Every light comes on for a moment.",
+      "es": "Todas las luces se encienden un momento.",
+      "fr": "Tous les voyants s'allument un instant.",
+      "sw": "Taa zote zinawaka kwa muda mfupi."
+     }
     },
     {
      "id": "a5",
@@ -1759,7 +1884,13 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light on.",
+      "es": "Luz Supervisory encendida.",
+      "fr": "Voyant Supervisory allumé.",
+      "sw": "Taa ya Supervisory inawaka."
+     }
     },
     {
      "id": "a6",
@@ -1779,7 +1910,13 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light off.",
+      "es": "Luz Supervisory apagada.",
+      "fr": "Voyant Supervisory éteint.",
+      "sw": "Taa ya Supervisory imezimika."
+     }
     },
     {
      "id": "a7",
@@ -1798,7 +1935,13 @@
      "highlight": [
       "hatch_cnc"
      ],
-     "tool": "flashlight"
+     "tool": "flashlight",
+     "see": {
+      "en": "Fire light on. Horns and strobes on. Water sprays.",
+      "es": "Luz Fire encendida. Bocinas y estrobos. Sale agua.",
+      "fr": "Voyant Fire allumé. Sirènes et flashs. L’eau gicle.",
+      "sw": "Taa ya Fire inawaka. Honi na taa za kumweka. Maji yanatoka."
+     }
     },
     {
      "id": "a8",
@@ -1833,15 +1976,21 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light on.",
+      "es": "Luz Supervisory encendida.",
+      "fr": "Voyant Supervisory allumé.",
+      "sw": "Taa ya Supervisory inawaka."
+     }
     },
     {
      "id": "a10",
      "text": {
-      "en": "Press ext. The horns stop. The water keeps spraying until the reset.",
-      "es": "Pulse ext. Las bocinas paran. El agua sigue hasta el reset.",
-      "fr": "Appuyez sur ext. Les sirènes s'arrêtent. L'eau continue jusqu'au reset.",
-      "sw": "Bonyeza ext. Honi zinasimama. Maji yanaendelea hadi reset."
+      "en": "Press ext.",
+      "es": "Pulse ext.",
+      "fr": "Appuyez sur ext.",
+      "sw": "Bonyeza ext."
      },
      "cond": {
       "event": {
@@ -1857,15 +2006,21 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Horns and strobes stop. Water keeps spraying.",
+      "es": "Bocinas y estrobos se detienen. El agua sigue.",
+      "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
+      "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
+     }
     },
     {
      "id": "a11",
      "text": {
-      "en": "Press reset. The water stops.",
-      "es": "Pulse reset. El agua se detiene.",
-      "fr": "Appuyez sur reset. L'eau s'arrête.",
-      "sw": "Bonyeza reset. Maji yanasimama."
+      "en": "Press reset.",
+      "es": "Pulse reset.",
+      "fr": "Appuyez sur reset.",
+      "sw": "Bonyeza reset."
      },
      "cond": {
       "eq": [
@@ -1877,7 +2032,13 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Fire light off. Water stops.",
+      "es": "Luz Fire apagada. El agua se detiene.",
+      "fr": "Voyant Fire éteint. L'eau s'arrête.",
+      "sw": "Taa ya Fire imezimika. Maji yanasimama."
+     }
     },
     {
      "id": "a12",
@@ -1897,7 +2058,13 @@
      "panel": "flamex_A",
      "highlight": [
       "panel_A"
-     ]
+     ],
+     "see": {
+      "en": "Supervisory light off.",
+      "es": "Luz Supervisory apagada.",
+      "fr": "Voyant Supervisory éteint.",
+      "sw": "Taa ya Supervisory imezimika."
+     }
     },
     {
      "id": "q1",
@@ -2053,15 +2220,21 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Every light comes on for a moment.",
+      "es": "Todas las luces se encienden un momento.",
+      "fr": "Tous les voyants s'allument un instant.",
+      "sw": "Taa zote zinawaka kwa muda mfupi."
+     }
     },
     {
      "id": "b4",
      "text": {
-      "en": "Turn the key to bypass (1). The Disabled light comes on.",
-      "es": "Gire la llave a bypass (1). Se enciende Disabled.",
-      "fr": "Tournez la clé sur bypass (1). Le voyant Disabled s’allume.",
-      "sw": "Geuza ufunguo kwenye bypass (1). Taa ya Disabled inawaka."
+      "en": "Turn the key to bypass (1).",
+      "es": "Gire la llave a bypass (1).",
+      "fr": "Tournez la clé sur bypass (1).",
+      "sw": "Geuza ufunguo kwenye bypass (1)."
      },
      "cond": {
       "eq": [
@@ -2073,7 +2246,13 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Disabled light on.",
+      "es": "Luz Disabled encendida.",
+      "fr": "Voyant Disabled allumé.",
+      "sw": "Taa ya Disabled inawaka."
+     }
     },
     {
      "id": "b5",
@@ -2093,7 +2272,13 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Disabled light off.",
+      "es": "Luz Disabled apagada.",
+      "fr": "Voyant Disabled éteint.",
+      "sw": "Taa ya Disabled imezimika."
+     }
     },
     {
      "id": "b6",
@@ -2112,7 +2297,13 @@
      "highlight": [
       "hatch_riser"
      ],
-     "tool": "flashlight"
+     "tool": "flashlight",
+     "see": {
+      "en": "Fire and Group 1 on. The screen shows the time. Water sprays.",
+      "es": "Fire y grupo 1 encendidos. La pantalla muestra la hora. Sale agua.",
+      "fr": "Fire et groupe 1 allumés. L'écran affiche l'heure. L'eau gicle.",
+      "sw": "Fire na kundi 1 zinawaka. Skrini inaonyesha saa. Maji yanatoka."
+     }
     },
     {
      "id": "b7",
@@ -2147,7 +2338,13 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Disabled light on.",
+      "es": "Luz Disabled encendida.",
+      "fr": "Voyant Disabled allumé.",
+      "sw": "Taa ya Disabled inawaka."
+     }
     },
     {
      "id": "b9",
@@ -2171,15 +2368,21 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Horns and strobes stop. Water keeps spraying.",
+      "es": "Bocinas y estrobos se detienen. El agua sigue.",
+      "fr": "Sirènes et flashs s'arrêtent. L'eau continue.",
+      "sw": "Honi na taa za kumweka zinasimama. Maji yanaendelea."
+     }
     },
     {
      "id": "b10",
      "text": {
-      "en": "Press reset. The water stops.",
-      "es": "Pulse reset. El agua se detiene.",
-      "fr": "Appuyez sur reset. L'eau s'arrête.",
-      "sw": "Bonyeza reset. Maji yanasimama."
+      "en": "Press reset.",
+      "es": "Pulse reset.",
+      "fr": "Appuyez sur reset.",
+      "sw": "Bonyeza reset."
      },
      "cond": {
       "eq": [
@@ -2191,7 +2394,13 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Fire light off. Water stops.",
+      "es": "Luz Fire apagada. El agua se detiene.",
+      "fr": "Voyant Fire éteint. L'eau s'arrête.",
+      "sw": "Taa ya Fire imezimika. Maji yanasimama."
+     }
     },
     {
      "id": "b11",
@@ -2211,15 +2420,21 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "Disabled light off.",
+      "es": "Luz Disabled apagada.",
+      "fr": "Voyant Disabled éteint.",
+      "sw": "Taa ya Disabled imezimika."
+     }
     },
     {
      "id": "b12",
      "text": {
-      "en": "Press the grey int button. It silences the panel buzzer.",
-      "es": "Pulse el botón gris int. Calla el zumbador del panel.",
-      "fr": "Appuyez sur le bouton gris int. Il coupe le buzzer du panneau.",
-      "sw": "Bonyeza kitufe kijivu int. Kinazima buzzer ya paneli."
+      "en": "Press the grey int button.",
+      "es": "Pulse el botón gris int.",
+      "fr": "Appuyez sur le bouton gris int.",
+      "sw": "Bonyeza kitufe kijivu int."
      },
      "cond": {
       "event": {
@@ -2231,7 +2446,13 @@
      "panel": "flamex_B",
      "highlight": [
       "panel_B"
-     ]
+     ],
+     "see": {
+      "en": "The panel buzzer is silent.",
+      "es": "El zumbador del panel se calla.",
+      "fr": "Le buzzer du panneau se tait.",
+      "sw": "Buzzer ya paneli imenyamaza."
+     }
     },
     {
      "id": "q1",

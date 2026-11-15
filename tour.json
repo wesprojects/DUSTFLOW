@@ -106,13 +106,6 @@
      "dur": 5,
      "at": [
       [
-       1.2,
-       {
-        "do": "airlock_box",
-        "act": "on"
-       }
-      ],
-      [
        2.2,
        {
         "do": "starter",
@@ -122,10 +115,10 @@
       ]
      ],
      "cap": {
-      "en": "Start the dust collector at the wall, right to left. 1. Starter 1 and the airlock box: the rotary airlock.",
-      "es": "Encienda el colector en la pared, de derecha a izquierda. 1. Arrancador 1 y la caja de la válvula: la válvula rotativa.",
-      "fr": "Démarrez le dépoussiéreur au mur, de droite à gauche. 1. Démarreur 1 et le boîtier de l'écluse : l'écluse rotative.",
-      "sw": "Washa kikusanya vumbi ukutani, kulia kwenda kushoto. 1. Kianzishi 1 na kisanduku cha vali: vali ya kuzunguka."
+      "en": "Start the dust collector at the wall, right to left. 1. Starter 1: the rotary airlock. The airlock box shows SYSTEM ON.",
+      "es": "Encienda el colector en la pared, de derecha a izquierda. 1. Arrancador 1: la válvula rotativa. La caja muestra SYSTEM ON.",
+      "fr": "Démarrez le dépoussiéreur au mur, de droite à gauche. 1. Démarreur 1 : l'écluse rotative. Le boîtier affiche SYSTEM ON.",
+      "sw": "Washa kikusanya vumbi ukutani, kulia kwenda kushoto. 1. Kianzishi 1: vali ya kuzunguka. Kisanduku kinaonyesha SYSTEM ON."
      },
      "labels": [
       {
@@ -1108,13 +1101,6 @@
        "do": "starter",
        "id": "starter1",
        "act": "stop"
-      }
-     ],
-     [
-      2.0,
-      {
-       "do": "airlock_box",
-       "act": "off"
       }
      ]
     ],

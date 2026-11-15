@@ -52,17 +52,16 @@ export function createSim(CT, SC, hooks = {}) {
   }
   function pressStarter(id, act) {
     const c = CTL[id], m = c.motor, d = CT.motors[m];
-    if (act === 'stop') { S.starter[id] = false; updateMotors(); H.say(MSG.stopped); return result(id, 'stop', 'stopped'); }
+    if (act === 'stop') { S.starter[id] = false; if (d.enable) S.airlockBox = false; updateMotors(); H.say(MSG.stopped); return result(id, 'stop', 'stopped'); }
     // locked out: nothing starts, the starter does not pull in
     if (motorLocked(m)) { H.say(MSG.locked_out, 'bad'); return result(id, 'start', 'locked_out'); }
     // start: control power comes through the inside feeder Eaton
     if (!S.eaton[d.inside_eaton].on) { H.say(S.eaton[d.inside_eaton].locked ? MSG.locked_out : MSG.no_power, 'bad'); return result(id, 'start', S.eaton[d.inside_eaton].locked ? 'locked_out' : 'no_power'); }
-    S.starter[id] = true; updateMotors();
+    S.starter[id] = true; if (d.enable) S.airlockBox = true; updateMotors(); // the airlock box only shows ON/OFF; starter 1 runs the airlock (Wes 11-15)
     if (!S.eaton[d.outside_eaton].on) {
       H.say(S.eaton[d.outside_eaton].locked ? MSG.locked_out : MSG.no_power, 'bad');
       return result(id, 'start', S.eaton[d.outside_eaton].locked ? 'locked_out' : 'no_power');
     }
-    if (d.enable && !S.airlockBox) { H.say(MSG.airlock_box_off, 'bad'); return result(id, 'start', 'airlock_box_off'); }
     H.say(MSG.started, 'ok');
     return result(id, 'start', 'started');
   }

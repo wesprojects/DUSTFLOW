@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.5';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.5';
+import { createSim } from './sim.js?v=2026-11-15.6';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.6';
 
 const Q = new URLSearchParams(location.search);
-const LANGS = ['en', 'es', 'fr', 'sw'];
+const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const smooth = t => t * t * (3 - 2 * t);
@@ -21,25 +21,29 @@ try { RM = RM || matchMedia('(prefers-reduced-motion: reduce)').matches; } catch
 const L4 = (en, es, fr, sw) => ({ en, es, fr, sw });
 
 // ---------------------------------------------------------------- language
-let LANG = 'all';
-try { LANG = localStorage.getItem('dce_lang') || 'all'; } catch (e) { /* storage blocked */ }
-if (Q.get('lang')) LANG = Q.get('lang');
+let LANGS = ['en'];
+try { const v = JSON.parse(localStorage.getItem('dce_langs') || 'null'); if (Array.isArray(v) && v.length) LANGS = v.filter(l => ['en', 'es', 'fr', 'sw'].includes(l)).slice(0, 3); } catch (e) { /* storage blocked */ }
+if (Q.get('lang')) LANGS = Q.get('lang').split(',').slice(0, 3);
+if (!LANGS.length) LANGS = ['en'];
+let LANG = LANGS.length === 1 ? LANGS[0] : 'all'; // 'all' now means: the chosen 2-3 languages
+let PRIM = LANGS[0];
+function setLangs(ls) { LANGS = ls.slice(0, 3); if (!LANGS.length) LANGS = ['en']; LANG = LANGS.length === 1 ? LANGS[0] : 'all'; PRIM = LANGS[0]; try { localStorage.setItem('dce_langs', JSON.stringify(LANGS)); } catch (e) { /* storage blocked */ } }
 const tx = (o, l) => (o == null ? '' : typeof o === 'string' ? o : (o[l] ?? o.en ?? ''));
 function t4(o, cls = '') {
   if (o == null) return '';
   if (typeof o === 'string') o = { en: o };
-  if (LANG !== 'all') return `<span class="t4 single ${cls}"><span class="en">${esc(tx(o, LANG))}</span></span>`;
-  let h = `<span class="t4 ${cls}"><span class="en">${esc(o.en)}</span>`;
-  for (const l of ['es', 'fr', 'sw']) {
-    if (o[l] && o[l] !== o.en) h += `<span class="ln ${l}"><b>${l.toUpperCase()}</b>${esc(o[l])}</span>`;
+  if (LANGS.length === 1) return `<span class="t4 single ${cls}"><span class="en">${esc(tx(o, PRIM))}</span></span>`;
+  let h = `<span class="t4 ${cls}"><span class="en">${esc(tx(o, PRIM))}</span>`;
+  for (const l of LANGS.slice(1)) {
+    if (o[l] && o[l] !== tx(o, PRIM)) h += `<span class="ln ${l}"><b>${l.toUpperCase()}</b>${esc(o[l])}</span>`;
   }
   return h + '</span>';
 }
 function b4(o) { // compact button label: English line + one small line of the others
   if (typeof o === 'string') o = { en: o };
-  if (LANG !== 'all') return esc(tx(o, LANG));
-  const rest = ['es', 'fr', 'sw'].filter(l => o[l] && o[l] !== o.en).map(l => `<span>${esc(o[l])}</span>`).join('');
-  return `${esc(o.en)}${rest ? `<span class="l4">${rest}</span>` : ''}`;
+  if (LANGS.length === 1) return esc(tx(o, PRIM));
+  const rest = LANGS.slice(1).filter(l => o[l] && o[l] !== tx(o, PRIM)).map(l => `<span>${esc(o[l])}</span>`).join('');
+  return `${esc(tx(o, PRIM))}${rest ? `<span class="l4">${rest}</span>` : ''}`;
 }
 const U = {
   sub: { en: 'Conklin laminate shop, 75 Appleton St', es: 'Taller de laminado Conklin, 75 Appleton St', fr: 'Atelier de stratifié Conklin, 75 Appleton St', sw: 'Karakana ya laminati ya Conklin, 75 Appleton St' },
@@ -2280,7 +2284,7 @@ function rpmLine(m) {
   const d = CT.motors[m], r = SC.rotating.find(x => x.node === d.rotating[0]);
   const real = r.real_rpm, now = Math.round(real * LV[m]);
   const st = motorStatus(m);
-  return `${t4(U.real_speed)}<div><b>${now.toLocaleString('en-US')}</b> / ${real.toLocaleString('en-US')} rpm` + (r.display_rpm !== r.real_rpm ? ` <span class="note">(${esc(tx(U.shown_at, LANG === 'all' ? 'en' : LANG))} ${r.display_rpm} rpm)</span>` : '') + `</div>${t4(st.label)}`;
+  return `${t4(U.real_speed)}<div><b>${now.toLocaleString('en-US')}</b> / ${real.toLocaleString('en-US')} rpm` + (r.display_rpm !== r.real_rpm ? ` <span class="note">(${esc(tx(U.shown_at, PRIM))} ${r.display_rpm} rpm)</span>` : '') + `</div>${t4(st.label)}`;
 }
 function renderInfo() {
   let el = $('#info');
@@ -2290,7 +2294,7 @@ function renderInfo() {
   let name = p.name;
   if (p.id === 'machine' || p.id === 'branch' || p.id === 'gate') {
     const mm = SC.machines.find(x => x.id === mach);
-    if (mm) name = p.id === 'machine' ? mm.name : Object.fromEntries(LANGS.map(l => [l, tx(p.name, l) + ': ' + tx(mm.name, l)]));
+    if (mm) name = p.id === 'machine' ? mm.name : Object.fromEntries(ALL_LANGS.map(l => [l, tx(p.name, l) + ': ' + tx(mm.name, l)]));
   }
   let facts = (p.facts || []).map(f => `<li>${t4(f)}</li>`).join('');
   if (p.motor) facts = `<li>${rpmLine(p.motor)}</li>` + facts;
@@ -2330,10 +2334,10 @@ function fitRight() { // the cards on the right stop above the story bar
 }
 function renderHud() {
   const parts = [];
-  for (const m of ['fan', 'blower', 'airlock']) { const s = motorStatus(m); parts.push([`${m}`, s.cls, tx(U[m + '_s'], LANG === 'all' ? 'en' : LANG) + ': ' + tx(s.label, LANG === 'all' ? 'en' : LANG)]); }
+  for (const m of ['fan', 'blower', 'airlock']) { const s = motorStatus(m); parts.push([`${m}`, s.cls, tx(U[m + '_s'], PRIM) + ': ' + tx(s.label, PRIM)]); }
   const g = Object.values(S.gates).filter(Boolean).length;
-  parts.push(['g', g ? 'run' : '', tx(U.gates_s, LANG === 'all' ? 'en' : LANG) + ': ' + g]);
-  for (const z of ['A', 'B']) { const Z = S.flamex[z]; parts.push(['fx' + z, Z.fire ? 'fire' : Z.key ? 'byp' : 'run', 'Flamex ' + z + ': ' + tx(Z.fire ? U.fire : Z.key ? U.bypass : U.normal, LANG === 'all' ? 'en' : LANG)]); }
+  parts.push(['g', g ? 'run' : '', tx(U.gates_s, PRIM) + ': ' + g]);
+  for (const z of ['A', 'B']) { const Z = S.flamex[z]; parts.push(['fx' + z, Z.fire ? 'fire' : Z.key ? 'byp' : 'run', 'Flamex ' + z + ': ' + tx(Z.fire ? U.fire : Z.key ? U.bypass : U.normal, PRIM)]); }
   const key = JSON.stringify(parts);
   if (key === hudKey) return; hudKey = key;
   elHud.innerHTML = parts.map(([, c, t]) => `<span class="chip ${c}"><i></i>${esc(t)}</span>`).join('');
@@ -2349,8 +2353,8 @@ function eatonHTML(id) {
   const tag = e.locked ? `<div class="tag">DANGER</div>` : '';
   return `<div class="eat">${tag}<div class="lbl">EATON</div>${c.amps ? `<div class="amps">${c.amps} A</div>` : ''}
     <button class="hdl ${e.on ? '' : 'off'}" data-eaton="${id}" title="ON / OFF"></button><div class="st">${e.on ? 'ON' : 'OFF'}</div>
-    <button class="lockb" data-lock="${id}">${esc(tx(e.locked ? U.remove_lock : U.lock_tag, LANG === 'all' ? 'en' : LANG))}</button>
-    <div class="note" style="color:#222;font-size:10px;margin-top:4px">${esc(tx(c.name, LANG === 'all' ? 'en' : LANG))}</div></div>`;
+    <button class="lockb" data-lock="${id}">${esc(tx(e.locked ? U.remove_lock : U.lock_tag, PRIM))}</button>
+    <div class="note" style="color:#222;font-size:10px;margin-top:4px">${esc(tx(c.name, PRIM))}</div></div>`;
 }
 function starterHTML(id) {
   const c = CTL[id], on = S.starter[id];
@@ -2367,7 +2371,7 @@ function renderPanel() {
   if (!PANEL) { if (el) el.remove(); return; }
   if (!el) { el = document.createElement('div'); el.id = 'panelv'; el.className = 'card'; elRight.appendChild(el); }
   let title, body = '', foot = '';
-  const L1 = LANG === 'all' ? 'en' : LANG;
+  const L1 = PRIM;
   if (PANEL === 'collector') {
     title = U.p_collector;
     body = `<div class="pv"><div class="wall">
@@ -2573,8 +2577,8 @@ function renderProc() {
   let el = $('#proc');
   if (!PROC) { if (el) el.remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
   if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card pcard'; elRight.prepend(el); }
-  const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = LANG === 'all' ? 'en' : LANG;
-  const big = o => esc(tx(o, L1)), small = o => LANG === 'all' ? ['es', 'fr', 'sw'].filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
+  const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = PRIM;
+  const big = o => esc(tx(o, L1)), small = o => LANGS.length > 1 ? LANGS.slice(1).filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
   let html = `<div class="p-top"><span>${big(P.title)}</span><span>${Math.min(PROC.i + 1, n)} / ${n}</span><button class="x" aria-label="Close">×</button></div>`;
   if (!st) {
     try { const D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); D[PROC.id] = new Date().toISOString().slice(0, 10); localStorage.setItem('dflow_done', JSON.stringify(D)); } catch (e) { /* storage blocked */ }
@@ -2720,7 +2724,7 @@ window.addEventListener('keydown', e => { // keyboard: right arrow / Space next,
 });
 function setCaption(o) { CAPO = o; renderCaption(); }
 function renderCaption() {
-  const L1 = LANG === 'all' ? 'en' : LANG;
+  const L1 = PRIM;
   let html;
   if (ST) {
     const step = curStep(), ph = step.phases[ST.k];
@@ -2787,7 +2791,7 @@ function fmText(b, L1) {
 }
 function renderFlow() {
   const el = $('#flowCard'); if (!el) return;
-  const L1 = LANG === 'all' ? 'en' : LANG;
+  const L1 = PRIM;
   const zn = (id) => esc(tx(FMZ.find(z => z.id === id).name, L1)).toUpperCase();
   const svg = `<svg class="fm" id="fmSvg" viewBox="0 0 300 216" role="img" aria-label="${esc(tx(U.flowmap, L1))}">
     <defs>${[...new Set(FMA.map(a => a[1]))].map(c => `<marker id="ah${c.slice(1)}" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" fill="${c}"/></marker>`).join('')}</defs>
@@ -2805,7 +2809,7 @@ function renderFlow() {
     : k === 'fine' ? `<svg viewBox="0 0 22 12"><circle cx="3" cy="6" r="1.2" fill="${HEX.fine}"/><circle cx="7" cy="4" r="1" fill="${HEX.fine}"/><path d="M11 6H20" stroke="${HEX.clean}" stroke-width="1.8" marker-end="url(#ah${HEX.clean.slice(1)})"/></svg>`
     : `<svg viewBox="0 0 22 12"><rect x="2" y="4" width="4" height="3" rx="1" fill="${HEX.chips}"/><rect x="8" y="6" width="3.5" height="3" rx="1" fill="${HEX.chips}"/><path d="M14 9a4 4 0 1 0 0-6" fill="none" stroke="${HEX.loop}" stroke-width="1.4"/></svg>`;
   el.innerHTML = `<div class="fm-hd">${b4(U.flowmap)}</div>${svg}
-    <div class="fm-leg">${FMZ.map(z => `<div class="fz" data-fz="${z.id}"><i style="background:${ZCOL[z.id]}"></i><span class="ic">${icon(z.icon)}</span><div>${t4(L4(...LANGS.map(l => tx(z.name, l) + ': ' + tx(z.pay, l))))}</div></div>`).join('')}
+    <div class="fm-leg">${FMZ.map(z => `<div class="fz" data-fz="${z.id}"><i style="background:${ZCOL[z.id]}"></i><span class="ic">${icon(z.icon)}</span><div>${t4(L4(...ALL_LANGS.map(l => tx(z.name, l) + ': ' + tx(z.pay, l))))}</div></div>`).join('')}
       <div class="fz meet"><i></i><span class="ic"></span><div>${t4(U.meet)}</div></div></div>
     <label class="tog"><input type="checkbox" data-ftog="zones" ${TOG.zones ? 'checked' : ''}><span>${b4(U.zones)}</span></label>
     <div class="note">${t4(U.tap_map)}</div>`;
@@ -2871,11 +2875,12 @@ function showLib(on) {
   let el = $('#lib'); if (!on) { if (el) el.remove(); return; }
   if (!el) { el = document.createElement('div'); el.id = 'lib'; elStage.appendChild(el); }
   let D = {}; try { D = JSON.parse(localStorage.getItem('dflow_done') || '{}'); } catch (e) { /* storage blocked */ }
-  const L1 = LANG === 'all' ? 'en' : LANG, pin = TRJ.pins && TRJ.pins[LIBPIN];
+  const L1 = PRIM, pin = TRJ.pins && TRJ.pins[LIBPIN];
   const list = (TRJ.packages || []).filter(p => !pin || pin.packages.includes(p.id));
   const areas = [...new Set(list.map(p => p.area || ''))];
   el.innerHTML = `<div class="libin"><div class="libtop"><h2>${esc(tx(L4('Training', 'Formación', 'Formation', 'Mafunzo'), L1))}</h2>
     <input id="libpin" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${esc(tx(LT.pin, L1))}" value="${esc(LIBPIN)}"><button class="b" id="libpinGo">OK</button>${LIBPIN ? `<button class="b" id="libAll">${esc(tx(LT.all, L1))}</button>` : ''}<button class="x" id="libX" aria-label="Close">×</button></div>
+    <div class="liblangs">${['en', 'es', 'fr', 'sw'].map(l => `<button class="lc ${LANGS.includes(l) ? 'on' : ''}" data-lang1="${l}">${{ en: 'English', es: 'Español', fr: 'Français', sw: 'Kiswahili' }[l]}${LANGS[0] === l && LANGS.length > 1 ? ' ●' : ''}</button>`).join('')}<span>${esc(tx(L4('Up to 3 languages', 'Hasta 3 idiomas', "Jusqu'à 3 langues", 'Hadi lugha 3'), L1))}</span></div>
     ${LIBPIN && !pin ? `<div class="mist">${esc(tx(LT.bad, L1))}</div>` : ''}
     ${areas.map(a => `<div class="libarea">${esc(tx((TRJ.areas || {})[a] || { en: a }, L1))}</div><div class="libcards">${list.filter(p => (p.area || '') === a).map(p => `<button class="libcard" data-libstart="${p.id}"><b>${esc(tx(p.title, L1))}</b><span>${p.minutes} min${D[p.id] ? ` <i>${esc(tx(LT.done, L1))}</i>` : ''}</span></button>`).join('')}</div>`).join('')}</div>`;
   const pinGo = v => { LIBPIN = String(v || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 12); try { localStorage.setItem('dflow_pin', LIBPIN); } catch (e) { /* storage blocked */ } showLib(true); };
@@ -2883,6 +2888,7 @@ function showLib(on) {
   el.querySelector('#libpin').onkeydown = e => { if (e.key === 'Enter') pinGo(e.target.value); };
   if (el.querySelector('#libAll')) el.querySelector('#libAll').onclick = () => pinGo('');
   el.querySelector('#libX').onclick = () => showLib(false);
+  el.querySelectorAll('[data-lang1]').forEach(b => b.onclick = () => { const l = b.dataset.lang1; let ls = LANGS.includes(l) ? LANGS.filter(x => x !== l) : (LANGS.length >= 3 ? LANGS : [...LANGS, l]); setLangs(ls.length ? ls : [l]); renderAll(); showLib(true); });
   el.querySelectorAll('[data-libstart]').forEach(b => b.onclick = () => { const p = (TRJ.packages || []).find(x => x.id === b.dataset.libstart); showLib(false); HERO = false; renderCaption(); if (!p) return; if (p.kind === 'tour') storyStart(0); else startProc(p.proc); });
 }
 function libraryHTML() {
@@ -2890,9 +2896,9 @@ function libraryHTML() {
   const pin = TRJ.pins && TRJ.pins[LIBPIN];
   const list = (TRJ.packages || []).filter(p => !pin || pin.packages.includes(p.id));
   const card = p => `<div class="trcard"><div class="trt">${b4(p.title)}${D[p.id] ? ` <span class="trok">✓ ${esc(D[p.id])}</span>` : ''}</div><div class="note">${t4(p.summary)}</div>
-    <div class="tra">${p.roles ? `<span class="note">${b4(LT.role)}:</span>${p.roles.map(r => `<button class="b" data-trstart="${p.id}" data-role="${r}">${esc(tx(U.employee, LANG === 'all' ? 'en' : LANG))} ${r}</button>`).join('')}` : `<button class="b go" data-trstart="${p.id}">${b4(LT.start)}</button>`}<span class="note">~${p.minutes} ${esc(tx(LT.min, LANG === 'all' ? 'en' : LANG))}</span></div></div>`;
+    <div class="tra">${p.roles ? `<span class="note">${b4(LT.role)}:</span>${p.roles.map(r => `<button class="b" data-trstart="${p.id}" data-role="${r}">${esc(tx(U.employee, PRIM))} ${r}</button>`).join('')}` : `<button class="b go" data-trstart="${p.id}">${b4(LT.start)}</button>`}<span class="note">~${p.minutes} ${esc(tx(LT.min, PRIM))}</span></div></div>`;
   return `<div class="sec"><div class="hd">${b4(LT.lib)}</div>
-    <div class="trpin"><input id="trpin" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${esc(tx(LT.pin, LANG === 'all' ? 'en' : LANG))}" value="${esc(LIBPIN)}"><button class="b" id="trpinGo">OK</button>${LIBPIN ? `<button class="b" id="trpinAll">${b4(LT.all)}</button>` : ''}</div>
+    <div class="trpin"><input id="trpin" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="${esc(tx(LT.pin, PRIM))}" value="${esc(LIBPIN)}"><button class="b" id="trpinGo">OK</button>${LIBPIN ? `<button class="b" id="trpinAll">${b4(LT.all)}</button>` : ''}</div>
     ${LIBPIN && !pin ? `<div class="mist">${t4(LT.bad)}</div>` : ''}${pin ? `<div class="note"><b>${esc(pin.name || '')}</b></div>` : ''}
     <div class="trlist">${list.map(card).join('')}</div></div>`;
 }
@@ -2927,7 +2933,7 @@ function drawerHTML(id) {
 }
 function renderSide() {
   if (!elSide._init) { elSide.innerHTML = '<nav id="rail"></nav><div id="drawer"><button class="dx" id="dclose" aria-label="close">×</button><div id="drawerIn"></div><div id="flowCard" class="fm-card"></div></div>'; elSide._init = true; renderFlow(); }
-  const L1 = LANG === 'all' ? 'en' : LANG;
+  const L1 = PRIM;
   $('#rail').innerHTML = RAILS.map(r => `<button class="rl ${RAIL === r.id ? 'on' : ''}" data-rail="${r.id}"><i>${r.icon}</i><span>${esc(tx(r.t, L1))}</span></button>`).join('');
   $('#drawer').style.display = RAIL ? 'block' : 'none';
   $('#flowCard').style.display = RAIL === 'flow' ? 'block' : 'none';
@@ -2936,7 +2942,7 @@ function renderSide() {
   on('[data-rail]', b => { if (b.dataset.rail === 'training') { RAIL = null; showLib(!$('#lib')); renderSide(); return; } RAIL = RAIL === b.dataset.rail ? null : b.dataset.rail; HERO = false; renderSide(); renderCaption(); });
   on('#dclose', () => { RAIL = null; renderSide(); });
   on('[data-lang]', b => {
-    LANG = b.dataset.lang; try { localStorage.setItem('dce_lang', LANG); } catch (e) { /* ignore */ }
+    setLangs(b.dataset.lang === 'all' ? ['en', 'es', 'fr'] : [b.dataset.lang]);
     hudKey = ''; elCap._h = ''; renderAll(); renderFlow(); refreshLabels(); renderCaption();
   });
   on('[data-story]', b => storyStart(+b.dataset.story));
