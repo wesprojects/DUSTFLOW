@@ -72,7 +72,7 @@ button{font:inherit;color:inherit}
 .chip i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#9aa3ae}
 .chip.run i{background:#1f9d55} .chip.lock i{background:#c62828} .chip.fire{background:#c62828;color:#fff;border-color:#c62828} .chip.fire i{background:#fff}
 .chip.byp i{background:#e0a400}
-#right{position:absolute;top:10px;right:10px;width:370px;max-height:calc(100% - 90px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;z-index:5}
+#right{position:absolute;top:10px;right:10px;width:440px;max-height:calc(100% - 90px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;z-index:5}
 .card{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
 .card .stripe{height:6px}
 .card .in{padding:10px 12px}
@@ -138,6 +138,30 @@ button{font:inherit;color:inherit}
 #lib .lc{padding:8px 16px;border-radius:20px;border:2px solid #dde2e8;background:#fff;font:600 16px 'Segoe UI',system-ui,sans-serif;cursor:pointer;color:#14181f}#lib .lc.on{background:#2563eb;border-color:#2563eb;color:#fff}
 .pcard .p-ins{font-size:28px !important}.pcard .p-l{font-size:18px !important;opacity:.85 !important}.pcard .p-see div{font-size:19px !important}.pcard .p-who{font-size:15px !important}
 #cap .t4 .en{font-size:1.18em}#cap .t4 .ln{font-size:.95em}
+
+/* training card: clean and roomy */
+.pcard{padding:18px 20px 16px !important;border-radius:16px !important}
+.pcard .p-top{font-size:14px !important;color:#9aa4b2 !important;gap:12px !important}
+.pcard .p-top .x{font-size:22px;line-height:1;background:none;border:0;color:#9aa4b2;cursor:pointer;padding:0 0 0 6px}
+.pcard .p-who{margin-top:14px !important;padding:4px 14px !important;font-size:15px !important}
+.pcard .p-ins{font:700 27px/1.28 'Segoe UI',system-ui,sans-serif !important;margin:14px 0 8px !important;letter-spacing:-.01em}
+.pcard .p-l{font-size:17px !important;line-height:1.35;margin:4px 0 !important}
+.pcard .p-see{margin-top:14px !important;padding:12px 14px !important;border:0 !important;border-radius:12px;background:rgba(61,220,132,.10)}
+.pcard .p-see b{font-size:14px !important;letter-spacing:.02em}.pcard .p-see div{font-size:19px !important;margin-top:4px !important}
+.pcard .p-acts{gap:10px !important;margin-top:16px !important}.pcard .p-acts .b{padding:10px 18px;font-size:16px;border-radius:10px}
+.pcard .mist,.pcard .good{margin-top:10px;font-size:16px}
+/* the check questions: centred, the scene greyed behind */
+body.proc-on #caption{display:none !important}
+#quizm{position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(18,22,30,.55);backdrop-filter:blur(3px);padding:24px}
+#quizm .qbox{width:min(760px,100%);background:#fff;color:#14181f;border-radius:20px;padding:30px 36px 26px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+#quizm .q-top{display:flex;justify-content:space-between;color:#7a8492;font:500 16px 'Segoe UI',system-ui,sans-serif}
+#quizm .q-ins{font:700 30px/1.25 'Segoe UI',system-ui,sans-serif;margin:16px 0 8px}
+#quizm .p-l{font-size:17px;color:#5f6773;margin:3px 0}
+#quizm .q-opts{display:flex;flex-direction:column;gap:12px;margin:22px 0 6px}
+#quizm .q-opt{text-align:left;padding:16px 20px;border-radius:14px;border:2px solid #dde2e8;background:#f8f9fb;font:500 21px 'Segoe UI',system-ui,sans-serif;color:#14181f;cursor:pointer}
+#quizm .q-opt:hover{border-color:#2563eb;background:#eef3ff}
+#quizm .q-bad{margin-top:10px;color:#c62828;font:600 17px 'Segoe UI',system-ui,sans-serif}
+#quizm .q-note{margin-top:14px;color:#7a8492;font-size:15px}
 #lib{position:absolute;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:6vh 24px;background:rgba(236,239,243,.86);backdrop-filter:blur(6px);overflow:auto}
 #lib .libin{width:min(1240px,100%);color:#14181f}
 #lib .libtop{display:flex;align-items:center;gap:10px;margin-bottom:18px}#lib h2{font:700 40px 'Segoe UI',system-ui,sans-serif;margin:0 auto 0 0}
@@ -319,7 +343,7 @@ body{font-size:15px}
     <svg width="107" height="9" viewBox="0 0 107 9" style="display:block;margin-top:1px"><text x="0" y="8" textLength="107" lengthAdjust="spacingAndGlyphs" font-family="'DM Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace" font-size="7.5" font-weight="700" fill="#f5a524">RESEARCH AND DEVELOPMENT</text></svg>
   </div>
 </header>
-<script>const BUILD = "2026-11-15.9"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
+<script>const BUILD = "2026-11-15.10"; document.getElementById("buildTag").textContent = "BUILD " + BUILD;</script>
 <div id="app">
   <aside id="side" aria-label="Controls"></aside>
   <main id="stage">
@@ -341,6 +365,6 @@ body{font-size:15px}
   "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 }}
 </script>
-<script type="module" src="app.js?v=2026-11-15.9"></script>
+<script type="module" src="app.js?v=2026-11-15.10"></script>
 </body>
 </html>

@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.9';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.9';
+import { createSim } from './sim.js?v=2026-11-15.10';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.10';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2592,7 +2592,8 @@ function checkStep(fromAck = false, fromAuto = false) {
 }
 function renderProc() {
   let el = $('#proc');
-  if (!PROC) { if (el) el.remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
+  document.body.classList.toggle('proc-on', !!PROC);
+  if (!PROC) { if (el) el.remove(); if ($('#quizm')) $('#quizm').remove(); if (!ST) hlGroup.clear(); if (LSRC.proc.length) { LSRC.proc = []; refreshLabels(); } return; }
   if (!el) { el = document.createElement('div'); el.id = 'proc'; el.className = 'card pcard'; elRight.prepend(el); }
   const P = PROCDEF(), st = P.steps[PROC.i], n = P.steps.length, L1 = PRIM;
   const big = o => esc(tx(o, L1)), small = o => LANGS.length > 1 ? LANGS.slice(1).filter(k => o && o[k]).map(k => `<div class="p-l"><b>${k.toUpperCase()}</b> ${esc(o[k])}</div>`).join('') : '';
@@ -2603,15 +2604,30 @@ function renderProc() {
   } else {
     if (st.actor) html += `<div class="p-who">${esc(tx(U.employee, L1))} ${esc(st.actor)}</div>`;
     html += `<div class="p-ins">${big(st.text)}</div>${small(st.text)}`;
-    if (st.quiz) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${big(o)}</button>`).join('')}</div><div class="p-l">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div>`;
+    if (st.quiz && false) html += `<div class="quiz">${st.options.map((o, k) => `<button class="b" data-opt="${k}">${big(o)}</button>`).join('')}</div><div class="p-l">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div>`;
     if (st.tool === 'flashlight') html += `<div class="p-l">🔦 ${big(MSG.pick_flashlight)}</div>`;
     if (PROC.msg) html += `<div class="${PROC.msg.kind === 'bad' ? 'mist' : 'good'}">${big(PROC.msg.o)}</div>`;
     if (st.see) html += `<div class="p-see"><b>${esc(tx(L4('You should see', 'Debe ver', 'Vous devez voir', 'Unapaswa kuona'), L1))}</b><div>${big(st.see)}</div></div>`;
     html += `<div class="p-acts">${st.ack ? `<button class="b go" id="prAck">${esc(tx(U.done, L1))}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦</button>` : ''}<button class="b" id="prBack">${esc(tx(L4('Back', 'Atrás', 'Retour', 'Nyuma'), L1))}</button><button class="b" id="prRep">${esc(tx(L4('Repeat', 'Repetir', 'Répéter', 'Rudia'), L1))}</button></div>`;
   }
   el.innerHTML = html;
+  el.style.display = st && st.quiz ? 'none' : '';
+  let qm = $('#quizm');
+  if (st && st.quiz) {
+    if (!qm) { qm = document.createElement('div'); qm.id = 'quizm'; elStage.appendChild(qm); }
+    const qs = P.steps.filter(x => x.quiz), qn = qs.indexOf(st) + 1;
+    qm.innerHTML = `<div class="qbox"><div class="q-top"><span>${big(P.title)}</span><span>${qn} / ${qs.length}</span></div>
+      <div class="q-ins">${big(st.text)}</div>${small(st.text)}
+      <div class="q-opts">${st.options.map((o, k) => `<button class="q-opt" data-opt="${k}">${big(o)}</button>`).join('')}</div>
+      ${PROC.msg ? `<div class="q-bad">${big(PROC.msg.o)}</div>` : ''}
+      <div class="q-note">${esc(tx(L4('Every answer must be right. You can try again.', 'Todas las respuestas deben ser correctas. Puede intentarlo de nuevo.', 'Toutes les réponses doivent être justes. Vous pouvez réessayer.', 'Kila jibu lazima liwe sahihi. Unaweza kujaribu tena.'), L1))}</div></div>`;
+    qm.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
+      if (+b.dataset.opt === st.answer) { PROC.msg = null; checkStep(true); }
+      else { PROC.mistakes++; PROC.msg = { kind: 'bad', o: L4('Not right. Try again.', 'No es correcto. Inténtelo de nuevo.', 'Pas juste. Réessayez.', 'Si sahihi. Jaribu tena.') }; renderProc(); }
+    });
+  } else if (qm) qm.remove();
   const q = (x) => el.querySelector(x);
-  q('.x').onclick = () => { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); renderSide(); };
+  q('.x').onclick = () => { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); renderSide(); showLib(true); };
   if (q('#prX')) q('#prX').onclick = q('.x').onclick;
   if (q('#prRe')) q('#prRe').onclick = () => startProc(PROC.id);
   if (q('#prAck')) q('#prAck').onclick = () => checkStep(true);
@@ -2766,7 +2782,7 @@ function renderCaption() {
     const a = b.dataset.sb;
     if (a === 'start') { showLib(true); return; }
     if (a === 'replay') storyStart(0);
-    else if (a === 'x') storyStop();
+    else if (a === 'x') { storyStop(); showLib(true); }
     else if (a === 'next') storyNext();
     else if (a === 'prev') storyPrev();
     else if (a === 're') storyPhase(ST.k);
