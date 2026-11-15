@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.14';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.14';
+import { createSim } from './sim.js?v=2026-11-15.15';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.15';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1120,6 +1120,19 @@ function kitBox(matRe) {
   if (!gW) return null; const b = new THREE.Box3(), v = new THREE.Vector3(); gW.scene.updateMatrixWorld(true);
   gW.scene.traverse(o => { if (!o.isMesh || !matRe.test(o.material.name)) return; const P = o.geometry.attributes.position; for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (v.x < 8.9) b.expandByPoint(v); } });
   return b.isEmpty() ? null : b;
+}
+// the riser's spark detector cables: the loose loop across the blower comes out, two neat runs go straight up the riser
+{
+  const loose = []; // the riser's detector cables drooped down across the blower (DC_ConveyPipe, Cable_Grey): hide them
+  scene.traverse(o => { if (o.isMesh && /^DC_ConveyPipe/.test(o.name) && /Cable_Grey/.test(o.material && o.material.name || '')) { o.material = NO_DRAW; loose.push(o.name); } });
+  const det = ['Flamex_DetB_0', 'Flamex_DetB_1'].map(n => NODE[n]).filter(Boolean);
+  const cm = new THREE.MeshLambertMaterial({ color: 0x8a9096 });
+  for (const d of det) { // up the riser beside the pipe, to the elbow
+    const b = new THREE.Box3().setFromObject(d), c = b.getCenter(new THREE.Vector3()), x = c.x + (c.x < 5.54 ? 0.03 : -0.03);
+    const path = new THREE.CatmullRomCurve3([new THREE.Vector3(c.x, c.y + 0.03, c.z + 0.05), new THREE.Vector3(x, c.y + 0.12, c.z + 0.07), new THREE.Vector3(x, 3.6, c.z + 0.07)]);
+    const m = new THREE.Mesh(new THREE.TubeGeometry(path, 24, 0.006, 6), cm); m.castShadow = true; world.add(m);
+  }
+  if (loose.length) console.log('[dce] tidied riser detector cables (' + loose.join(', ') + ')');
 }
 const FXFACE = {};
 for (const z of ['A', 'B']) {
