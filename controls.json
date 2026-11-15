@@ -1261,13 +1261,13 @@
   },
   {
    "type": "ladder",
-   "name": "6 ft A-frame ladder (roll-off inlet)",
+   "name": "3 ft A-frame ladder (roll-off inlet)",
    "pos": [
     2.08,
     0.9,
     -20.72
    ],
-   "height": 1.83,
+   "height": 0.915,
    "spread": "z",
    "width": 0.3
   },
