@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.1';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.1';
+import { createSim } from './sim.js?v=2026-11-15.2';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.2';
 
 const Q = new URLSearchParams(location.search);
 const LANGS = ['en', 'es', 'fr', 'sw'];
@@ -462,6 +462,8 @@ function texLambert(m) {
   texLamCache.set(m, l); return l;
 }
 for (const g of [gT, gW]) if (g) g.scene.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(texLambert) : texLambert(o.material); });
+// the Square D switchboards at the back are plain grey enclosures (their atlas patch rendered near black)
+if (gR) gR.scene.traverse(o => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (/SwitchGrey/.test(m.name) && !m.userData.greyed) { m.userData.greyed = true; m.map = null; if (m.color) m.color.set(0xb4b9be); m.needsUpdate = true; } });
 // conduit and boxes on the navy band are painted the wall's navy (photo 62): use the wall texture's own average colour
 if (gW && gR) {
   let wallMat = null; gR.scene.traverse(o => { if (!wallMat && o.isMesh && /WallNavy/.test(o.material.name)) wallMat = o.material; });
