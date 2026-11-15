@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.30';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.30';
+import { createSim } from './sim.js?v=2026-11-15.31';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.31';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1917,9 +1917,9 @@ function fitKey(key) {
   return Object.assign({}, key, { position: [p.x, p.y, p.z], target: [t.x, t.y, t.z] });
 }
 function flyTo(key, dur = 0, after = null) {
-  if (PROC) key = fitKey(key);
+  if (PROC && !key.keep) key = fitKey(key);
   if (MODE === 'walk') return walkTo(key, dur, after); // keep the user's mode: the walker walks there instead
-  key = clearShot(key); if (RIDE && !RIDE.dot) RIDE = null;
+  if (!key.keep) key = clearShot(key); if (RIDE && !RIDE.dot) RIDE = null; // keep: a hand-picked spot, used as is
   const to = { p: V3(key.position), t: V3(key.target), fov: key.hfov_deg ? fovFor(key) : camera.fov };
   const dist = camera.position.distanceTo(to.p) + 0.5 * controls.target.distanceTo(to.t);
   const d = RM ? 0.001 : Math.max(dur, clamp(1.0 + dist * 0.08, 1.2, 2.8)); // longer trips take longer, always eased
@@ -2670,7 +2670,7 @@ function enterStep() {
     const pnl = /^panel_/.test(hid), d = pnl ? clamp(renderer.domElement.clientHeight * 0.00084, 0.5, 0.9) : Math.abs(hn.y) > 0.7 ? 1.3 : 1.5, cp = hp.clone().addScaledVector(hn, d); cp.y += pnl ? 0.04 : Math.abs(hn.y) > 0.7 ? 0 : 0.3;
     if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(0.7, 0, 0.7)); // a hatch that opens downward: from close below, a little to the side
     if (CTL[hid] && CTL[hid].view_from) cp.copy(V3(CTL[hid].view_from)); // a hand-picked spot where nothing stands in front of it
-    flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z] }, 2.4);
+    flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z], keep: !!(CTL[hid] && CTL[hid].view_from) }, 2.4);
   }
   else if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 2.4); }
   else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
