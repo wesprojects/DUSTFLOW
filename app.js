@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.26';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.26';
+import { createSim } from './sim.js?v=2026-11-15.27';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.27';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];

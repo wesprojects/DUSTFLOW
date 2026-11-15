@@ -15,10 +15,10 @@
     "sw": "Jaribio la kila wiki la Flamex"
    },
    "source": {
-    "en": "Conklin's Flamex Weekly Testing Process. Each system is prepped and tested on its own.",
-    "es": "Proceso semanal de prueba Flamex de Conklin. Cada sistema se prepara y prueba por separado.",
-    "fr": "Procédure hebdomadaire Flamex de Conklin. Chaque système est préparé et testé séparément.",
-    "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki. Kila mfumo huandaliwa na kupimwa peke yake."
+    "en": "Conklin's Flamex Weekly Testing Process. The interior and exterior systems are tested on their own.",
+    "es": "Proceso semanal de prueba Flamex de Conklin. Los sistemas interior y exterior se prueban por separado.",
+    "fr": "Procédure hebdomadaire Flamex de Conklin. Les systèmes intérieur et extérieur sont testés séparément.",
+    "sw": "Mchakato wa Conklin wa kupima Flamex kila wiki. Mifumo ya ndani na nje hupimwa kila mmoja peke yake."
    },
    "people": {
     "en": "3 people (Employee 1, 2 and 3)",
@@ -573,126 +573,6 @@
       "fr": "Seau rangé.",
       "sw": "Ndoo imeondolewa."
      }
-    },
-    {
-     "id": "x1",
-     "actor": "2",
-     "focus": "flamex_panels",
-     "panel": "flamex_B",
-     "highlight": [
-      "panel_B"
-     ],
-     "text": {
-      "en": "At the Exterior Flamex Panel: turn the key to bypass (1).",
-      "es": "En el panel Flamex exterior: gire la llave a bypass (1).",
-      "fr": "Au panneau Flamex extérieur : tournez la clé sur bypass (1).",
-      "sw": "Kwenye paneli ya nje ya Flamex: geuza ufunguo kwenda bypass (1)."
-     },
-     "cond": {
-      "eq": [
-       "flamex.B.key",
-       1
-      ]
-     },
-     "auto": [
-      {
-       "fx": [
-        "B",
-        "key"
-       ]
-      }
-     ],
-     "see": {
-      "en": "Disabled light on.",
-      "es": "Luz Disabled encendida.",
-      "fr": "Voyant Disabled allumé.",
-      "sw": "Taa ya Disabled inawaka."
-     },
-     "part": {
-      "en": "Exterior system: prep",
-      "es": "Sistema exterior: preparación",
-      "fr": "Système extérieur : préparation",
-      "sw": "Mfumo wa nje: maandalizi"
-     }
-    },
-    {
-     "id": "x2",
-     "actor": "1",
-     "focus": "riser_hatch",
-     "highlight": [
-      "hatch_riser"
-     ],
-     "text": {
-      "en": "Open the hatch on the riser by the shed and clean out the debris. Click it twice: open, then clean and close.",
-      "es": "Abra la escotilla del tubo vertical junto a la caseta y limpie los residuos. Haga clic dos veces: abrir, luego limpiar y cerrar.",
-      "fr": "Ouvrez la trappe de la colonne près de l’abri et retirez les débris. Cliquez deux fois : ouvrir, puis nettoyer et fermer.",
-      "sw": "Fungua kifuniko cha bomba la kupanda karibu na kibanda na usafishe uchafu. Bofya mara mbili: fungua, kisha safisha na funga."
-     },
-     "cond": {
-      "all": [
-       {
-        "eq": [
-         "hatch.hatch_riser.cleaned",
-         true
-        ]
-       },
-       {
-        "eq": [
-         "hatch.hatch_riser.open",
-         false
-        ]
-       }
-      ]
-     },
-     "auto": [
-      {
-       "ctl": "hatch_riser"
-      },
-      {
-       "ctl": "hatch_riser"
-      }
-     ],
-     "see": {
-      "en": "Hatch clean and closed.",
-      "es": "Escotilla limpia y cerrada.",
-      "fr": "Trappe propre et fermée.",
-      "sw": "Kifuniko safi na kimefungwa."
-     }
-    },
-    {
-     "id": "x3",
-     "actor": "2",
-     "panel": "flamex_B",
-     "text": {
-      "en": "Turn the key back to active (0).",
-      "es": "Regrese la llave a activo (0).",
-      "fr": "Remettez la clé sur actif (0).",
-      "sw": "Rudisha ufunguo kwenye hai (0)."
-     },
-     "cond": {
-      "eq": [
-       "flamex.B.key",
-       0
-      ]
-     },
-     "auto": [
-      {
-       "fx": [
-        "B",
-        "key"
-       ]
-      }
-     ],
-     "see": {
-      "en": "Disabled light off.",
-      "es": "Luz Disabled apagada.",
-      "fr": "Voyant Disabled éteint.",
-      "sw": "Taa ya Disabled imezimika."
-     },
-     "highlight": [
-      "panel_B"
-     ],
-     "focus": "flamex_panels"
     },
     {
      "id": "e1",
