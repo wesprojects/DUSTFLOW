@@ -2585,7 +2585,6 @@
     {
      "id": "s1",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter1:start"
      ],
@@ -2606,7 +2605,6 @@
      "id": "s2",
      "ack": true,
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "airlock_box"
      ],
@@ -2626,7 +2624,6 @@
     {
      "id": "s3",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter2:start"
      ],
@@ -2648,7 +2645,6 @@
      "ack": true,
      "listen": true,
      "scene": "blower",
-     "focus": "blower",
      "text": {
       "en": "Listen for the transfer blower.",
       "es": "Escuche el soplador de transferencia.",
@@ -2660,12 +2656,12 @@
       "es": "La rueda del soplador gira. Se oye funcionar.",
       "fr": "La roue de la soufflante tourne. On l'entend.",
       "sw": "Gurudumu la kipuliza linazunguka. Unasikia likifanya kazi."
-     }
+     },
+     "look": "Rig_BlowerImpeller"
     },
     {
      "id": "s5",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter3:start"
      ],
@@ -2687,7 +2683,6 @@
      "ack": true,
      "listen": true,
      "scene": "fan",
-     "focus": "fan",
      "text": {
       "en": "Listen for the dust collector.",
       "es": "Escuche el colector de polvo.",
@@ -2699,12 +2694,12 @@
       "es": "La rueda del ventilador gira. Se oye funcionar.",
       "fr": "La roue du ventilateur tourne. On l'entend.",
       "sw": "Gurudumu la feni linazunguka. Unasikia likifanya kazi."
-     }
+     },
+     "look": "Rig_FanImpeller"
     },
     {
      "id": "d1",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter3:stop"
      ],
@@ -2730,7 +2725,6 @@
     {
      "id": "d2",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter2:stop"
      ],
@@ -2756,7 +2750,6 @@
     {
      "id": "d3",
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "starter1:stop"
      ],
@@ -2777,7 +2770,6 @@
      "id": "d4",
      "ack": true,
      "focus": "collector_wall",
-     "panel": "collector",
      "highlight": [
       "airlock_box"
      ],

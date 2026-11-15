@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.12';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.12';
+import { createSim } from './sim.js?v=2026-11-15.13';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.13';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -2162,8 +2162,8 @@ function clickControl(u) {
   const c = CTL[id];
   switch (c.type) {
     case 'eaton': if (act === 'handle') setEaton(id, !S.eaton[id].on); openPanel(c.where === 'outside' ? 'outside' : 'collector'); break;
-    case 'starter': if (act === 'start' || act === 'stop') pressStarter(id, act); openPanel('collector'); break;
-    case 'airlock_box': openPanel('collector'); break; // display only: starter 1 runs the airlock
+    case 'starter': if (act === 'start' || act === 'stop') pressStarter(id, act); if (!PROC || (PROCDEF().steps[PROC.i] || {}).panel) openPanel('collector'); break;
+    case 'airlock_box': if (!PROC) openPanel('collector'); break; // display only: starter 1 runs the airlock
     case 'gate_panel': if (act === 'open' || act === 'close') setGate(u.gate, act === 'open'); openPanel('gate_panel'); break;
     case 'air_valve': setAir(!S.air.on); openPanel('gate_panel'); break;
     case 'ball_valve': setValve(id, !S.valve[id].open); openPanel('flamex_' + c.zone); break;
@@ -2513,14 +2513,20 @@ function enterStep() {
   if (hid && /^panel_/.test(hid) && FXFACE[hid.slice(6)] && FXFACE[hid.slice(6)].mesh) { hp = new THREE.Box3().setFromObject(FXFACE[hid.slice(6)].mesh).getCenter(new THREE.Vector3()); }
   else if (hid && CTL[hid]) { hp = V3(CTL[hid].pos); const f = CTL[hid].face || CTL[hid].normal; if (f) hn = V3(f).normalize(); }
   if (st.focus && CT.views[st.focus]) applyViewVis(CT.views[st.focus]);
-  if (hp) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
+  if (st.look && NODE[st.look]) { // turn to look at it from about where we stand, through the opened wall: no long flight
+    const c = new THREE.Box3().setFromObject(NODE[st.look]).getCenter(new THREE.Vector3()), cp = camera.position.clone();
+    const back = cp.clone().sub(c).setY(0).normalize(); cp.addScaledVector(back, 0.6); cp.y += 0.5;
+    flyTo({ position: [cp.x, cp.y, cp.z], target: [c.x, c.y, c.z] }, 1.6);
+  }
+  else if (hp) { // the camera looks at what the trainee has to use, from in front of it, slowly enough to follow
     const d = Math.abs(hn.y) > 0.7 ? 2.2 : 1.9, cp = hp.clone().addScaledVector(hn, d); cp.y += Math.abs(hn.y) > 0.7 ? 0 : 0.35;
     if (Math.abs(hn.y) > 0.7) cp.add(new THREE.Vector3(1.2, 0, 1.2));
     flyTo({ position: [cp.x, cp.y, cp.z], target: [hp.x, hp.y, hp.z] }, 2.4);
   }
   else if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 2.4); }
   else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
-  if (st.scene) applyScene(st.scene); // e.g. the blower or fan opened up so its wheel can be seen turning
+  if (st.scene) { applyScene(st.scene); PROC.sceneOn = true; } // e.g. the blower or fan opened up so its wheel can be seen turning
+  else if (PROC.sceneOn) { applyScene(null); PROC.sceneOn = false; } // walls back
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
   if (st.panel) openPanel(st.panel);
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
@@ -2640,7 +2646,7 @@ function renderProc() {
     html += `<div class="p-acts">${st.ack ? `<button class="b go" id="prAck">${esc(tx(U.done, L1))}</button>` : ''}${st.tool === 'flashlight' ? `<button class="b" id="prTool">🔦</button>` : ''}<button class="b" id="prBack">${esc(tx(L4('Back', 'Atrás', 'Retour', 'Nyuma'), L1))}</button><button class="b" id="prRep">${esc(tx(L4('Repeat', 'Repetir', 'Répéter', 'Rudia'), L1))}</button></div>`;
   }
   el.innerHTML = html;
-  el.style.display = st && st.quiz ? 'none' : '';
+  el.style.display = !st || st.quiz ? 'none' : '';
   let qm = $('#quizm');
   if (st && st.quiz) {
     if (!qm) { qm = document.createElement('div'); qm.id = 'quizm'; elStage.appendChild(qm); }
@@ -2654,6 +2660,13 @@ function renderProc() {
       if (+b.dataset.opt === st.answer) { PROC.msg = null; b.classList.add('right'); checkStep(true); }
       else { PROC.mistakes++; b.classList.add('wrong'); PROC.msg = { kind: 'bad', o: L4('Not right. Try again.', 'No es correcto. Inténtelo de nuevo.', 'Pas juste. Réessayez.', 'Si sahihi. Jaribu tena.') }; feedback(false, qm.querySelector('.qbox')); setTimeout(renderProc, 650); }
     });
+  } else if (!st) {
+    if (!qm) { qm = document.createElement('div'); qm.id = 'quizm'; elStage.appendChild(qm); }
+    qm.innerHTML = `<div class="qbox qdone"><svg viewBox="0 0 52 52" class="qd-ic"><circle cx="26" cy="26" r="23"/><path d="M15 27 l7 7 l15 -16"/></svg>
+      <div class="qd-t">${esc(tx(L4('TRAINING COMPLETE!', '¡FORMACIÓN COMPLETADA!', 'FORMATION TERMINÉE !', 'MAFUNZO YAMEKAMILIKA!'), L1))}</div><div class="qd-n">${big(P.title)}</div>
+      <div class="qd-acts"><button class="q-opt" id="qdRe">${esc(tx(U.restart, L1))}</button><button class="q-opt go" id="qdX">${esc(tx(U.exit, L1))}</button></div></div>`;
+    qm.querySelector('#qdRe').onclick = () => startProc(PROC.id);
+    qm.querySelector('#qdX').onclick = () => { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); renderSide(); showLib(true); };
   } else if (qm) qm.remove();
   const q = (x) => el.querySelector(x);
   q('.x').onclick = () => { PROC = null; TOOL = null; document.body.classList.remove('tool-on'); renderProc(); renderSide(); showLib(true); };
