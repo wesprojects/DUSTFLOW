@@ -23,6 +23,24 @@
    "area": "dust"
   },
   {
+   "id": "startup_shutdown",
+   "proc": "startup_shutdown",
+   "area": "dust",
+   "minutes": 5,
+   "title": {
+    "en": "Dust collector start-up and shut-down",
+    "es": "Arranque y paro del colector de polvo",
+    "fr": "Démarrage et arrêt du dépoussiéreur",
+    "sw": "Kuwasha na kuzima kikusanya vumbi"
+   },
+   "summary": {
+    "en": "Starters 1, 2, 3 on; check and listen; then 3, 2, 1 off.",
+    "es": "Arrancadores 1, 2, 3; revisar y escuchar; luego 3, 2, 1.",
+    "fr": "Démarreurs 1, 2, 3 ; vérifier et écouter ; puis 3, 2, 1.",
+    "sw": "Vianzishi 1, 2, 3; angalia na sikiliza; kisha 3, 2, 1."
+   }
+  },
+  {
    "id": "flamex_weekly",
    "proc": "flamex_weekly",
    "minutes": 15,

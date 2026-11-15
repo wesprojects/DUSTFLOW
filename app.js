@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.7';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.7';
+import { createSim } from './sim.js?v=2026-11-15.8';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.8';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1670,6 +1670,7 @@ function hitUnder(clientX, clientY) {
   return h || null;
 }
 renderer.domElement.addEventListener('wheel', e => { // runs before OrbitControls' own wheel handler
+  if (ST || PROC) return;
   if (MODE !== 'orbit') return;
   CAMANIM = null;
   const now = performance.now(); if (now - navT < 120) return; navT = now;
@@ -1680,13 +1681,14 @@ renderer.domElement.addEventListener('wheel', e => { // runs before OrbitControl
   if (Math.abs(nd - dT) > 1e-3) controls.target.copy(camera.position).addScaledVector(dir, nd);
 }, { capture: true, passive: true });
 renderer.domElement.addEventListener('dblclick', e => {
+  if (ST || PROC) return;
   const h = hitUnder(e.clientX, e.clientY); if (!h) return;
   const g = glideGoal(camera.position.toArray(), h.point.toArray(), camera.position.distanceTo(h.point));
   if (ST) { ST.paused = true; renderCaption(); }
   flyTo(g, 0.9);
 });
 function stepFly(dt) {
-  if (MODE !== 'orbit') return;
+  if (MODE !== 'orbit' || ST || PROC) return;
   const d = new THREE.Vector3(); camera.getWorldDirection(d);
   const mv = flyStep(WALK.keys, Math.atan2(-d.x, -d.z), dt); if (!mv) return;
   if (CAMANIM) { CAMANIM = null; if (ST) { ST.paused = true; renderCaption(); } }
@@ -2488,6 +2490,7 @@ function startProc(id, role = null) {
   storyStop();
   resetScene(true);
   PROC = { id, role, i: 0, events: [], mistakes: 0, msg: null, done: [], skipped: [] };
+  { const P0 = PR.procedures.find(p => p.id === id); if (P0 && P0.start_tour_state) tourState(P0.start_tour_state, false); }
   enterStep();
 }
 function enterStep() {
@@ -2506,6 +2509,8 @@ function enterStep() {
   }
   else if (st.focus && CT.views[st.focus]) { const v = CT.views[st.focus]; flyTo({ position: v.position, target: v.target }, 2.4); }
   else if (st.focus) { const vp = VPS.find(v => v.id === st.focus); if (vp) flyTo(vp.camera[vp.camera.length - 1], 2.4); }
+  if (st.scene) applyScene(st.scene); // e.g. the blower or fan opened up so its wheel can be seen turning
+  if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
   if (st.panel) openPanel(st.panel);
   if (st.tool === 'flashlight') { TOOL = 'flashlight'; document.body.classList.add('tool-on'); }
   highlightControls(st.highlight || []);
@@ -3105,6 +3110,7 @@ function frameInner() {
   if (Q.has('dbg') && FRAMES % 20 === 1) console.log('[dce] frame ' + FRAMES + ' t ' + performance.now().toFixed(0) + ' cap ' + elCap.style.display + ' load ' + $('#loading').style.display);
   const rawDt = clock.getDelta(), dt = Math.min(0.05, rawDt);
   stepCam(dt);
+  controls.enabled = !ST && !PROC; // trainings drive the camera
   stepRide(dt);
   { // near plane follows the view distance: depth precision where it is needed, no flicker on far surfaces
     const dn = clamp(camera.position.distanceTo(controls.target) * 0.01, 0.03, 0.4);

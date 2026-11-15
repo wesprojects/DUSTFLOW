@@ -2542,6 +2542,306 @@
      "answer": 1
     }
    ]
+  },
+  {
+   "id": "startup_shutdown",
+   "kind": "ops",
+   "start_tour_state": "closed",
+   "title": {
+    "en": "Dust collector start-up and shut-down",
+    "es": "Arranque y paro del colector de polvo",
+    "fr": "Démarrage et arrêt du dépoussiéreur",
+    "sw": "Kuwasha na kuzima kikusanya vumbi"
+   },
+   "steps": [
+    {
+     "id": "s1",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter1:start"
+     ],
+     "text": {
+      "en": "Press the green button on starter 1. This starts the rotary airlock.",
+      "es": "Pulse el botón verde del arrancador 1. Arranca la válvula rotativa.",
+      "fr": "Appuyez sur le bouton vert du démarreur 1. Il démarre l'écluse rotative.",
+      "sw": "Bonyeza kitufe kijani cha kianzishi 1. Kinawasha vali ya kuzunguka."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter1",
+       true
+      ]
+     }
+    },
+    {
+     "id": "s2",
+     "ack": true,
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "airlock_box"
+     ],
+     "text": {
+      "en": "Check the airlock box.",
+      "es": "Revise la caja de la válvula.",
+      "fr": "Vérifiez le boîtier de l'écluse.",
+      "sw": "Angalia kisanduku cha vali."
+     },
+     "see": {
+      "en": "Green light on. The screen reads SYSTEM ON.",
+      "es": "Luz verde encendida. La pantalla dice SYSTEM ON.",
+      "fr": "Voyant vert allumé. L'écran indique SYSTEM ON.",
+      "sw": "Taa ya kijani inawaka. Skrini inasoma SYSTEM ON."
+     }
+    },
+    {
+     "id": "s3",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter2:start"
+     ],
+     "text": {
+      "en": "Press the green button on starter 2. This starts the transfer blower.",
+      "es": "Pulse el botón verde del arrancador 2. Arranca el soplador de transferencia.",
+      "fr": "Appuyez sur le bouton vert du démarreur 2. Il démarre la soufflante de transfert.",
+      "sw": "Bonyeza kitufe kijani cha kianzishi 2. Kinawasha kipuliza cha kuhamisha."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter2",
+       true
+      ]
+     }
+    },
+    {
+     "id": "s4",
+     "ack": true,
+     "listen": true,
+     "scene": "blower",
+     "focus": "blower",
+     "text": {
+      "en": "Listen for the transfer blower.",
+      "es": "Escuche el soplador de transferencia.",
+      "fr": "Écoutez la soufflante de transfert.",
+      "sw": "Sikiliza kipuliza cha kuhamisha."
+     },
+     "see": {
+      "en": "The blower wheel turns. You hear it run.",
+      "es": "La rueda del soplador gira. Se oye funcionar.",
+      "fr": "La roue de la soufflante tourne. On l'entend.",
+      "sw": "Gurudumu la kipuliza linazunguka. Unasikia likifanya kazi."
+     }
+    },
+    {
+     "id": "s5",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter3:start"
+     ],
+     "text": {
+      "en": "Press the green button on starter 3. This starts the dust collector.",
+      "es": "Pulse el botón verde del arrancador 3. Arranca el colector de polvo.",
+      "fr": "Appuyez sur le bouton vert du démarreur 3. Il démarre le dépoussiéreur.",
+      "sw": "Bonyeza kitufe kijani cha kianzishi 3. Kinawasha kikusanya vumbi."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter3",
+       true
+      ]
+     }
+    },
+    {
+     "id": "s6",
+     "ack": true,
+     "listen": true,
+     "scene": "fan",
+     "focus": "fan",
+     "text": {
+      "en": "Listen for the dust collector.",
+      "es": "Escuche el colector de polvo.",
+      "fr": "Écoutez le dépoussiéreur.",
+      "sw": "Sikiliza kikusanya vumbi."
+     },
+     "see": {
+      "en": "The fan wheel turns. You hear it run.",
+      "es": "La rueda del ventilador gira. Se oye funcionar.",
+      "fr": "La roue du ventilateur tourne. On l'entend.",
+      "sw": "Gurudumu la feni linazunguka. Unasikia likifanya kazi."
+     }
+    },
+    {
+     "id": "d1",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter3:stop"
+     ],
+     "text": {
+      "en": "Shut down in reverse. Press the red button on starter 3.",
+      "es": "Apague en orden inverso. Pulse el botón rojo del arrancador 3.",
+      "fr": "Arrêt dans l'ordre inverse. Appuyez sur le bouton rouge du démarreur 3.",
+      "sw": "Zima kwa mpangilio wa nyuma. Bonyeza kitufe chekundu cha kianzishi 3."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter3",
+       false
+      ]
+     },
+     "see": {
+      "en": "The dust collector slows and stops.",
+      "es": "El colector se frena y se detiene.",
+      "fr": "Le dépoussiéreur ralentit et s'arrête.",
+      "sw": "Kikusanya vumbi kinapunguza kasi na kusimama."
+     }
+    },
+    {
+     "id": "d2",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter2:stop"
+     ],
+     "text": {
+      "en": "Press the red button on starter 2.",
+      "es": "Pulse el botón rojo del arrancador 2.",
+      "fr": "Appuyez sur le bouton rouge du démarreur 2.",
+      "sw": "Bonyeza kitufe chekundu cha kianzishi 2."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter2",
+       false
+      ]
+     },
+     "see": {
+      "en": "The transfer blower stops.",
+      "es": "El soplador de transferencia se detiene.",
+      "fr": "La soufflante de transfert s'arrête.",
+      "sw": "Kipuliza cha kuhamisha kinasimama."
+     }
+    },
+    {
+     "id": "d3",
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "starter1:stop"
+     ],
+     "text": {
+      "en": "Press the red button on starter 1.",
+      "es": "Pulse el botón rojo del arrancador 1.",
+      "fr": "Appuyez sur le bouton rouge du démarreur 1.",
+      "sw": "Bonyeza kitufe chekundu cha kianzishi 1."
+     },
+     "cond": {
+      "eq": [
+       "starter.starter1",
+       false
+      ]
+     }
+    },
+    {
+     "id": "d4",
+     "ack": true,
+     "focus": "collector_wall",
+     "panel": "collector",
+     "highlight": [
+      "airlock_box"
+     ],
+     "text": {
+      "en": "Check the airlock box.",
+      "es": "Revise la caja de la válvula.",
+      "fr": "Vérifiez le boîtier de l'écluse.",
+      "sw": "Angalia kisanduku cha vali."
+     },
+     "see": {
+      "en": "Red light on. The screen reads SYSTEM OFF.",
+      "es": "Luz roja encendida. La pantalla dice SYSTEM OFF.",
+      "fr": "Voyant rouge allumé. L'écran indique SYSTEM OFF.",
+      "sw": "Taa nyekundu inawaka. Skrini inasoma SYSTEM OFF."
+     }
+    },
+    {
+     "id": "q1",
+     "quiz": true,
+     "text": {
+      "en": "In which order do you start the starters?",
+      "es": "¿En qué orden arranca los arrancadores?",
+      "fr": "Dans quel ordre démarrez-vous les démarreurs ?",
+      "sw": "Unawasha vianzishi kwa mpangilio gani?"
+     },
+     "options": [
+      {
+       "en": "1, 2, 3",
+       "es": "1, 2, 3",
+       "fr": "1, 2, 3",
+       "sw": "1, 2, 3"
+      },
+      {
+       "en": "3, 2, 1",
+       "es": "3, 2, 1",
+       "fr": "3, 2, 1",
+       "sw": "3, 2, 1"
+      }
+     ],
+     "answer": 0
+    },
+    {
+     "id": "q2",
+     "quiz": true,
+     "text": {
+      "en": "In which order do you shut them down?",
+      "es": "¿En qué orden los apaga?",
+      "fr": "Dans quel ordre les arrêtez-vous ?",
+      "sw": "Unavizima kwa mpangilio gani?"
+     },
+     "options": [
+      {
+       "en": "1, 2, 3",
+       "es": "1, 2, 3",
+       "fr": "1, 2, 3",
+       "sw": "1, 2, 3"
+      },
+      {
+       "en": "3, 2, 1",
+       "es": "3, 2, 1",
+       "fr": "3, 2, 1",
+       "sw": "3, 2, 1"
+      }
+     ],
+     "answer": 1
+    },
+    {
+     "id": "q3",
+     "quiz": true,
+     "text": {
+      "en": "Where do you start the rotary airlock?",
+      "es": "¿Dónde arranca la válvula rotativa?",
+      "fr": "Où démarrez-vous l'écluse rotative ?",
+      "sw": "Unawasha vali ya kuzunguka wapi?"
+     },
+     "options": [
+      {
+       "en": "Starter 1, green button",
+       "es": "Arrancador 1, botón verde",
+       "fr": "Démarreur 1, bouton vert",
+       "sw": "Kianzishi 1, kitufe kijani"
+      },
+      {
+       "en": "The airlock box",
+       "es": "La caja de la válvula",
+       "fr": "Le boîtier de l'écluse",
+       "sw": "Kisanduku cha vali"
+      }
+     ],
+     "answer": 0
+    }
+   ]
   }
  ]
 }
