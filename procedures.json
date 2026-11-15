@@ -2599,8 +2599,7 @@
        true
       ]
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "s2",
@@ -2620,8 +2619,7 @@
       "fr": "Voyant vert allumé. L'écran indique SYSTEM ON.",
       "sw": "Taa ya kijani inawaka. Skrini inasoma SYSTEM ON."
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "s3",
@@ -2640,8 +2638,7 @@
        true
       ]
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "s4",
@@ -2683,8 +2680,7 @@
        true
       ]
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "s6",
@@ -2732,8 +2728,7 @@
       "fr": "Le dépoussiéreur ralentit et s'arrête.",
       "sw": "Kikusanya vumbi kinapunguza kasi na kusimama."
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "d2",
@@ -2758,8 +2753,7 @@
       "fr": "La soufflante de transfert s'arrête.",
       "sw": "Kipuliza cha kuhamisha kinasimama."
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "d3",
@@ -2778,8 +2772,7 @@
        false
       ]
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "d4",
@@ -2799,8 +2792,7 @@
       "fr": "Voyant rouge allumé. L'écran indique SYSTEM OFF.",
       "sw": "Taa nyekundu inawaka. Skrini inasoma SYSTEM OFF."
      },
-     "focus": "collector_wall",
-     "panel": "collector"
+     "focus": "collector_wall"
     },
     {
      "id": "q1",

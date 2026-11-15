@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createSim } from './sim.js?v=2026-11-15.18';
-import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.18';
+import { createSim } from './sim.js?v=2026-11-15.19';
+import { wheelTargetDist, glideGoal, flyStep } from './nav.js?v=2026-11-15.19';
 
 const Q = new URLSearchParams(location.search);
 const ALL_LANGS = ['en', 'es', 'fr', 'sw'];
@@ -1819,7 +1819,58 @@ function stepRide(dt) {
   camera.position.lerp(c, k); controls.target.lerp(RIDE.follow ? q : q.clone().lerp(qa, 0.5), k);
   camera.lookAt(controls.target);
 }
+// trainings: the camera centers on the open area left of the step card, and backs off until every glowing control is in view
+function freeCut() { // px of the canvas covered by the card column on the right (0 on phones, where it sits at the bottom)
+  if (!PROC && !ST) return 0;
+  const r = elRight.getBoundingClientRect(), c = renderer.domElement.getBoundingClientRect();
+  const pv = $('#panelv.side'), left = pv ? Math.min(r.left, pv.getBoundingClientRect().left) : r.left;
+  return r.width > 0 && r.left > c.left + c.width / 2 ? Math.max(0, c.right - left + 16) : 0;
+}
+let VOFF = 0;
+function applyViewOffset() {
+  const c = renderer.domElement.getBoundingClientRect(), off = Math.round(freeCut() / 2);
+  if (off === VOFF) return; VOFF = off;
+  if (off) camera.setViewOffset(c.width, c.height, off, 0, c.width, c.height); else camera.clearViewOffset();
+}
+const _fc = new THREE.PerspectiveCamera();
+function stepBoxes() {
+  if (!PROC) return [];
+  const st = PROCDEF().steps[PROC.i]; if (!st) return [];
+  const out = [];
+  for (const h of st.highlight || []) {
+    const id = String(h).split(':')[0], b = new THREE.Box3();
+    if (/^panel_/.test(id)) { const f = FXFACE[id.slice(6)]; if (f && f.mesh) b.setFromObject(f.mesh); }
+    else for (const m of clickables) if (m.userData.ctl === id && visibleDeep(m)) b.expandByObject(m);
+    if (!b.isEmpty()) out.push(b);
+  }
+  return out;
+}
+function fitKey(key) {
+  const boxes = stepBoxes(); if (!boxes.length) return key;
+  const c = renderer.domElement.getBoundingClientRect(), cut = freeCut();
+  const t = V3(key.target), p = V3(key.position), xmax = 1 - 2 * cut / c.width - 0.06;
+  _fc.copy(camera); _fc.fov = key.hfov_deg ? fovFor(key) : camera.fov; _fc.aspect = c.width / c.height;
+  if (cut) _fc.setViewOffset(c.width, c.height, Math.round(cut / 2), 0, c.width, c.height); else _fc.clearViewOffset();
+  const v = new THREE.Vector3();
+  const fits = () => {
+    _fc.position.copy(p); _fc.lookAt(t); _fc.updateMatrixWorld(); _fc.updateProjectionMatrix();
+    for (const b of boxes) for (let i = 0; i < 8; i++) {
+      v.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).project(_fc);
+      if (v.z > 1 || v.x < -0.94 || v.x > xmax || v.y < -0.88 || v.y > 0.86) return false;
+    }
+    return true;
+  };
+  const p0 = p.clone(), t0 = t.clone();
+  for (let k = 0; k < 10 && !fits(); k++) p.sub(t).multiplyScalar(1.15).add(t);
+  if (!fits()) { // the view looks elsewhere: aim at the controls instead, from the same side, then back off until they fit
+    const u = new THREE.Box3(); boxes.forEach(b => u.union(b)); u.getCenter(t);
+    const dir = p0.clone().sub(t0).normalize(); p.copy(t).addScaledVector(dir, Math.max(1.6, p0.distanceTo(t0)));
+    for (let k = 0; k < 12 && !fits(); k++) p.sub(t).multiplyScalar(1.15).add(t);
+  }
+  return Object.assign({}, key, { position: [p.x, p.y, p.z], target: [t.x, t.y, t.z] });
+}
 function flyTo(key, dur = 0, after = null) {
+  if (PROC) key = fitKey(key);
   if (MODE === 'walk') return walkTo(key, dur, after); // keep the user's mode: the walker walks there instead
   key = clearShot(key); if (RIDE && !RIDE.dot) RIDE = null;
   const to = { p: V3(key.position), t: V3(key.target), fov: key.hfov_deg ? fovFor(key) : camera.fov };
@@ -2136,12 +2187,27 @@ const ray = new THREE.Raycaster();
 let SEL = null; // {part, node}
 let TOOL = null;
 function visibleDeep(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+const _tb = new THREE.Box3(), _tv = new THREE.Vector3();
+function trainingBoxHit() { // nearest allowed control whose (slightly grown) box the click ray passes through
+  let best = null, bd = Infinity;
+  for (const m of clickables) {
+    if (!m.userData.ctl || !trainingAllows(m.userData.ctl) || !visibleDeep(m)) continue;
+    _tb.setFromObject(m); if (_tb.isEmpty()) continue; _tb.expandByScalar(0.04);
+    const p = ray.ray.intersectBox(_tb, _tv); if (p) { const d = p.distanceTo(ray.ray.origin); if (d < bd) { bd = d; best = m; } }
+  }
+  return best;
+}
 function pick(e) {
   const r = renderer.domElement.getBoundingClientRect();
   const m = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(m, camera);
   const list = pickables.filter(visibleDeep).concat(clickables.filter(visibleDeep));
   const hits = ray.intersectObjects(list, false);
+  if (PROC || ST) { // in a training the step's control wins even with a duct or wall in front of it
+    const a = hits.find(h => h.object.userData.ctl && trainingAllows(h.object.userData.ctl));
+    if (a) { clickControl(a.object.userData); return; }
+    const b = trainingBoxHit(); if (b) { clickControl(b.userData); return; } // thin or moving parts (hose, an open hatch door): its whole box counts
+  }
   for (const h of hits) {
     const o = h.object;
     if (o.userData.ctl) { clickControl(o.userData); return; }
@@ -2356,6 +2422,25 @@ function fitRight() { // the cards on the right stop above the story bar
   const lim = capOn ? elCap.offsetTop - elRight.offsetTop - 12 : elStage.clientHeight - 90;
   const v = Math.max(160, lim) + 'px';
   if (elRight.style.maxHeight !== v) elRight.style.maxHeight = v;
+  // the step card never shrinks. A panel drawing goes under it when it fits at a usable size,
+  // otherwise (short screens) it gets its own column beside the card; the camera centers on what is left
+  const pv = $('#panelv'), card = $('#proc'), fr = pv && pv.querySelector('.fxreal'), img = fr && fr.querySelector('img');
+  if (!pv) return;
+  const wide = elRight.getBoundingClientRect().left > window.innerWidth / 2;
+  let side = false, imgW = 0;
+  if (!(fr && img && img.naturalWidth) && PROC && wide) { // drawn panels (wall, gate panel): beside the card when they would not fit under it
+    const room = parseFloat(v) - (card && card.style.display !== 'none' ? card.offsetHeight + 8 : 0);
+    side = pv.scrollHeight > room + 2;
+  }
+  if (fr && img && img.naturalWidth) {
+    const r = img.naturalHeight / img.naturalWidth, over = pv.scrollHeight - img.offsetHeight; // everything in the panel but the drawing
+    const room = parseFloat(v) - (card && card.style.display !== 'none' ? card.offsetHeight + 8 : 0) - over - 4;
+    imgW = Math.min(pv.clientWidth - 24, room / r);
+    if (PROC && wide && imgW < 300) { side = true; imgW = Math.min(380, (elStage.clientHeight - 110 - over) / r); }
+    fr.style.width = Math.max(200, Math.round(imgW)) + 'px'; fr.style.margin = '0 auto';
+  }
+  if (side && pv.parentElement !== elStage) { elStage.appendChild(pv); pv.classList.add('side'); }
+  if (!side && pv.parentElement !== elRight) { elRight.appendChild(pv); pv.classList.remove('side'); }
 }
 function renderHud() {
   const parts = [];
@@ -2542,7 +2627,7 @@ function enterStep() {
   if (st.scene) { applyScene(st.scene); PROC.sceneOn = true; } // e.g. the blower or fan opened up so its wheel can be seen turning
   else if (PROC.sceneOn) { applyScene(null); PROC.sceneOn = false; } // walls back
   setPip(st.pip || null, st.pipTitle);
-  if (st.pip && PANEL) closePanel(); // the inset needs the corner the 2D panel would cover
+  if ((st.pip || !st.panel) && PANEL) closePanel(); // one thing at a time: a panel shows only on the steps that use it; the inset needs that corner
   if (st.cut && CUT[st.cut]) { if (PROC.cutOn && PROC.cutOn !== st.cut) setCutOpen(PROC.cutOn, false); setCutOpen(st.cut, true); PROC.cutOn = st.cut; } // open the housing: the wheel is seen turning
   else if (PROC.cutOn) { setCutOpen(PROC.cutOn, false); PROC.cutOn = null; }
   if (st.listen && !TOG.sound) { TOG.sound = true; renderSide(); }
@@ -3238,6 +3323,7 @@ function frameInner() {
   applySkins();
   if (EXPL.e !== EXPL.target) SHADOW_DIRTY = true;
   if (SHADOW_DIRTY && sun.castShadow) { renderer.shadowMap.needsUpdate = true; SHADOW_DIRTY = false; }
+  applyViewOffset();
   renderFinal();
   renderPip();
   stepQuality(rawDt);
@@ -3363,7 +3449,20 @@ $('#loading').style.display = 'none';
   if (!seen || Q.has('hint')) { const el = document.createElement('div'); el.id = 'navhint'; el.innerHTML = t4(U.nav_hint); elStage.appendChild(el); setTimeout(() => el.classList.add('off'), 9000); setTimeout(() => el.remove(), 10000); }
 }
 window.__ready = true;
-window.__dce = { startProc, fxButton, shine, clickControl, checkStep, S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
+// re-fit the right column as soon as the card or a panel redraws (no squashed frame before the 0.25 s refit)
+{ const rp = renderPanel, rc = renderProc;
+  renderPanel = function () { rp.apply(this, arguments); fitRight(); };
+  renderProc = function () { rc.apply(this, arguments); fitRight(); }; }
+// test probe: what a click at (x, y) would hit first, and what pick() would act on
+function pickProbe(x, y) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
+  const hits = ray.intersectObjects(pickables.filter(visibleDeep).concat(clickables.filter(visibleDeep)), false);
+  let a = (PROC || ST) ? hits.find(h => h.object.userData.ctl && trainingAllows(h.object.userData.ctl)) : null;
+  if (!a && (PROC || ST)) { const m = trainingBoxHit(); if (m) a = { object: m }; }
+  return { first: hits[0] ? (hits[0].object.userData.ctl || topNode(hits[0].object).name) : null, acts: a ? a.object.userData.ctl + ':' + (a.object.userData.act || '') : (hits[0] && hits[0].object.userData.ctl ? hits[0].object.userData.ctl : null) };
+}
+window.__dce = { pickProbe, enterStep, renderProc, PROCDEF: () => PROCDEF(), clickables, startProc, fxButton, shine, clickControl, checkStep, S, CUT, CUTHIDE, NODE, LV, PILE, TOG, camera, controls, scene, renderer, get PROC() { return PROC; }, get CAMANIM() { return CAMANIM; }, get ST() { return ST; }, get LREP() { return LREP; }, frameInner, storyStart, goFlow };
 console.log('[dce] ready ' + JSON.stringify({ particles: NTOT, flowParticles: NP, nodes: Object.keys(NODE).length }));
 if (Q.has('bench')) { const t0 = Date.now(); for (let n = 0; n < 120; n++) tick(1 / 60); console.log('[dce] bench tick ms ' + ((Date.now() - t0) / 120).toFixed(2)); }
 requestAnimationFrame(frame);
